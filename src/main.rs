@@ -13,6 +13,7 @@ use rand::Rng;
 pub fn main() {
     //expGa0();return;
 
+    // TODO< implement peripherial vision too >
     expInvent0();
 }
 
@@ -21,6 +22,7 @@ pub fn main() {
 // scifi: is supposed to invent more and more difficult tasks and adapt previous found solutions
 
 // TODO< make task harder with a 2nd task which is harder >
+//    TODO< we need to modify the network for that with "Evolutionary Strategies!" >
 pub fn expInvent0() {
     
 
@@ -85,7 +87,7 @@ pub fn solveProblem(iProblem:i32) {
                 paramsIdx+=1;
                 weights.push(ad::Ad{r:v,d:0.0});
             }
-            let bias = params[paramsIdx] * 15.0; // boost parameter because it is the bias
+            let bias = params[paramsIdx] * 8.0; // boost parameter because it is the bias
             paramsIdx+=1;
             neuronsLayer1.push(ad::Neuron{
                 weights: weights,
@@ -97,7 +99,8 @@ pub fn solveProblem(iProblem:i32) {
 
         for iEnvStimulusVersion in 0..20 { // iterate over environment variants
             let mut boxX0 = 0; // position of the drawn box
-            let mut problemMap:map2d::Map2d::<f64> = invent0(&mut boxX0); // invent a map of the problem
+            let problemDifficulty:i32 = iProblem; // the problem difficulty depends on the problem number for now!
+            let mut problemMap:map2d::Map2d::<f64> = invent0(problemDifficulty, &mut boxX0); // invent a map of the problem
 
         
             let mut cursorX = 3;
@@ -125,11 +128,17 @@ pub fn solveProblem(iProblem:i32) {
                     }
         
                     {
-                        // y vector, which is the result of the NN
-                        let mut ys = vec!(ad::Ad{r:0.0,d:0.0}; neuronsLayer0.len());
+                        // y vector, which is the result of the NN for layer[0]
+                        let mut ys0 = vec!(ad::Ad{r:0.0,d:0.0}; neuronsLayer0.len());
+                        for ysIdx in 0..ys0.len() {
+                            ys0[ysIdx] = ad::calc(&stimulus, &neuronsLayer0[ysIdx]);
+                        }
+
+                        // layer[1]
+                        let mut ys1 = vec!(ad::Ad{r:0.0,d:0.0}; neuronsLayer1.len());
                         
-                        for ysIdx in 0..ys.len() {
-                            ys[ysIdx] = ad::calc(&stimulus, &neuronsLayer0[ysIdx]);
+                        for ysIdx in 0..ys1.len() {
+                            ys1[ysIdx] = ad::calc(&ys0, &neuronsLayer1[ysIdx]);
                         }
 
                         // TODO< wire up output layer >
@@ -140,10 +149,10 @@ pub fn solveProblem(iProblem:i32) {
                         //println!("y[2] = {}", ys[2]);
         
                         let mut maxActIdx=0;
-                        let mut maxActYVal = ys[0].r;
-                        for iYIdx in 0..ys.len() {
-                            if ys[iYIdx].r > maxActYVal {
-                                maxActYVal = ys[iYIdx].r;
+                        let mut maxActYVal = ys1[0].r;
+                        for iYIdx in 0..ys1.len() {
+                            if ys1[iYIdx].r > maxActYVal {
+                                maxActYVal = ys1[iYIdx].r;
                                 maxActIdx = iYIdx;
                             }
                         }
@@ -151,6 +160,8 @@ pub fn solveProblem(iProblem:i32) {
                         if maxActIdx == 0 {} // NOP
                         else if maxActIdx == 1 {cursorX+=1;}
                         else if maxActIdx == 2 {cursorX-=1;}
+                        else if maxActIdx == 3 {cursorY+=1;}
+                        else if maxActIdx == 4 {cursorY-=1;}
                         
                         /* commented because it is old code
         
@@ -197,7 +208,8 @@ pub fn solveProblem(iProblem:i32) {
 
 // run task invention program
 // TODO< can return empty map, we need to check this here inside >
-pub fn invent0(boxX0:&mut i32) -> map2d::Map2d::<f64> {
+// /param problemDifficulty difficulty of the problem itself
+pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
     
     let mut rng = rand::thread_rng();
 
@@ -224,10 +236,15 @@ pub fn invent0(boxX0:&mut i32) -> map2d::Map2d::<f64> {
             h:10,
         };
 
+        let mut boxY0 = 0;
+        if problemDifficulty > 0 {
+            boxY0 = v[1] % (map.h-1); // let y position depend on random var in this more complicated case!
+        }
+
         // interpret genes to draw
-        *boxX0 = v[0] % map.w; // we need to write the value outside
+        *boxX0 = v[0] % (map.w-1); // we need to write the value outside
         //map2d::map2dDrawBox(&mut map, *boxX0 ,v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
-        map2d::map2dDrawBox(&mut map, *boxX0 ,0,v[2],50,1.0);
+        map2d::map2dDrawBox(&mut map, *boxX0 ,boxY0,v[2],50,1.0);
 
 
 
