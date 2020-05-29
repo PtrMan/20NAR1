@@ -16,6 +16,11 @@ pub fn main() {
     expInvent0();
 }
 
+
+// experiment a bit in the direction of PowerPlay
+// scifi: is supposed to invent more and more difficult tasks and adapt previous found solutions
+
+// TODO< make task harder with a 2nd task which is harder >
 pub fn expInvent0() {
     let mut rng = rand::thread_rng();
 
@@ -45,7 +50,7 @@ pub fn expInvent0() {
                 paramsIdx+=1;
                 weights.push(ad::Ad{r:v,d:0.0});
             }
-            let bias = params[paramsIdx] * 11.0; // boost parameter because it is the bias
+            let bias = params[paramsIdx] * 15.0; // boost parameter because it is the bias
             paramsIdx+=1;
             neurons.push(ad::Neuron{
                 weights: weights,
@@ -72,7 +77,7 @@ pub fn expInvent0() {
         
                 for iiy in 0..h {
                     for iix in 0..w {
-                        let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorY-w/2+iix);
+                        let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorX-w/2+iix);
                         stimulus[destIdx].r = v;
                         destIdx+=1;
                     }
@@ -102,7 +107,7 @@ pub fn expInvent0() {
 
                     if maxActIdx == 0 {} // NOP
                     else if maxActIdx == 1 {cursorX+=1;}
-                    else if maxActIdx == 2 {cursorX+=2;}
+                    else if maxActIdx == 2 {cursorX-=1;}
                     
                     /* commented because it is old code
     
@@ -130,7 +135,7 @@ pub fn expInvent0() {
         }
 
         if (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
-            println!("archived goal!");
+            println!("archived goal! steps={}", iNnSearchStep);
             break;
         }
     
@@ -175,7 +180,9 @@ pub fn invent0(boxX0:&mut i32) -> map2d::Map2d::<f64> {
 
         // interpret genes to draw
         *boxX0 = v[0]; // we need to write the value outside
-        map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0);
+        //map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
+        map2d::map2dDrawBox(&mut map, v[0],0,v[2],50,1.0);
+
 
 
         // print to console
