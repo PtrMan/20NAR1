@@ -25,9 +25,9 @@ pub fn expInvent0() {
     //println!("- refine NN till it solves the task"); // TODO?
 
     for iNnSearchStep in 0..50000 {
+        let nNeurons = 3; // number of neurons
 
-
-        let mut params:Vec::<f64> = vec!(0.0;5*5+1);
+        let mut params:Vec::<f64> = vec!(0.0;(5*5+1)*nNeurons);
         // init with random
         for idx in 0..params.len() {
             params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 0.3;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
@@ -37,14 +37,14 @@ pub fn expInvent0() {
     
         let mut neurons:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
     
-        for iNeuronIdx in 0..1 { // loop to transfer to neurons
+        for iNeuronIdx in 0..nNeurons { // loop to transfer to neurons
             let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
             for i in 0..5*5 {
                 let v = params[paramsIdx];
                 paramsIdx+=1;
                 weights.push(ad::Ad{r:v,d:0.0});
             }
-            let bias = params[paramsIdx] * 10.0; // boost parameter because it is the bias
+            let bias = params[paramsIdx] * 7.0; // boost parameter because it is the bias
             paramsIdx+=1;
             neurons.push(ad::Neuron{
                 weights: weights,
@@ -72,14 +72,37 @@ pub fn expInvent0() {
                     destIdx+=1;
                 }
             }
-    
-            let y = ad::calc(&stimulus, &neurons[0]).r;
-            //println!("y = {}", y);
 
-            if y > 0.5 {
-                println!("FOUND NN with right y!");
-                break;
+            {
+                // y vector, which is the result of the NN
+                let mut ys = vec!(0.0; neurons.len());
+                    
+                ys[0] = ad::calc(&stimulus, &neurons[0]).r;
+                ys[1] = ad::calc(&stimulus, &neurons[1]).r;
+
+                println!("y[0] = {}", ys[0]);
+                println!("y[1] = {}", ys[1]);
+
+
+                if ys[0] > 0.5 {
+                    println!("FOUND NN with right y! step={}", iNnSearchStep);
+
+
+                    { // for manual testing if it depends on the input
+                        stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5);
+
+                        ys[0] = ad::calc(&stimulus, &neurons[0]).r;
+                        ys[1] = ad::calc(&stimulus, &neurons[1]).r;
+
+                        println!("y[0] for null = {}", ys[0]);
+                        println!("y[1] for null = {}", ys[1]);
+                    }
+
+
+                    break;
+                }
             }
+            
         }
 
 
