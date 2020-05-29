@@ -13,7 +13,6 @@ use rand::Rng;
 pub fn main() {
     //expGa0();return;
 
-    // TODO< implement peripherial vision too >
     expInvent0();
 }
 
@@ -23,11 +22,13 @@ pub fn main() {
 
 // TODO< make task harder with a 2nd task which is harder >
 //    TODO< we need to modify the network for that with "Evolutionary Strategies!" >
+
+// TODO< implement peripherial vision too >
 pub fn expInvent0() {
     
 
     // we generate problems on the fly, so we need to iterate over them!
-    for iProblem in 0..1 { // iterate over more and more difficult problems
+    for iProblem in 0..2 { // iterate over more and more difficult problems
         solveProblem(iProblem);
     }
 
@@ -158,10 +159,10 @@ pub fn solveProblem(iProblem:i32) {
                         }
 
                         if maxActIdx == 0 {} // NOP
-                        else if maxActIdx == 1 {cursorX+=1;}
-                        else if maxActIdx == 2 {cursorX-=1;}
-                        else if maxActIdx == 3 {cursorY+=1;}
-                        else if maxActIdx == 4 {cursorY-=1;}
+                        else if maxActIdx == 1 {cursorX+=1; cursorX = cursorX % problemMap.w;}
+                        else if maxActIdx == 2 {cursorX-=1; cursorX = (cursorX + problemMap.w) % problemMap.w;}
+                        else if maxActIdx == 3 {cursorY+=1; cursorY = cursorY % problemMap.h;}
+                        else if maxActIdx == 4 {cursorY-=1; cursorY = (cursorY + problemMap.h) % problemMap.h;}
                         
                         /* commented because it is old code
         
