@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 
+mod map2d;
+
 extern crate rand;
 
 //use std::default::Default;
@@ -7,8 +9,57 @@ extern crate rand;
 use rand::Rng;
 //use rand::distributions::{Normal, Distribution};
 
-// run example of GA
 pub fn main() {
+    //expGa0();return;
+
+    expInvent0();
+}
+
+pub fn expInvent0() {
+    let problemMap:map2d::Map2d::<f64> = invent0(); // invent a map of the problem
+
+    println!("TODO - search for NN which solves the task in this environment");
+}
+
+// run task invention program
+// TODO< can return empty map, we need to check this here inside >
+pub fn invent0() -> map2d::Map2d::<f64> {
+    
+    let mut rng = rand::thread_rng();
+
+    let mut v = vec![0; 9];
+    // init with random
+    for idx in 0..v.len() {
+        v[idx] = (rng.gen::<f64>() * 8.0) as i32;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
+    }
+
+    let mut map = map2d::Map2d{
+        arr:vec!(0.0;10*10),
+        w:10,
+        h:10,
+    };
+
+    // interpret genes to draw
+    map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0);
+
+
+    // print to console
+    for iy in 0..map.h {
+        for ix in 0..map.w {
+            if map2d::readAt(&map, iy,ix) > 0.5 {print!("x");}
+            else {print!(".");}
+            print!(" "); // space for better width ratio
+        }
+        println!();
+    }
+
+    map
+}
+
+
+
+// run example of GA
+pub fn expGa0() {
     let mut rng = rand::thread_rng();
 
     // found solution programs
@@ -23,10 +74,10 @@ pub fn main() {
             let mut v = vec![0; 9];
             // init with random
             for idx in 0..v.len() {
-                v[idx] = (rng.gen::<f64>() * 20.0) as i32;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
+                v[idx] = (rng.gen::<f64>() * 11.0) as i32;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
             }
             
-            let mut ctx = Ctx{ip:0,accu:0,accu2:0};
+            let mut ctx = Ctx{ip:0,accu:0,accu2:0,accuf:0.0,accu2f:0.0};
             for iStep in 0..9 {
                 let ip = ctx.ip;
                 let instr = v[ip as usize];
@@ -63,6 +114,8 @@ pub struct Ctx {
     ip:i32,
     accu:i32, // accumulator
     accu2:i32,
+    accuf:f64, // float accumulator
+    accu2f:f64,
 }
 
 // interpret instruction
@@ -70,7 +123,7 @@ pub fn interp(ctx:&mut Ctx, instr:i32) {
     let mut incIp=true;
     
     match instr {
-        // Match a single value
+        // page 0 : basic integer operations
         0 => {}, // nop
         1 => ctx.accu = 0, // reset accu
         2 => ctx.accu = 1, // set accu to one
@@ -85,8 +138,26 @@ pub fn interp(ctx:&mut Ctx, instr:i32) {
         7 => ctx.accu=ctx.accu-ctx.accu2,
         8 => ctx.accu=ctx.accu*ctx.accu2,
         9 => ctx.accu=5,
+
+        // page 1 : basic float operations
+
+        10 => {}, // TODO< use >
+
+        11 => ctx.accuf = 0.0, // reset accu
+        12 => ctx.accuf = 1.0, // set accu to one
+        13 => ctx.accuf+=1.0,
+        14 => ctx.accuf-=1.0,
+        15 => { // xchg
+            let t = ctx.accuf;
+            ctx.accuf=ctx.accu2f;
+            ctx.accu2f=t;
+        },
+        16 => ctx.accuf=ctx.accuf+ctx.accu2f,
+        17 => ctx.accuf=ctx.accuf-ctx.accu2f,
+        18 => ctx.accuf=ctx.accuf*ctx.accu2f,
+        19 => ctx.accuf=5.0,
         
-        20..=40 => {incIp=false; ctx.ip = instr-20}, // jump absolute
+        40..=60 => {incIp=false; ctx.ip = instr-20}, // jump absolute
         // Handle the rest of cases
         _ => {},
     }
