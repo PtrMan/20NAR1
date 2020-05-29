@@ -47,9 +47,10 @@ pub fn solveProblem(iProblem:i32) {
     for iNnSearchStep in 0..5000000 {
 
 
-        let nNeurons = 3; // number of neurons
+        let nNeuronsLayer0 = 5; // number of neurons
+        let nNeuronsLayer1 = 5; // number of neurons
 
-        let mut params:Vec::<f64> = vec!(0.0;(5*5+1)*nNeurons);
+        let mut params:Vec::<f64> = vec!(0.0;(5*5+1)*nNeuronsLayer0 + (nNeuronsLayer0+1)*nNeuronsLayer1);
         // init with random
         for idx in 0..params.len() {
             params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 0.3;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
@@ -57,9 +58,9 @@ pub fn solveProblem(iProblem:i32) {
     
         let mut paramsIdx = 0;
     
-        let mut neurons:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
+        let mut neuronsLayer0:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
     
-        for iNeuronIdx in 0..nNeurons { // loop to transfer to neurons
+        for iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
             let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
             for i in 0..5*5 {
                 let v = params[paramsIdx];
@@ -68,10 +69,28 @@ pub fn solveProblem(iProblem:i32) {
             }
             let bias = params[paramsIdx] * 15.0; // boost parameter because it is the bias
             paramsIdx+=1;
-            neurons.push(ad::Neuron{
+            neuronsLayer0.push(ad::Neuron{
                 weights: weights,
                 bias:ad::Ad{r:bias,d:0.0},
                 act: 0,
+            });
+        }
+
+        let mut neuronsLayer1:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
+    
+        for iNeuronIdx in 0..nNeuronsLayer1 { // loop to transfer to neurons
+            let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
+            for i in 0..nNeuronsLayer0 {
+                let v = params[paramsIdx];
+                paramsIdx+=1;
+                weights.push(ad::Ad{r:v,d:0.0});
+            }
+            let bias = params[paramsIdx] * 15.0; // boost parameter because it is the bias
+            paramsIdx+=1;
+            neuronsLayer1.push(ad::Neuron{
+                weights: weights,
+                bias:ad::Ad{r:bias,d:0.0},
+                act: 1,
             });
         }
 
@@ -107,11 +126,13 @@ pub fn solveProblem(iProblem:i32) {
         
                     {
                         // y vector, which is the result of the NN
-                        let mut ys = vec!(0.0; neurons.len());
-                            
-                        ys[0] = ad::calc(&stimulus, &neurons[0]).r;
-                        ys[1] = ad::calc(&stimulus, &neurons[1]).r;
-                        ys[2] = ad::calc(&stimulus, &neurons[2]).r;
+                        let mut ys = vec!(ad::Ad{r:0.0,d:0.0}; neuronsLayer0.len());
+                        
+                        for ysIdx in 0..ys.len() {
+                            ys[ysIdx] = ad::calc(&stimulus, &neuronsLayer0[ysIdx]);
+                        }
+
+                        // TODO< wire up output layer >
                         
                         //DEBUG - y array to see if NN computes sensible stuff
                         //println!("y[0] = {}", ys[0]);
@@ -119,10 +140,10 @@ pub fn solveProblem(iProblem:i32) {
                         //println!("y[2] = {}", ys[2]);
         
                         let mut maxActIdx=0;
-                        let mut maxActYVal = ys[0];
+                        let mut maxActYVal = ys[0].r;
                         for iYIdx in 0..ys.len() {
-                            if ys[iYIdx] > maxActYVal {
-                                maxActYVal = ys[iYIdx];
+                            if ys[iYIdx].r > maxActYVal {
+                                maxActYVal = ys[iYIdx].r;
                                 maxActIdx = iYIdx;
                             }
                         }
