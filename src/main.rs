@@ -19,12 +19,13 @@ pub fn main() {
 pub fn expInvent0() {
     let mut rng = rand::thread_rng();
 
-    let problemMap:map2d::Map2d::<f64> = invent0(); // invent a map of the problem
+    let mut boxX0 = 0; // position of the drawn box
+    let problemMap:map2d::Map2d::<f64> = invent0(&mut boxX0); // invent a map of the problem
 
     println!("- search for NN which solves the task in this environment");
     //println!("- refine NN till it solves the task"); // TODO?
 
-    for iNnSearchStep in 0..50000 {
+    for iNnSearchStep in 0..5000000 {
         let nNeurons = 3; // number of neurons
 
         let mut params:Vec::<f64> = vec!(0.0;(5*5+1)*nNeurons);
@@ -44,7 +45,7 @@ pub fn expInvent0() {
                 paramsIdx+=1;
                 weights.push(ad::Ad{r:v,d:0.0});
             }
-            let bias = params[paramsIdx] * 7.0; // boost parameter because it is the bias
+            let bias = params[paramsIdx] * 11.0; // boost parameter because it is the bias
             paramsIdx+=1;
             neurons.push(ad::Neuron{
                 weights: weights,
@@ -55,56 +56,84 @@ pub fn expInvent0() {
     
         let mut cursorX = 3;
         let mut cursorY = 3;
-    
-        let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5); // stimulus for NN
-    
-        //println!("- use NN !");
-        {
-            let w = 5;
-            let h = 5;
-    
-            let mut destIdx=0;
-    
-            for iiy in 0..h {
-                for iix in 0..w {
-                    let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorY-w/2+iix);
-                    stimulus[destIdx].r = v;
-                    destIdx+=1;
-                }
-            }
 
+        for timer in 0..50 {
+
+
+
+            let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5); // stimulus for NN
+    
+            //println!("- use NN !");
             {
-                // y vector, which is the result of the NN
-                let mut ys = vec!(0.0; neurons.len());
+                let w = 5;
+                let h = 5;
+        
+                let mut destIdx=0;
+        
+                for iiy in 0..h {
+                    for iix in 0..w {
+                        let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorY-w/2+iix);
+                        stimulus[destIdx].r = v;
+                        destIdx+=1;
+                    }
+                }
+    
+                {
+                    // y vector, which is the result of the NN
+                    let mut ys = vec!(0.0; neurons.len());
+                        
+                    ys[0] = ad::calc(&stimulus, &neurons[0]).r;
+                    ys[1] = ad::calc(&stimulus, &neurons[1]).r;
+                    ys[2] = ad::calc(&stimulus, &neurons[2]).r;
                     
-                ys[0] = ad::calc(&stimulus, &neurons[0]).r;
-                ys[1] = ad::calc(&stimulus, &neurons[1]).r;
-
-                println!("y[0] = {}", ys[0]);
-                println!("y[1] = {}", ys[1]);
-
-
-                if ys[0] > 0.5 {
-                    println!("FOUND NN with right y! step={}", iNnSearchStep);
-
-
-                    { // for manual testing if it depends on the input
-                        stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5);
-
-                        ys[0] = ad::calc(&stimulus, &neurons[0]).r;
-                        ys[1] = ad::calc(&stimulus, &neurons[1]).r;
-
-                        println!("y[0] for null = {}", ys[0]);
-                        println!("y[1] for null = {}", ys[1]);
+                    //DEBUG - y array to see if NN computes sensible stuff
+                    //println!("y[0] = {}", ys[0]);
+                    //println!("y[1] = {}", ys[1]);
+                    //println!("y[2] = {}", ys[2]);
+    
+                    let mut maxActIdx=0;
+                    let mut maxActYVal = ys[0];
+                    for iYIdx in 0..ys.len() {
+                        if ys[iYIdx] > maxActYVal {
+                            maxActYVal = ys[iYIdx];
+                            maxActIdx = iYIdx;
+                        }
                     }
 
-
-                    break;
+                    if maxActIdx == 0 {} // NOP
+                    else if maxActIdx == 1 {cursorX+=1;}
+                    else if maxActIdx == 2 {cursorX+=2;}
+                    
+                    /* commented because it is old code
+    
+                    if ys[0] > 0.5 {
+                        println!("FOUND NN with right y! step={}", iNnSearchStep);
+    
+    
+                        { // for manual testing if it depends on the input
+                            stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5);
+    
+                            ys[0] = ad::calc(&stimulus, &neurons[0]).r;
+                            ys[1] = ad::calc(&stimulus, &neurons[1]).r;
+    
+                            println!("y[0] for null = {}", ys[0]);
+                            println!("y[1] for null = {}", ys[1]);
+                        }
+    
+    
+                        break;
+                    }
+                    */
                 }
+                
             }
-            
         }
 
+        if (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
+            println!("archived goal!");
+            break;
+        }
+    
 
 
     }
@@ -117,7 +146,7 @@ pub fn expInvent0() {
 
 // run task invention program
 // TODO< can return empty map, we need to check this here inside >
-pub fn invent0() -> map2d::Map2d::<f64> {
+pub fn invent0(boxX0:&mut i32) -> map2d::Map2d::<f64> {
     
     let mut rng = rand::thread_rng();
 
@@ -145,6 +174,7 @@ pub fn invent0() -> map2d::Map2d::<f64> {
         };
 
         // interpret genes to draw
+        *boxX0 = v[0]; // we need to write the value outside
         map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0);
 
 
