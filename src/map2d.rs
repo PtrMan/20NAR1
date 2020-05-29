@@ -29,3 +29,14 @@ pub fn map2dDrawBox<T:Copy>(m:&mut Map2d<T>, cx:i32,cy:i32,w:i32,h:i32,v:T) {
         }
     }
 }
+
+// helper to draw a circle
+pub fn map2dDrawCircle<T:Copy>(m:&mut Map2d<T>, cx:i32,cy:i32,r:i32,v:T) {
+    for iy in -(r+1)..r+1 {
+        for ix in -(r+1)..r+1 {
+            if ix*ix+iy*iy <= r {
+                writeAt(m,cy+iy,cx+ix, v);
+            }
+        }
+    }
+}

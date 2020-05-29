@@ -28,7 +28,7 @@ pub fn expInvent0() {
     
 
     // we generate problems on the fly, so we need to iterate over them!
-    for iProblem in 0..2 { // iterate over more and more difficult problems
+    for iProblem in 0..3 { // iterate over more and more difficult problems
         solveProblem(iProblem);
     }
 
@@ -245,7 +245,15 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
         // interpret genes to draw
         *boxX0 = v[0] % (map.w-1); // we need to write the value outside
         //map2d::map2dDrawBox(&mut map, *boxX0 ,v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
-        map2d::map2dDrawBox(&mut map, *boxX0 ,boxY0,v[2],50,1.0);
+        
+        if problemDifficulty >= 2 {
+            map2d::map2dDrawCircle(&mut map, *boxX0 ,boxY0,3,1.0); // draw circle with radius 3
+        }
+        else {
+            // TODO< draw with nonfixed height >
+            map2d::map2dDrawBox(&mut map, *boxX0 ,boxY0,v[2],50,1.0);
+        }
+
 
 
 
