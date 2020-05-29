@@ -22,6 +22,23 @@ pub fn main() {
 
 // TODO< make task harder with a 2nd task which is harder >
 pub fn expInvent0() {
+    
+
+    // we generate problems on the fly, so we need to iterate over them!
+    for iProblem in 0..1 { // iterate over more and more difficult problems
+        solveProblem(iProblem);
+    }
+
+
+
+
+
+}
+
+// inner loop which does the problem solving.
+// the source of the problem is a problem generator, which generates more and more difficult problems
+// /param iProblem number of the problem, starting from zero
+pub fn solveProblem(iProblem:i32) {
     let mut rng = rand::thread_rng();
 
     println!("- search for NN which solves the task in this environment");
@@ -140,11 +157,11 @@ pub fn expInvent0() {
             }
 
             if iEnvStimulusVersion > 15 && (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
-                println!("archived FINAL goal! steps={}", iNnSearchStep);
+                println!("problem#{} steps={}  archived  F I N A L  goal!", iProblem, iNnSearchStep);
                 return;
             }
             if (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
-                println!("archived goal (in version {})! steps={}", iEnvStimulusVersion, iNnSearchStep);
+                println!("problem#{} steps={}  archived goal (in version {})!", iProblem, iNnSearchStep, iEnvStimulusVersion);
                 continue;
             }
             break; // give this up because it failed in a version of the environment
@@ -153,11 +170,9 @@ pub fn expInvent0() {
 
     }
 
-
-
-
-
 }
+
+
 
 // run task invention program
 // TODO< can return empty map, we need to check this here inside >
