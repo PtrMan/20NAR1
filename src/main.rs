@@ -24,13 +24,12 @@ pub fn main() {
 pub fn expInvent0() {
     let mut rng = rand::thread_rng();
 
-    let mut boxX0 = 0; // position of the drawn box
-    let problemMap:map2d::Map2d::<f64> = invent0(&mut boxX0); // invent a map of the problem
-
     println!("- search for NN which solves the task in this environment");
     //println!("- refine NN till it solves the task"); // TODO?
 
     for iNnSearchStep in 0..5000000 {
+
+
         let nNeurons = 3; // number of neurons
 
         let mut params:Vec::<f64> = vec!(0.0;(5*5+1)*nNeurons);
@@ -58,87 +57,98 @@ pub fn expInvent0() {
                 act: 0,
             });
         }
-    
-        let mut cursorX = 3;
-        let mut cursorY = 3;
-
-        for timer in 0..50 {
 
 
+        for iEnvStimulusVersion in 0..20 { // iterate over environment variants
+            let mut boxX0 = 0; // position of the drawn box
+            let mut problemMap:map2d::Map2d::<f64> = invent0(&mut boxX0); // invent a map of the problem
 
-            let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5); // stimulus for NN
-    
-            //println!("- use NN !");
-            {
-                let w = 5;
-                let h = 5;
         
-                let mut destIdx=0;
+            let mut cursorX = 3;
+            let mut cursorY = 3;
+
+            for timer in 0..50 {
+
+
+
+                let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5); // stimulus for NN
         
-                for iiy in 0..h {
-                    for iix in 0..w {
-                        let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorX-w/2+iix);
-                        stimulus[destIdx].r = v;
-                        destIdx+=1;
-                    }
-                }
-    
+                //println!("- use NN !");
                 {
-                    // y vector, which is the result of the NN
-                    let mut ys = vec!(0.0; neurons.len());
+                    let w = 5;
+                    let h = 5;
+            
+                    let mut destIdx=0;
+            
+                    for iiy in 0..h {
+                        for iix in 0..w {
+                            let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorX-w/2+iix);
+                            stimulus[destIdx].r = v;
+                            destIdx+=1;
+                        }
+                    }
+        
+                    {
+                        // y vector, which is the result of the NN
+                        let mut ys = vec!(0.0; neurons.len());
+                            
+                        ys[0] = ad::calc(&stimulus, &neurons[0]).r;
+                        ys[1] = ad::calc(&stimulus, &neurons[1]).r;
+                        ys[2] = ad::calc(&stimulus, &neurons[2]).r;
                         
-                    ys[0] = ad::calc(&stimulus, &neurons[0]).r;
-                    ys[1] = ad::calc(&stimulus, &neurons[1]).r;
-                    ys[2] = ad::calc(&stimulus, &neurons[2]).r;
-                    
-                    //DEBUG - y array to see if NN computes sensible stuff
-                    //println!("y[0] = {}", ys[0]);
-                    //println!("y[1] = {}", ys[1]);
-                    //println!("y[2] = {}", ys[2]);
-    
-                    let mut maxActIdx=0;
-                    let mut maxActYVal = ys[0];
-                    for iYIdx in 0..ys.len() {
-                        if ys[iYIdx] > maxActYVal {
-                            maxActYVal = ys[iYIdx];
-                            maxActIdx = iYIdx;
+                        //DEBUG - y array to see if NN computes sensible stuff
+                        //println!("y[0] = {}", ys[0]);
+                        //println!("y[1] = {}", ys[1]);
+                        //println!("y[2] = {}", ys[2]);
+        
+                        let mut maxActIdx=0;
+                        let mut maxActYVal = ys[0];
+                        for iYIdx in 0..ys.len() {
+                            if ys[iYIdx] > maxActYVal {
+                                maxActYVal = ys[iYIdx];
+                                maxActIdx = iYIdx;
+                            }
                         }
-                    }
 
-                    if maxActIdx == 0 {} // NOP
-                    else if maxActIdx == 1 {cursorX+=1;}
-                    else if maxActIdx == 2 {cursorX-=1;}
-                    
-                    /* commented because it is old code
-    
-                    if ys[0] > 0.5 {
-                        println!("FOUND NN with right y! step={}", iNnSearchStep);
-    
-    
-                        { // for manual testing if it depends on the input
-                            stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5);
-    
-                            ys[0] = ad::calc(&stimulus, &neurons[0]).r;
-                            ys[1] = ad::calc(&stimulus, &neurons[1]).r;
-    
-                            println!("y[0] for null = {}", ys[0]);
-                            println!("y[1] for null = {}", ys[1]);
+                        if maxActIdx == 0 {} // NOP
+                        else if maxActIdx == 1 {cursorX+=1;}
+                        else if maxActIdx == 2 {cursorX-=1;}
+                        
+                        /* commented because it is old code
+        
+                        if ys[0] > 0.5 {
+                            println!("FOUND NN with right y! step={}", iNnSearchStep);
+        
+        
+                            { // for manual testing if it depends on the input
+                                stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5);
+        
+                                ys[0] = ad::calc(&stimulus, &neurons[0]).r;
+                                ys[1] = ad::calc(&stimulus, &neurons[1]).r;
+        
+                                println!("y[0] for null = {}", ys[0]);
+                                println!("y[1] for null = {}", ys[1]);
+                            }
+        
+        
+                            break;
                         }
-    
-    
-                        break;
+                        */
                     }
-                    */
+                    
                 }
-                
             }
-        }
 
-        if (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
-            println!("archived goal! steps={}", iNnSearchStep);
-            break;
+            if iEnvStimulusVersion > 15 && (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
+                println!("archived FINAL goal! steps={}", iNnSearchStep);
+                return;
+            }
+            if (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
+                println!("archived goal (in version {})! steps={}", iEnvStimulusVersion, iNnSearchStep);
+                continue;
+            }
+            break; // give this up because it failed in a version of the environment
         }
-    
 
 
     }
@@ -179,21 +189,24 @@ pub fn invent0(boxX0:&mut i32) -> map2d::Map2d::<f64> {
         };
 
         // interpret genes to draw
-        *boxX0 = v[0]; // we need to write the value outside
-        //map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
-        map2d::map2dDrawBox(&mut map, v[0],0,v[2],50,1.0);
+        *boxX0 = v[0] % map.w; // we need to write the value outside
+        //map2d::map2dDrawBox(&mut map, *boxX0 ,v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
+        map2d::map2dDrawBox(&mut map, *boxX0 ,0,v[2],50,1.0);
 
 
 
-        // print to console
-        for iy in 0..map.h {
-            for ix in 0..map.w {
-                if map2d::readAt(&map, iy,ix) > 0.5 {print!("x");}
-                else {print!(".");}
-                print!(" "); // space for better width ratio
+        // DEBUG print to console
+        if false {
+            for iy in 0..map.h {
+                for ix in 0..map.w {
+                    if map2d::readAt(&map, iy,ix) > 0.5 {print!("x");}
+                    else {print!(".");}
+                    print!(" "); // space for better width ratio
+                }
+                println!();
             }
-            println!();
         }
+
 
         // count how many pixels are enabled
         let mut cnt=0;
