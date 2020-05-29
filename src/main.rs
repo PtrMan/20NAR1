@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 mod map2d;
+mod ad;
 
 extern crate rand;
 
@@ -16,9 +17,79 @@ pub fn main() {
 }
 
 pub fn expInvent0() {
+    let mut rng = rand::thread_rng();
+
     let problemMap:map2d::Map2d::<f64> = invent0(); // invent a map of the problem
 
-    println!("TODO - search for NN which solves the task in this environment");
+    println!("- search for NN which solves the task in this environment");
+    //println!("- refine NN till it solves the task"); // TODO?
+
+    for iNnSearchStep in 0..50000 {
+
+
+        let mut params:Vec::<f64> = vec!(0.0;5*5+1);
+        // init with random
+        for idx in 0..params.len() {
+            params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 0.3;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
+        }
+    
+        let mut paramsIdx = 0;
+    
+        let mut neurons:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
+    
+        for iNeuronIdx in 0..1 { // loop to transfer to neurons
+            let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
+            for i in 0..5*5 {
+                let v = params[paramsIdx];
+                paramsIdx+=1;
+                weights.push(ad::Ad{r:v,d:0.0});
+            }
+            let bias = params[paramsIdx] * 10.0; // boost parameter because it is the bias
+            paramsIdx+=1;
+            neurons.push(ad::Neuron{
+                weights: weights,
+                bias:ad::Ad{r:bias,d:0.0},
+                act: 0,
+            });
+        }
+    
+        let mut cursorX = 3;
+        let mut cursorY = 3;
+    
+        let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5); // stimulus for NN
+    
+        //println!("- use NN !");
+        {
+            let w = 5;
+            let h = 5;
+    
+            let mut destIdx=0;
+    
+            for iiy in 0..h {
+                for iix in 0..w {
+                    let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorY-w/2+iix);
+                    stimulus[destIdx].r = v;
+                    destIdx+=1;
+                }
+            }
+    
+            let y = ad::calc(&stimulus, &neurons[0]).r;
+            //println!("y = {}", y);
+
+            if y > 0.5 {
+                println!("FOUND NN with right y!");
+                break;
+            }
+        }
+
+
+
+    }
+
+
+
+
+
 }
 
 // run task invention program
@@ -27,11 +98,6 @@ pub fn invent0() -> map2d::Map2d::<f64> {
     
     let mut rng = rand::thread_rng();
 
-    let mut v = vec![0; 9];
-    // init with random
-    for idx in 0..v.len() {
-        v[idx] = (rng.gen::<f64>() * 8.0) as i32;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
-    }
 
     let mut map = map2d::Map2d{
         arr:vec!(0.0;10*10),
@@ -39,21 +105,53 @@ pub fn invent0() -> map2d::Map2d::<f64> {
         h:10,
     };
 
-    // interpret genes to draw
-    map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0);
+    for tryIt in 0..500 { // try as long as no fitting environment was found
 
 
-    // print to console
-    for iy in 0..map.h {
-        for ix in 0..map.w {
-            if map2d::readAt(&map, iy,ix) > 0.5 {print!("x");}
-            else {print!(".");}
-            print!(" "); // space for better width ratio
+
+        let mut v = vec![0; 9];
+        // init with random
+        for idx in 0..v.len() {
+            v[idx] = (rng.gen::<f64>() * 8.0) as i32;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
         }
-        println!();
+
+        map = map2d::Map2d{
+            arr:vec!(0.0;10*10),
+            w:10,
+            h:10,
+        };
+
+        // interpret genes to draw
+        map2d::map2dDrawBox(&mut map, v[0],v[1],v[2],v[3],1.0);
+
+
+        // print to console
+        for iy in 0..map.h {
+            for ix in 0..map.w {
+                if map2d::readAt(&map, iy,ix) > 0.5 {print!("x");}
+                else {print!(".");}
+                print!(" "); // space for better width ratio
+            }
+            println!();
+        }
+
+        // count how many pixels are enabled
+        let mut cnt=0;
+        for iy in 0..map.h {
+            for ix in 0..map.w {
+                if map2d::readAt(&map, iy,ix) > 0.5 {
+                    cnt+=1;
+                }
+            }
+        }
+
+        if cnt > 1 { // did we draw one pixel?
+            return map;
+        }
     }
 
-    map
+
+    return map; // give up
 }
 
 

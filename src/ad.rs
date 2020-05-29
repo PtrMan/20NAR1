@@ -2,8 +2,8 @@
 // automatic differentiation
 #[derive(Debug, Clone)]
 pub struct Ad {
-    r: f64,
-    d: f64,
+    pub r: f64,
+    pub d: f64,
 }
 
 pub fn add(a: &Ad,b: &Ad) -> Ad {
@@ -53,9 +53,9 @@ pub fn sigmoidAct(v:&Ad) -> Ad {
 
 #[derive(Debug, Clone)]
 pub struct Neuron {
-    weights: Vec<Ad>,
-    bias:Ad,
-    act: u32,
+    pub weights: Vec<Ad>,
+    pub bias:Ad,
+    pub act: u32,
 }
 
 // calc activation of neuron
