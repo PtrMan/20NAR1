@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(dead_code)]
 
 mod map2d;
 mod ad;
@@ -28,26 +29,54 @@ pub fn expInvent0() {
     
 
     // we generate problems on the fly, so we need to iterate over them!
-    for iProblem in 0..3 { // iterate over more and more difficult problems
+    for iProblem in 0..2 { // iterate over more and more difficult problems
         solveProblem(iProblem);
     }
 
 
-
+    println!("DONE - reason: no unsolved problems");
 
 
 }
 
 // inner loop which does the problem solving.
 // the source of the problem is a problem generator, which generates more and more difficult problems
-// /param iProblem number of the problem, starting from zero
-pub fn solveProblem(iProblem:i32) {
+// /param problemNr number of the problem, starting from zero
+pub fn solveProblem(problemNr:i32) {
     let mut rng = rand::thread_rng();
 
     println!("- search for NN which solves the task in this environment");
     //println!("- refine NN till it solves the task"); // TODO?
 
-    for iNnSearchStep in 0..5000000 {
+    let mut iNnSearchStep:i64 = -1;
+
+
+
+    let mut currentProblems:Vec<CursorProblem> = Vec::<CursorProblem>::new(); // problem instances which it needs to all solve with one single modified agent
+    { // create problems
+        for _iVersion in 0..12 { // iterate over version of the same problem
+            let mut boxX0 = 0; // position of the drawn box
+            let problemDifficulty:i32 = problemNr; // the problem difficulty
+            let problemMap:map2d::Map2d::<f64> = invent0(problemDifficulty, &mut boxX0); // invent a map of the problem
+
+            currentProblems.push(CursorProblem {
+                boxX0:boxX0,
+                problemMap:problemMap,
+            });
+        }
+    }
+
+
+    loop {
+        iNnSearchStep+=1;
+        if iNnSearchStep >= 5000000 {
+            println!("FAILED SEARCH: give up! reason: search took to many iterations!");
+            break;
+        }
+
+
+
+
 
 
         let nNeuronsLayer0 = 5; // number of neurons
@@ -60,151 +89,148 @@ pub fn solveProblem(iProblem:i32) {
         }
     
         let mut paramsIdx = 0;
+
+        let mut network:Network = Network { // network of the solver
+            neuronsLayer0:Vec::<ad::Neuron>::new(),
+            neuronsLayer1:Vec::<ad::Neuron>::new(),
+        };
     
-        let mut neuronsLayer0:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
-    
-        for iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
+        for _iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
             let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-            for i in 0..5*5 {
+            for _i in 0..5*5 {
                 let v = params[paramsIdx];
                 paramsIdx+=1;
                 weights.push(ad::Ad{r:v,d:0.0});
             }
             let bias = params[paramsIdx] * 15.0; // boost parameter because it is the bias
             paramsIdx+=1;
-            neuronsLayer0.push(ad::Neuron{
+            network.neuronsLayer0.push(ad::Neuron{
                 weights: weights,
                 bias:ad::Ad{r:bias,d:0.0},
                 act: 0,
             });
         }
 
-        let mut neuronsLayer1:Vec::<ad::Neuron> = Vec::<ad::Neuron>::new();
-    
-        for iNeuronIdx in 0..nNeuronsLayer1 { // loop to transfer to neurons
+        for _iNeuronIdx in 0..nNeuronsLayer1 { // loop to transfer to neurons
             let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-            for i in 0..nNeuronsLayer0 {
+            for _i in 0..nNeuronsLayer0 {
                 let v = params[paramsIdx];
                 paramsIdx+=1;
                 weights.push(ad::Ad{r:v,d:0.0});
             }
             let bias = params[paramsIdx] * 8.0; // boost parameter because it is the bias
             paramsIdx+=1;
-            neuronsLayer1.push(ad::Neuron{
+            network.neuronsLayer1.push(ad::Neuron{
                 weights: weights,
                 bias:ad::Ad{r:bias,d:0.0},
                 act: 1,
             });
         }
 
-
-        for iEnvStimulusVersion in 0..20 { // iterate over environment variants
-            let mut boxX0 = 0; // position of the drawn box
-            let problemDifficulty:i32 = iProblem; // the problem difficulty depends on the problem number for now!
-            let mut problemMap:map2d::Map2d::<f64> = invent0(problemDifficulty, &mut boxX0); // invent a map of the problem
-
-        
-            let mut cursorX = 3;
-            let mut cursorY = 3;
-
-            for timer in 0..50 {
+        for iEnvStimulusVersion in 0..currentProblems.len() {
+            let iProblem = &currentProblems[iEnvStimulusVersion];
 
 
+            let mut solverState:SolverState = SolverState {
+                cursorX : 3,
+                cursorY : 3,
+            };
 
-                let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5); // stimulus for NN
-        
-                //println!("- use NN !");
-                {
-                    let w = 5;
-                    let h = 5;
-            
-                    let mut destIdx=0;
-            
-                    for iiy in 0..h {
-                        for iix in 0..w {
-                            let v = map2d::readAt(&problemMap, cursorY-h/2+iiy,cursorX-w/2+iix);
-                            stimulus[destIdx].r = v;
-                            destIdx+=1;
-                        }
-                    }
-        
-                    {
-                        // y vector, which is the result of the NN for layer[0]
-                        let mut ys0 = vec!(ad::Ad{r:0.0,d:0.0}; neuronsLayer0.len());
-                        for ysIdx in 0..ys0.len() {
-                            ys0[ysIdx] = ad::calc(&stimulus, &neuronsLayer0[ysIdx]);
-                        }
-
-                        // layer[1]
-                        let mut ys1 = vec!(ad::Ad{r:0.0,d:0.0}; neuronsLayer1.len());
-                        
-                        for ysIdx in 0..ys1.len() {
-                            ys1[ysIdx] = ad::calc(&ys0, &neuronsLayer1[ysIdx]);
-                        }
-
-                        // TODO< wire up output layer >
-                        
-                        //DEBUG - y array to see if NN computes sensible stuff
-                        //println!("y[0] = {}", ys[0]);
-                        //println!("y[1] = {}", ys[1]);
-                        //println!("y[2] = {}", ys[2]);
-        
-                        let mut maxActIdx=0;
-                        let mut maxActYVal = ys1[0].r;
-                        for iYIdx in 0..ys1.len() {
-                            if ys1[iYIdx].r > maxActYVal {
-                                maxActYVal = ys1[iYIdx].r;
-                                maxActIdx = iYIdx;
-                            }
-                        }
-
-                        if maxActIdx == 0 {} // NOP
-                        else if maxActIdx == 1 {cursorX+=1; cursorX = cursorX % problemMap.w;}
-                        else if maxActIdx == 2 {cursorX-=1; cursorX = (cursorX + problemMap.w) % problemMap.w;}
-                        else if maxActIdx == 3 {cursorY+=1; cursorY = cursorY % problemMap.h;}
-                        else if maxActIdx == 4 {cursorY-=1; cursorY = (cursorY + problemMap.h) % problemMap.h;}
-                        
-                        /* commented because it is old code
-        
-                        if ys[0] > 0.5 {
-                            println!("FOUND NN with right y! step={}", iNnSearchStep);
-        
-        
-                            { // for manual testing if it depends on the input
-                                stimulus = vec!(ad::Ad{r:0.0,d:0.0};5*5);
-        
-                                ys[0] = ad::calc(&stimulus, &neurons[0]).r;
-                                ys[1] = ad::calc(&stimulus, &neurons[1]).r;
-        
-                                println!("y[0] for null = {}", ys[0]);
-                                println!("y[1] for null = {}", ys[1]);
-                            }
-        
-        
-                            break;
-                        }
-                        */
-                    }
-                    
-                }
+            let isSolved = iProblem.checkSolved(&network, &mut solverState);
+            if !isSolved {
+                break; // we don't need to continue if unsolved
             }
-
-            if iEnvStimulusVersion > 15 && (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
-                println!("problem#{} steps={}  archived  F I N A L  goal!", iProblem, iNnSearchStep);
+            if isSolved && iEnvStimulusVersion == currentProblems.len() - 1 { // were all problems solved?
+                println!("problem#{} steps={} v#{}  archived  F I N A L  goal!", problemNr, iNnSearchStep, iEnvStimulusVersion);
                 return;
             }
-            if (cursorX - boxX0).abs() <= 1 { // did we move with the cursor to the edge of the shape?
-                println!("problem#{} steps={}  archived goal (in version {})!", iProblem, iNnSearchStep, iEnvStimulusVersion);
-                continue;
-            }
-            break; // give this up because it failed in a version of the environment
+            println!("problem#{} steps={} v#{}  archived goal!", problemNr, iNnSearchStep, iEnvStimulusVersion);
         }
-
-
     }
-
 }
 
+
+
+// structure for a problem where the solver has to find a program to position a cursor to the right spot
+pub struct CursorProblem {
+    pub boxX0: i32, // target position
+
+    pub problemMap:map2d::Map2d::<f64>, // map with the evironment of the problem
+}
+
+impl ProblemInstance for CursorProblem {
+    fn checkSolved(&self, solverNetwork:&Network, solverState:&mut SolverState) -> bool {
+        
+        for _timer in 0..50 {
+
+
+            let w:i32 = 5;
+            let h:i32 = 5;
+            let mut stimulus = vec!(ad::Ad{r:0.0,d:0.0};(w*h) as usize); // stimulus for NN
+    
+            //println!("- use NN !");
+            {
+                
+        
+                let mut destIdx=0;
+        
+                for iiy in 0..h {
+                    for iix in 0..w {
+                        let v = map2d::readAt(&self.problemMap, solverState.cursorY-h/2+iiy,solverState.cursorX-w/2+iix);
+                        stimulus[destIdx].r = v;
+                        destIdx+=1;
+                    }
+                }
+    
+                {
+                    // y vector, which is the result of the NN for layer[0]
+                    let mut ys0 = vec!(ad::Ad{r:0.0,d:0.0}; solverNetwork.neuronsLayer0.len());
+                    for ysIdx in 0..ys0.len() {
+                        ys0[ysIdx] = ad::calc(&stimulus, &solverNetwork.neuronsLayer0[ysIdx]);
+                    }
+
+                    // layer[1]
+                    let mut ys1 = vec!(ad::Ad{r:0.0,d:0.0}; solverNetwork.neuronsLayer1.len());
+                    
+                    for ysIdx in 0..ys1.len() {
+                        ys1[ysIdx] = ad::calc(&ys0, &solverNetwork.neuronsLayer1[ysIdx]);
+                    }
+
+                    // TODO< wire up output layer >
+                    
+                    //DEBUG - y array to see if NN computes sensible stuff
+                    //println!("y[0] = {}", ys[0]);
+                    //println!("y[1] = {}", ys[1]);
+                    //println!("y[2] = {}", ys[2]);
+    
+                    let mut maxActIdx=0;
+                    let mut maxActYVal = ys1[0].r;
+                    for iYIdx in 0..ys1.len() {
+                        if ys1[iYIdx].r > maxActYVal {
+                            maxActYVal = ys1[iYIdx].r;
+                            maxActIdx = iYIdx;
+                        }
+                    }
+
+                    if maxActIdx == 0 {} // NOP
+                    else if maxActIdx == 1 {solverState.cursorX+=1; solverState.cursorX = solverState.cursorX % self.problemMap.w;}
+                    else if maxActIdx == 2 {solverState.cursorX-=1; solverState.cursorX = (solverState.cursorX + self.problemMap.w) % self.problemMap.w;}
+                    else if maxActIdx == 3 {solverState.cursorY+=1; solverState.cursorY = solverState.cursorY % self.problemMap.h;}
+                    else if maxActIdx == 4 {solverState.cursorY-=1; solverState.cursorY = (solverState.cursorY + self.problemMap.h) % self.problemMap.h;}
+                }
+                
+            }
+        }
+
+        
+        
+        if (solverState.cursorX - self.boxX0).abs() <= 1 {
+            return true;
+        }
+
+        return false;
+    }
+}
 
 
 // run task invention program
@@ -221,7 +247,7 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
         h:10,
     };
 
-    for tryIt in 0..500 { // try as long as no fitting environment was found
+    for _tryIt in 0..500 { // try as long as no fitting environment was found
 
 
 
@@ -290,6 +316,33 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
 }
 
 
+// network used to solve a problem
+pub struct Network {
+    pub neuronsLayer0:Vec::<ad::Neuron>,
+    pub neuronsLayer1:Vec::<ad::Neuron>,
+}
+
+// state of the solver
+pub struct SolverState {
+    pub cursorX:i32, // x position of cursor
+    pub cursorY:i32, // y position of cursor
+}
+
+// a problem instance to be solved with the solver
+pub trait ProblemInstance {
+    // does the proposed solution solve the problem?
+    // /param solverNetwork neural-network of the tested solver
+    fn checkSolved(&self, solverNetwork:&Network, solverState:&mut SolverState) -> bool;
+}
+
+
+
+
+
+
+
+
+
 
 // run example of GA
 pub fn expGa0() {
@@ -300,7 +353,7 @@ pub fn expGa0() {
     
     for iTask in 0..50 { // iterate over tasks
             
-        for iRun in 0..50000 {
+        for _iRun in 0..50000 {
             //(rng.gen::<f64>() * 2.0 - 1.0) * 0.5;
             
         
@@ -311,7 +364,7 @@ pub fn expGa0() {
             }
             
             let mut ctx = Ctx{ip:0,accu:0,accu2:0,accuf:0.0,accu2f:0.0};
-            for iStep in 0..9 {
+            for _iStep in 0..9 {
                 let ip = ctx.ip;
                 let instr = v[ip as usize];
                 //println!("ip {}  instr {}", ip, instr);
