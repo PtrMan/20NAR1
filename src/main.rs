@@ -3,13 +3,14 @@
 
 mod map2d;
 mod ad;
+mod mlutils;
 
 extern crate rand;
 
 //use std::default::Default;
 
 use rand::Rng;
-//use rand::distributions::{Normal, Distribution};
+use rand::distributions::{Normal, Distribution};
 
 pub fn main() {
     //expGa0();return;
@@ -27,10 +28,11 @@ pub fn main() {
 // TODO< implement peripherial vision too >
 pub fn expInvent0() {
     let mut solvedProblems:Vec<Box<dyn ProblemInstance>> = vec![];
+    let mut lastParameters:Option<Vec::<f64>> = None; // parameters of agent, is none if we don't yet have best parameters
 
     // we generate problems on the fly, so we need to iterate over them!
     for iProblem in 0..5 { // iterate over more and more difficult problems
-        solveProblem(iProblem, &mut solvedProblems);
+        solveProblem(iProblem, &mut lastParameters, &mut solvedProblems);
     }
 
 
@@ -42,7 +44,7 @@ pub fn expInvent0() {
 // inner loop which does the problem solving.
 // the source of the problem is a problem generator, which generates more and more difficult problems
 // /param problemNr number of the problem, starting from zero
-pub fn solveProblem(problemNr:i64, solvedProblems:&mut Vec<Box<dyn ProblemInstance>>) {
+pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solvedProblems:&mut Vec<Box<dyn ProblemInstance>>) {
     let mut rng = rand::thread_rng();
 
     println!("- search for NN which solves the task in this environment");
@@ -85,11 +87,29 @@ pub fn solveProblem(problemNr:i64, solvedProblems:&mut Vec<Box<dyn ProblemInstan
         let nNeuronsLayer0 = 5; // number of neurons
         let nNeuronsLayer1 = 5; // number of neurons
 
-        let mut params:Vec::<f64> = vec!(0.0;(5*5+1)*nNeuronsLayer0 + (nNeuronsLayer0+1)*nNeuronsLayer1);
-        // init with random
-        for idx in 0..params.len() {
-            params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 0.3;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
-        }
+        let mut params:Vec::<f64> = match lastParameters {
+            // agent is already parameterized by last winner
+            Some(params) => {
+                // mutation of EA candidate
+                let normal = Normal::new(0.0, 0.02); // standard deviation 0.02
+                let mut param2 = params.clone();
+                for idx in 0..param2.len() {
+                    param2[idx] += normal.sample(&mut rng);
+                }
+
+                param2
+            },
+            // agent isn't parameterized yet, we need to fall back to "random weight guessing" algorithm
+            None    => {
+                let mut params = vec!(0.0;(5*5+1)*nNeuronsLayer0 + (nNeuronsLayer0+1)*nNeuronsLayer1);
+                // init with random
+                for idx in 0..params.len() {
+                    params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 0.3;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
+                }
+                params
+            }
+        };
+        
     
         let mut paramsIdx = 0;
 
