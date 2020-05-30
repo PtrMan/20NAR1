@@ -1,21 +1,29 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-mod map2d;
-mod ad;
-mod mlutils;
-
 extern crate rand;
+
+use std::rc::Rc;
 
 //use std::default::Default;
 use std::process::exit;
 use rand::Rng;
 use rand::distributions::{Normal, Distribution};
 
+mod map2d;
+mod ad;
+mod mlutils;
+
+mod narPerception;
+
+
 pub fn main() {
     //expGa0();return;
 
-    expInvent0();
+    // POWERPLAY like algorithm to solve simple problem(s)
+    //expInvent0();
+
+    protoNarEntry0();
 }
 
 
@@ -401,3 +409,44 @@ pub trait ProblemInstance {
 
 
 
+// prototype of NAR components
+pub fn protoNarEntry0() {
+    let mut rng = rand::thread_rng();
+
+    let mut eventsInFifo = vec![];
+    let mut fifoSize = 20; // size of fifo
+
+    // add dummy events for testing the fifo algorithm
+
+    
+    for iTime in 0..50 {
+        eventsInFifo.push(narPerception::SentenceDummy {
+            isOp:rng.gen::<f64>() < 0.2, // decide if it is a op by random
+            term:Rc::new(narPerception::Term::Cop(narPerception::Copula::INH, Rc::new(narPerception::Term::Name(format!("e{}", iTime))), Rc::new(narPerception::Term::Name(format!("e{}", iTime))))),
+            t:iTime,
+        });
+    }
+
+    eventsInFifo = (&eventsInFifo[(eventsInFifo.len()-fifoSize).max(0)..]).to_vec(); // slice so only that last n events are inside
+
+
+    // test sampling
+    for _iSample in 0..100 {
+        // * sample events
+        let sampledEvents = narPerception::perceiveImpl(&eventsInFifo, &mut rng);
+
+        //println!("OUT");
+        //for iSentence in &sampledEvents {
+        //    println!("{}", iSentence.term);
+        //}
+
+        // build impl seq
+        if sampledEvents.len() == 3 {
+            let _0 = &*sampledEvents[0].term;
+            let _1 = &*sampledEvents[1].term;
+            let _2 = &*sampledEvents[2].term;
+
+            println!("<({} &/ {}) =/> {}>.", narPerception::convTermToStr(&_0), narPerception::convTermToStr(&_1), narPerception::convTermToStr(&_2));
+        }
+    }
+}
