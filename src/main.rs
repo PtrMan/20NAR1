@@ -294,7 +294,9 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
 
 
         // DEBUG print to console
-        if problemDifficulty > 0 {
+        let debugProblemImage = true; // do we want to debug the image of the problem?
+        if debugProblemImage {
+            println!("image of problem:");
             for iy in 0..map.h {
                 for ix in 0..map.w {
                     if map2d::readAt(&map, iy,ix) > 0.5 {print!("x");}
