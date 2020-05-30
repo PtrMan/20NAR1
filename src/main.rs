@@ -8,7 +8,7 @@ mod mlutils;
 extern crate rand;
 
 //use std::default::Default;
-
+use std::process::exit;
 use rand::Rng;
 use rand::distributions::{Normal, Distribution};
 
@@ -91,7 +91,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
             // agent is already parameterized by last winner
             Some(params) => {
                 // mutation of EA candidate
-                let normal = Normal::new(0.0, 0.02); // standard deviation 0.02
+                let normal = Normal::new(0.0, 0.02 * (1.0 + 0.00001*(iNnSearchStep as f64))); // standard deviation 0.02, add more randomness with longer searches!
                 let mut param2 = params.clone();
                 for idx in 0..param2.len() {
                     param2[idx] += normal.sample(&mut rng);
@@ -104,7 +104,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
                 let mut params = vec!(0.0;(5*5+1)*nNeuronsLayer0 + (nNeuronsLayer0+1)*nNeuronsLayer1);
                 // init with random
                 for idx in 0..params.len() {
-                    params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 0.3;//((6059512.42149 * ((((idx + 5994) as f64) + 63.563)).powf(2.0)) % 50.0) as i32;
+                    params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 1.0;// * 0.3
                 }
                 params
             }
@@ -177,7 +177,10 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
                 
                 return;
             }
-            println!("problem#{} steps={} v#{}  archived goal!", problemNr, iNnSearchStep, iEnvStimulusVersion);
+
+            if iEnvStimulusVersion > 4 { // don't spam output
+                println!("problem#{} steps={} v#{}  archived goal!", problemNr, iNnSearchStep, iEnvStimulusVersion);
+            }
         }
     }
 }
@@ -317,12 +320,11 @@ pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::
         *boxX0 = v[0] % (map.w-1-4); // we need to write the value outside
         //map2d::map2dDrawBox(&mut map, *boxX0 ,v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
         
-        if problemDifficulty >= 2 {
+        if problemDifficulty >= 3 {
+            map2d::drawLine(&mut map, *boxX0 - 1, *boxY0 - 1, *boxX0 + 1, *boxY0 + 1, 1.0);
+        }
+        else if problemDifficulty >= 2 {
             let mut r=3;
-            if problemDifficulty >= 3 {
-                r = 4;
-            }
-
             map2d::map2dDrawCircle(&mut map, *boxX0 ,*boxY0,r,1.0); // draw circle with radius 3
         }
         else {
@@ -348,7 +350,6 @@ pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::
             println!("---");
         }
 
-
         // count how many pixels are enabled
         let mut cnt=0;
         for iy in 0..map.h {
@@ -359,7 +360,7 @@ pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::
             }
         }
 
-        if cnt > 3 { // did we draw one pixel?
+        if cnt > 2 { // did we draw one pixel?
             return map;
         }
     }

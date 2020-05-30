@@ -40,3 +40,49 @@ pub fn map2dDrawCircle<T:Copy>(m:&mut Map2d<T>, cx:i32,cy:i32,r:i32,v:T) {
         }
     }
 }
+
+pub fn drawLine<T:Copy>(m:&mut Map2d<T>, ax:i32,ay:i32,bx:i32,by:i32,v:T) {
+    let fax = ax as f64;
+    let fay = ay as f64;
+    let fbx = bx as f64;
+    let fby = by as f64;
+    let fdiffx = fbx-fax;
+    let fdiffy = fby-fay;
+
+    let fdiffLen = (fdiffx*fdiffx+fdiffy*fdiffy).sqrt();
+    let nfdiffx = fdiffx/fdiffLen;
+    let nfdiffy = fdiffy/fdiffLen;
+    
+    for iy in 0..m.h {
+        for ix in 0..m.w {
+            let ofX = (ix as f64) - (ax as f64); // offset from a
+            let ofY = (iy as f64) - (ay as f64); // offset from a
+
+            //let ofLen = (ofX*ofX+ofY*ofY).sqrt();
+            //let nofX = ofX / ofLen;
+            //let nofY = ofY / ofLen;
+
+
+            let dotRes = ofX*nfdiffx+ofY*nfdiffy;
+
+            let isOnLine = dotRes >= 0.0 && dotRes <= fdiffLen; // is the pixel between the points?
+            if !isOnLine {
+                continue;
+            }
+
+            // projected
+            let px = (ax as f64) + dotRes*fdiffx;
+            let py = (ay as f64) + dotRes*fdiffy;
+
+            let diff2x = (ix as f64) - px;
+            let diff2y = (iy as f64) - py;
+
+            let mut d:f64 = (diff2x*diff2x + diff2y*diff2y).sqrt(); // compute distance from line
+            if d > 1.5 {
+                continue; // not on line
+            }
+
+            writeAt(m,iy,ix, v);
+        }
+    }
+}
