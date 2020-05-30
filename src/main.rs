@@ -47,7 +47,9 @@ pub fn expInvent0() {
 pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solvedProblems:&mut Vec<Box<dyn ProblemInstance>>) {
     let mut rng = rand::thread_rng();
 
-    println!("- search for NN which solves the task in this environment");
+    let mut cfgVerbosity = 1;
+
+    if cfgVerbosity>0{println!("- search for NN which solves the task in this environment")};
     //println!("- refine NN till it solves the task"); // TODO?
 
     let mut iNnSearchStep:i64 = -1;
@@ -172,14 +174,14 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
                     }
                 }
                 
-                println!("problem#{} steps={} v#{}  archived  F I N A L  goal!", problemNr, iNnSearchStep, iEnvStimulusVersion);
+                if cfgVerbosity>0{println!("problem#{} steps={} v#{}  archived  F I N A L  goal!", problemNr, iNnSearchStep, iEnvStimulusVersion)};
                 
                 
                 return;
             }
 
             if iEnvStimulusVersion > 4 { // don't spam output
-                println!("problem#{} steps={} v#{}  archived goal!", problemNr, iNnSearchStep, iEnvStimulusVersion);
+                if cfgVerbosity>0{println!("problem#{} steps={} v#{}  archived goal!", problemNr, iNnSearchStep, iEnvStimulusVersion)};
             }
         }
     }
