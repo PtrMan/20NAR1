@@ -29,7 +29,7 @@ pub fn expInvent0() {
     let mut solvedProblems:Vec<Box<dyn ProblemInstance>> = vec![];
 
     // we generate problems on the fly, so we need to iterate over them!
-    for iProblem in 0..2 { // iterate over more and more difficult problems
+    for iProblem in 0..3 { // iterate over more and more difficult problems
         solveProblem(iProblem, &mut solvedProblems);
     }
 
@@ -317,7 +317,7 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
             }
         }
 
-        if cnt > 1 { // did we draw one pixel?
+        if cnt > 3 { // did we draw one pixel?
             return map;
         }
     }
