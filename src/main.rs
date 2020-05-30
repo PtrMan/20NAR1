@@ -29,7 +29,7 @@ pub fn expInvent0() {
     let mut solvedProblems:Vec<Box<dyn ProblemInstance>> = vec![];
 
     // we generate problems on the fly, so we need to iterate over them!
-    for iProblem in 0..3 { // iterate over more and more difficult problems
+    for iProblem in 0..5 { // iterate over more and more difficult problems
         solveProblem(iProblem, &mut solvedProblems);
     }
 
@@ -42,7 +42,7 @@ pub fn expInvent0() {
 // inner loop which does the problem solving.
 // the source of the problem is a problem generator, which generates more and more difficult problems
 // /param problemNr number of the problem, starting from zero
-pub fn solveProblem(problemNr:i32, solvedProblems:&mut Vec<Box<dyn ProblemInstance>>) {
+pub fn solveProblem(problemNr:i64, solvedProblems:&mut Vec<Box<dyn ProblemInstance>>) {
     let mut rng = rand::thread_rng();
 
     println!("- search for NN which solves the task in this environment");
@@ -56,12 +56,15 @@ pub fn solveProblem(problemNr:i32, solvedProblems:&mut Vec<Box<dyn ProblemInstan
     { // create problems
         for _iVersion in 0..12 { // iterate over version of the same problem
             let mut boxX0 = 0; // position of the drawn box
-            let problemDifficulty:i32 = problemNr; // the problem difficulty
-            let problemMap:map2d::Map2d::<f64> = invent0(problemDifficulty, &mut boxX0); // invent a map of the problem
+            let mut boxY0 = 0;
+            let problemDifficulty:i64 = problemNr; // the problem difficulty
+            let problemMap:map2d::Map2d::<f64> = invent0(problemDifficulty, &mut boxX0, &mut boxY0); // invent a map of the problem
 
             currentProblems.push(Box::new(CursorProblem {
                 boxX0:boxX0,
+                boxY0:boxY0,
                 problemMap:problemMap,
+                difficulty:problemDifficulty,
             }));
         }
     }
@@ -69,7 +72,7 @@ pub fn solveProblem(problemNr:i32, solvedProblems:&mut Vec<Box<dyn ProblemInstan
 
     loop {
         iNnSearchStep+=1;
-        if iNnSearchStep >= 5000000 {
+        if iNnSearchStep >= 8000000 {
             println!("FAILED SEARCH: give up! reason: search took to many iterations!");
             break;
         }
@@ -164,6 +167,9 @@ pub fn solveProblem(problemNr:i32, solvedProblems:&mut Vec<Box<dyn ProblemInstan
 // structure for a problem where the solver has to find a program to position a cursor to the right spot
 pub struct CursorProblem {
     pub boxX0: i32, // target position
+    pub boxY0: i32,
+
+    pub difficulty: i64, // how difficult is the task?
 
     pub problemMap:map2d::Map2d::<f64>, // map with the evironment of the problem
 }
@@ -235,7 +241,16 @@ impl ProblemInstance for CursorProblem {
         
         
         if (solverState.cursorX - self.boxX0).abs() <= 1 {
-            return true;
+            if self.difficulty >= 3 {
+
+                if ( solverState.cursorY - self.boxY0).abs() <= 1 { // y position is even more difficult
+                    return true;
+                }
+                return false;
+            }
+            else {
+                return true;
+            }
         }
 
         return false;
@@ -246,7 +261,7 @@ impl ProblemInstance for CursorProblem {
 // run task invention program
 // TODO< can return empty map, we need to check this here inside >
 // /param problemDifficulty difficulty of the problem itself
-pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
+pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::Map2d::<f64> {
     
     let mut rng = rand::thread_rng();
 
@@ -273,9 +288,9 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
             h:10,
         };
 
-        let mut boxY0 = 0;
+        *boxY0 = 0;
         if problemDifficulty > 0 {
-            boxY0 = v[1] % (map.h-1-4); // let y position depend on random var in this more complicated case!
+            *boxY0 = v[1] % (map.h-1-4); // let y position depend on random var in this more complicated case!
         }
 
         // interpret genes to draw
@@ -283,11 +298,16 @@ pub fn invent0(problemDifficulty:i32, boxX0:&mut i32) -> map2d::Map2d::<f64> {
         //map2d::map2dDrawBox(&mut map, *boxX0 ,v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
         
         if problemDifficulty >= 2 {
-            map2d::map2dDrawCircle(&mut map, *boxX0 ,boxY0,3,1.0); // draw circle with radius 3
+            let mut r=3;
+            if problemDifficulty >= 3 {
+                r = 4;
+            }
+
+            map2d::map2dDrawCircle(&mut map, *boxX0 ,*boxY0,r,1.0); // draw circle with radius 3
         }
         else {
             // TODO< draw with nonfixed height >
-            map2d::map2dDrawBox(&mut map, *boxX0 ,boxY0,v[2],50,1.0);
+            map2d::map2dDrawBox(&mut map, *boxX0 ,*boxY0,v[2],50,1.0);
         }
 
 
@@ -347,6 +367,8 @@ pub trait ProblemInstance {
     // /param solverNetwork neural-network of the tested solver
     fn checkSolved(&self, solverNetwork:&Network, solverState:&mut SolverState) -> bool;
 }
+
+
 
 
 
