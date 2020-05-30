@@ -3,6 +3,8 @@
 
 extern crate rand;
 
+use std::collections::HashMap;
+
 use std::rc::Rc;
 
 //use std::default::Default;
@@ -406,11 +408,24 @@ pub trait ProblemInstance {
 
 
 
-
-
-
 // prototype of NAR components
 pub fn protoNarEntry0() {
+    let mut mem = narPerception::Mem{
+        concepts:HashMap::new(),
+    };
+
+    {
+        let sentence = narPerception::SentenceDummy {
+            isOp:false, // decide if it is a op by random
+            term:Rc::new(narPerception::Term::Cop(narPerception::Copula::INH, Rc::new(narPerception::Term::Name(format!("e{}", 0))), Rc::new(narPerception::Term::Name(format!("E{}", 0))))),
+            t:0,
+        };
+        narPerception::storeInConcepts(&mut mem, &sentence);
+    }
+}
+
+// TODO< make to unittest >
+pub fn testNarPerception0() {
     let mut rng = rand::thread_rng();
 
     let mut eventsInFifo = vec![];
@@ -422,7 +437,7 @@ pub fn protoNarEntry0() {
     for iTime in 0..50 {
         eventsInFifo.push(narPerception::SentenceDummy {
             isOp:rng.gen::<f64>() < 0.2, // decide if it is a op by random
-            term:Rc::new(narPerception::Term::Cop(narPerception::Copula::INH, Rc::new(narPerception::Term::Name(format!("e{}", iTime))), Rc::new(narPerception::Term::Name(format!("e{}", iTime))))),
+            term:Rc::new(narPerception::Term::Cop(narPerception::Copula::INH, Rc::new(narPerception::Term::Name(format!("e{}", iTime))), Rc::new(narPerception::Term::Name(format!("E{}", iTime))))),
             t:iTime,
         });
     }

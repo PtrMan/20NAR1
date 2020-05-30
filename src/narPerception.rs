@@ -135,17 +135,34 @@ pub struct Mem {
 
 pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
     for iTerm in termEnum(&*s.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
+        match mem.concepts.get_mut(&iTerm.clone()) {
+            Some(arcConcept) => {
+                match Arc::get_mut(arcConcept) {
+                    Some(concept) => {
+                        println!("TODO - add belief only if it doesn't already exist!");
 
-        println!("TODO - check if concept name is already there and insert if it is there");
+                        concept.implBeliefs.push(Arc::new((*s).clone())); // add belief
 
-        // * insert new concept if we are here
-        
-        let concept = Arc::new(Concept {
-            name:Rc::new(iTerm.clone()),
-            implBeliefs:vec![Arc::new((*s).clone())],
-        });
-        
-        mem.concepts.insert(iTerm.clone(), concept); // add concept to memory
+                        // TODO< order by importance >
+
+                        concept.implBeliefs = concept.implBeliefs[..concept.implBeliefs.len().min(20)].to_vec(); // keep under AIKR
+                    }
+                    None => {
+                        println!("INTERNAL ERROR - couldn't aquire arc!");
+                    }
+                }
+            },
+            None => { // concept doesn't exist
+                // * insert new concept if we are here
+                
+                let concept = Arc::new(Concept {
+                    name:Rc::new(iTerm.clone()),
+                    implBeliefs:vec![Arc::new((*s).clone())],
+                });
+                
+                mem.concepts.insert(iTerm.clone(), concept); // add concept to memory
+            }
+        }
     }
 }
 
