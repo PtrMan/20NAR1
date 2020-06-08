@@ -57,6 +57,7 @@ pub struct Ctx {
     accu2:i32,
     accuf:f64, // float accumulator
     accu2f:f64,
+    cur0:i32, // cursor position
 }
 
 // interpret instruction
@@ -97,7 +98,12 @@ pub fn interp(ctx:&mut Ctx, instr:i32) {
         17 => ctx.accuf=ctx.accuf-ctx.accu2f,
         18 => ctx.accuf=ctx.accuf*ctx.accu2f,
         19 => ctx.accuf=5.0,
-        
+
+        // page 2 : cursor and array
+        20 => ctx.cur0=ctx.accu, // set cursor position
+        21 => ctx.accu=ctx.arr0[ctx.accu], // read from array
+        22 => ctx.arr0[ctx.accu]=ctx.accu, // write to array
+
         40..=60 => {incIp=false; ctx.ip = instr-20}, // jump absolute
         // Handle the rest of cases
         _ => {},
@@ -107,6 +113,11 @@ pub fn interp(ctx:&mut Ctx, instr:i32) {
         ctx.ip+=1;
     }
 }
+
+// TODO< integrate >
+// macro functions : 
+
+// vec![21, 22, 3] // read from array0 at ctx.accu and increment accu
 
 
 // structure to store solution

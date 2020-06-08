@@ -23,7 +23,7 @@ pub fn main() {
     //expGa0();return;
 
     // POWERPLAY like algorithm to solve simple problem(s)
-    //expInvent0();
+    expInvent0();
 
     protoNarEntry0();
 }
@@ -332,7 +332,12 @@ pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::
         *boxX0 = v[0] % (map.w-1-4); // we need to write the value outside
         //map2d::map2dDrawBox(&mut map, *boxX0 ,v[1],v[2],v[3],1.0); // commented becaus it was to random for simple difficulty
         
-        if problemDifficulty >= 3 {
+        if problemDifficulty >= 4 {
+            // draw vertical cross
+            map2d::drawLine(&mut map, *boxX0 - 1, *boxY0 - 1, *boxX0 + 1, *boxY0 + 1, 1.0);
+            map2d::drawLine(&mut map, *boxX0 + 2, *boxY0 + 2, *boxX0 - 2, *boxY0 - 2, 1.0);
+        }
+        else if problemDifficulty >= 3 {
             map2d::drawLine(&mut map, *boxX0 - 1, *boxY0 - 1, *boxX0 + 1, *boxY0 + 1, 1.0);
         }
         else if problemDifficulty >= 2 {
