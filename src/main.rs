@@ -24,8 +24,6 @@ pub fn main() {
 
     // POWERPLAY like algorithm to solve simple problem(s)
     expInvent0();
-
-    protoNarEntry0();
 }
 
 
@@ -96,8 +94,8 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
 
 
 
-        let nNeuronsLayer0 = 5; // number of neurons
-        let nNeuronsLayer1 = 5; // number of neurons
+        let nNeuronsLayer0:i64 = 5; // number of neurons
+        let nNeuronsLayer1:i64 = 5; // number of neurons
 
         let mut params:Vec::<f64> = match lastParameters {
             // agent is already parameterized by last winner
@@ -113,7 +111,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
             },
             // agent isn't parameterized yet, we need to fall back to "random weight guessing" algorithm
             None    => {
-                let mut params = vec!(0.0;(5*5+1)*nNeuronsLayer0 + (nNeuronsLayer0+1)*nNeuronsLayer1);
+                let mut params = vec!(0.0;((5*5+1)*nNeuronsLayer0 + (nNeuronsLayer0+1)*nNeuronsLayer1) as usize);
                 // init with random
                 for idx in 0..params.len() {
                     params[idx] = ((rng.gen::<f64>() * 2.0) - 1.0) * 1.0;// * 0.3
@@ -124,43 +122,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
         
     
         let mut paramsIdx = 0;
-
-        let mut network:Network = Network { // network of the solver
-            neuronsLayer0:Vec::<ad::Neuron>::new(),
-            neuronsLayer1:Vec::<ad::Neuron>::new(),
-        };
-    
-        for _iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
-            let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-            for _i in 0..5*5 {
-                let v = params[paramsIdx];
-                paramsIdx+=1;
-                weights.push(ad::Ad{r:v,d:0.0});
-            }
-            let bias = params[paramsIdx] * 15.0; // boost parameter because it is the bias
-            paramsIdx+=1;
-            network.neuronsLayer0.push(ad::Neuron{
-                weights: weights,
-                bias:ad::Ad{r:bias,d:0.0},
-                act: 0,
-            });
-        }
-
-        for _iNeuronIdx in 0..nNeuronsLayer1 { // loop to transfer to neurons
-            let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-            for _i in 0..nNeuronsLayer0 {
-                let v = params[paramsIdx];
-                paramsIdx+=1;
-                weights.push(ad::Ad{r:v,d:0.0});
-            }
-            let bias = params[paramsIdx] * 8.0; // boost parameter because it is the bias
-            paramsIdx+=1;
-            network.neuronsLayer1.push(ad::Neuron{
-                weights: weights,
-                bias:ad::Ad{r:bias,d:0.0},
-                act: 1,
-            });
-        }
+        let mut network:Network = buildNnFromParameters(&mut paramsIdx, &params, nNeuronsLayer0, nNeuronsLayer1); // build network from parameters
 
         let nProblems = currentProblems.len()+solvedProblems.len();
         for iEnvStimulusVersion in 0..nProblems {
@@ -197,6 +159,47 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
     }
 }
 
+// helper to build network from parameters
+pub fn buildNnFromParameters(paramsIdx:&mut i64, params:&Vec<f64>, nNeuronsLayer0:i64, nNeuronsLayer1:i64) -> Network {
+    let mut network:Network = Network { // network of the solver
+        neuronsLayer0:Vec::<ad::Neuron>::new(),
+        neuronsLayer1:Vec::<ad::Neuron>::new(),
+    };
+
+    for _iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
+        let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
+        for _i in 0..5*5 {
+            let v = params[*paramsIdx as usize];
+            *paramsIdx+=1;
+            weights.push(ad::Ad{r:v,d:0.0});
+        }
+        let bias = params[*paramsIdx as usize] * 15.0; // boost parameter because it is the bias
+        *paramsIdx+=1;
+        network.neuronsLayer0.push(ad::Neuron{
+            weights: weights,
+            bias:ad::Ad{r:bias,d:0.0},
+            act: 0,
+        });
+    }
+
+    for _iNeuronIdx in 0..nNeuronsLayer1 { // loop to transfer to neurons
+        let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
+        for _i in 0..nNeuronsLayer0 {
+            let v = params[*paramsIdx as usize];
+            *paramsIdx+=1;
+            weights.push(ad::Ad{r:v,d:0.0});
+        }
+        let bias = params[*paramsIdx as usize] * 8.0; // boost parameter because it is the bias
+        *paramsIdx+=1;
+        network.neuronsLayer1.push(ad::Neuron{
+            weights: weights,
+            bias:ad::Ad{r:bias,d:0.0},
+            act: 1,
+        });
+    }
+
+    network
+}
 
 
 // structure for a problem where the solver has to find a program to position a cursor to the right spot
@@ -404,69 +407,4 @@ pub trait ProblemInstance {
     // does the proposed solution solve the problem?
     // /param solverNetwork neural-network of the tested solver
     fn checkSolved(&self, solverNetwork:&Network, solverState:&mut SolverState) -> bool;
-}
-
-
-
-
-
-
-
-
-// prototype of NAR components
-pub fn protoNarEntry0() {
-    let mut mem = narPerception::Mem{
-        concepts:HashMap::new(),
-    };
-
-    {
-        let sentence = narPerception::SentenceDummy {
-            isOp:false, // decide if it is a op by random
-            term:Rc::new(narPerception::Term::Cop(narPerception::Copula::INH, Rc::new(narPerception::Term::Name(format!("e{}", 0))), Rc::new(narPerception::Term::Name(format!("E{}", 0))))),
-            t:0,
-        };
-        narPerception::storeInConcepts(&mut mem, &sentence);
-    }
-}
-
-// TODO< make to unittest >
-pub fn testNarPerception0() {
-    let mut rng = rand::thread_rng();
-
-    let mut eventsInFifo = vec![];
-    let mut fifoSize = 20; // size of fifo
-
-    // add dummy events for testing the fifo algorithm
-
-    
-    for iTime in 0..50 {
-        eventsInFifo.push(narPerception::SentenceDummy {
-            isOp:rng.gen::<f64>() < 0.2, // decide if it is a op by random
-            term:Rc::new(narPerception::Term::Cop(narPerception::Copula::INH, Rc::new(narPerception::Term::Name(format!("e{}", iTime))), Rc::new(narPerception::Term::Name(format!("E{}", iTime))))),
-            t:iTime,
-        });
-    }
-
-    eventsInFifo = (&eventsInFifo[(eventsInFifo.len()-fifoSize).max(0)..]).to_vec(); // slice so only that last n events are inside
-
-
-    // test sampling
-    for _iSample in 0..100 {
-        // * sample events
-        let sampledEvents = narPerception::perceiveImpl(&eventsInFifo, &mut rng);
-
-        //println!("OUT");
-        //for iSentence in &sampledEvents {
-        //    println!("{}", iSentence.term);
-        //}
-
-        // build impl seq
-        if sampledEvents.len() == 3 {
-            let _0 = &*sampledEvents[0].term;
-            let _1 = &*sampledEvents[1].term;
-            let _2 = &*sampledEvents[2].term;
-
-            println!("<({} &/ {}) =/> {}>.", narPerception::convTermToStr(&_0), narPerception::convTermToStr(&_1), narPerception::convTermToStr(&_2));
-        }
-    }
 }
