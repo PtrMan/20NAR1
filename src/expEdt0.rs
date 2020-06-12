@@ -9,28 +9,30 @@ mod Edt;
 pub fn expExpUtilityMax0() {
     // build structure
 
-    let mut nodes:Vec<Box<Edt::EnumNode>> = vec![];
+    let mut edges:Vec<Box<Edt::Edge>> = vec![];
 
     let mut ops = vec!["^a".to_string(), "^b".to_string(), "^c".to_string()];
 
     // iterate over ops in this level
     for iOp in &ops {
         let aLeaf = Edt::LeafStruct {desirability:1.0, resProb:0.0};
-        let y = vec![Box::new(Edt::EnumNode::Leaf(Cell::new(aLeaf)))];
-    
-        let mut node0 = Edt::NodeStruct{
-            children:y,
+        let y = vec![Box::new(Edt::Edge{
+            target:Box::new(Edt::EnumNode::Leaf(Cell::new(aLeaf))),
             prob:1.0 / (ops.len() as f64),
             act:iOp.clone(),
-        };
+        })];
     
-        nodes.push(Box::new(Edt::EnumNode::Node(node0)));
+        edges.push(
+            Box::new(Edt::Edge{
+                target:Box::new(Edt::EnumNode::Leaf(Cell::new(aLeaf))),
+                prob:1.0 / (ops.len() as f64),
+                act:iOp.clone(),
+        }));
     }
 
+    
     let mut root = Edt::EnumNode::Node(Edt::NodeStruct{
-        children:nodes,
-        prob:1.0,
-        act:"^aa".to_string(),
+        children:edges,
     });
 
     // compute rating

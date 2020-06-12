@@ -4,7 +4,11 @@ use std::cell::{Cell};
 
 // decision tree node
 pub struct NodeStruct {
-    pub children:Vec<Box<EnumNode>>,
+    pub children:Vec<Box<Edge>>,
+}
+
+pub struct Edge {
+    pub target:Box<EnumNode>,
     pub prob:f64, // probability
     pub act:String, // action for this node
 }
@@ -30,8 +34,8 @@ pub enum EnumNode {
 pub fn calcUtility(n2:&mut EnumNode, p:f64) {
     match n2 {
         EnumNode::Node(n) => {
-            for iChildren in &mut n.children {
-                calcUtility(iChildren, p*n.prob);
+            for iEdge in &mut n.children {
+                calcUtility(&mut *iEdge.target, p*iEdge.prob);
             }
         },
         EnumNode::Leaf(l) => {
@@ -51,10 +55,10 @@ pub struct Sel {
 pub fn selBestOption(currentPath: &Vec<String>, current:&mut Box<Option<Sel>>, n2:&EnumNode) {
     match &n2 {
         EnumNode::Node(n) => {
-            for iChildren in &n.children {
+            for iEdge in &n.children {
                 let mut path = currentPath.to_vec();
-                path.push(n.act.clone());
-                selBestOption(&path, current, &iChildren);
+                path.push(iEdge.act.clone());
+                selBestOption(&path, current, &iEdge.target);
             }
         },
         EnumNode::Leaf(l) => {
