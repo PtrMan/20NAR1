@@ -304,58 +304,6 @@ pub fn narStep1(nar:&mut Nar, batVelX: &mut f64) {
     nar.t+=1; // increment time of NAR
 }
 
-pub fn narEntry() {
-    let mut nar:Nar = narInit();
-    
-
-
-    let mut ballX:f64 = 3.0;
-    let mut batX:f64 = 7.0;
-    let mut batVelX:f64 = 0.0;
-    
-    
-    for _t in 0..350 {
-        narStep0(&mut nar);
-
-        {
-            let diff = ballX - batX;
-            if diff > 1.0 {
-                nar.trace.push(SimpleSentence {name:"r".to_string(),evi:_t,occT:_t});
-            }
-            else if diff < -1.0 {
-                nar.trace.push(SimpleSentence {name:"l".to_string(),evi:_t,occT:_t});
-            }
-            else {
-                nar.trace.push(SimpleSentence {name:"c".to_string(),evi:_t,occT:_t});
-            }
-        }
-
-
-        println!("{} {}", nar.trace[nar.trace.len()-1].name, ballX - batX);
-        
-        narStep1(&mut nar, &mut batVelX);
-        
-        
-        batX += batVelX;
-        
-        // limit bat
-        if batX < 0.0 {
-            batX = 0.0;
-        }
-        if batX > 10.0 {
-            batX = 10.0;
-        }
-    }
-    
-    // debug all evidence
-    println!("");
-    println!("EVIDENCE:");
-    for iEvi in &nar.evidence {
-        let implSeqAsStr = format!("({},{})=/>{}",(*iEvi).borrow().seqCond,(*iEvi).borrow().seqOp,(*iEvi).borrow().pred);
-        println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt, (*iEvi).borrow().eviPos, (*iEvi).borrow().eviCnt);
-    }
-}
-
 // evidence
 pub struct EE {
     pub stamp:Vec<i64>, // collection of evidence of stamp
@@ -364,7 +312,7 @@ pub struct EE {
     pub seqOp:String, // op of sequence
     pub pred:String, // predicate of impl seq
     
-    expDt:i64, // exponential time delta
+    pub expDt:i64, // exponential time delta
     
     pub eviPos:i64,
     pub eviCnt:i64,
