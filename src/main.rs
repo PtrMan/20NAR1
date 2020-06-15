@@ -12,6 +12,8 @@ use std::process::exit;
 use rand::Rng;
 use rand::distributions::{Normal, Distribution};
 
+mod Reasoner0Entry;
+use Reasoner0Entry::{reasoner0Entry};
 mod map2d;
 mod ad;
 mod mlutils;
@@ -23,7 +25,10 @@ pub fn main() {
     //expGa0();return;
 
     // POWERPLAY like algorithm to solve simple problem(s)
-    expInvent0();
+    //expInvent0();
+
+    // jump to reasoner
+    reasoner0Entry();
 }
 
 

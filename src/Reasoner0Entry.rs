@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-pub fn main() {
+pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time
     let mut maxT:Option<i64> = Some(100);
     
