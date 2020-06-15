@@ -19,6 +19,8 @@ mod mlutils;
 
 mod narPerception;
 mod Nars;
+mod AeraishPerceptionComp;
+mod expRepresent0;
 
 pub fn main() {
     //expGa0();return;

@@ -1,7 +1,12 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
+use rand::Rng;
+
 use ::Nars;
+use ::AeraishPerceptionComp;
+use ::AeraishPerceptionComp::{PerceptItem};
+use ::expRepresent0;
 
 pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time
@@ -10,6 +15,7 @@ pub fn reasoner0Entry() {
 
     let mut nar:Nars::Nar = Nars::narInit();
     
+    let mut rng = rand::thread_rng();
 
 
     let mut ballX:f64 = 3.0;
@@ -23,7 +29,7 @@ pub fn reasoner0Entry() {
     
         // select option to focus on
         // we hardcoded it so it always returns the first option, which is the only one
-        let selFocusItem:usize = pickByMass(&[1.0], 0.5);
+        let selFocusItem:usize = pickByMass(&[1.0, 0.1], rng.gen_range(0.0, 1.0));
         
         if selFocusItem == 0 { // do we want to spend the time in the NARS reasoning?
             Nars::narStep0(&mut nar);
@@ -57,6 +63,25 @@ pub fn reasoner0Entry() {
                 batX = 10.0;
             }
         }
+        else if selFocusItem == 1 { // perceive outside sensor
+            // TODO< call into real perception here to perceive environment >
+
+            let mut perceived : Vec< PerceptItem::< expRepresent0::ClsnWVal > > = Vec::new();
+            { // fill with dummy percepts for testing
+                println!("TODO - fill with dummy perceptions");
+            }
+
+            // TODO< call into process for attention modulation to manipulate PerceptItem.salience >
+
+            // TODO< sort by PerceptItem.salience >
+
+            // filter with simple attention based on limited throughput
+            perceived = AeraishPerceptionComp::limit(&perceived, 10);
+
+            // set as global perceived of this (NAR)"channel"
+            //currentPerceived = perceived;
+        }
+
         // TODO< add AERA reasoning >
         // TODO< add self improvement things >
         
@@ -88,13 +113,13 @@ pub fn reasoner0Entry() {
 // /param selVal value for selection in range [0.0;1.0]
 pub fn pickByMass(massArr:&[f64], selVal:f64) -> usize {
     let sum:f64 = massArr.iter().sum();
-    let mut acc = 0.0;
+    let mut rem = selVal*sum;
     let mut idx = 0;
     for iv in massArr {
-        if acc >= selVal {
+        if rem < *iv {
             return idx;
         }
-        acc += iv;
+        rem -= iv;
         idx+=1;
     }
     

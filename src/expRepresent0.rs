@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-mod mlutils;
-mod map2d;
-use map2d::{Map2d,writeAt,readAt,map2dDrawCircle};
+use ::mlutils;
+use ::map2d;
+use ::map2d::{Map2d,writeAt,readAt,map2dDrawCircle};
 
 // TODO< draw a object in motion and display result maxima classifications >
 
