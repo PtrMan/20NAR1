@@ -21,6 +21,18 @@ pub fn writeAt<T>(m:&mut Map2d<T>, y:i32,x:i32,v:T) -> () {
     m.arr[(y*m.w+x) as usize] = v;
 }
 
+// helper to extract a rect
+pub fn crop<T:Copy+Default>(m:&Map2d<T>, x:i32, y:i32, sx:i32, sy:i32) -> Map2d<T> {
+    let mut res = Map2d::<T>{arr:vec![T::default();(sx*sy) as usize], w:sx, h:sy};
+    for iy in 0..sy {
+        for ix in 0..sx {
+            let v = readAt(&m, y+iy,x+ix);
+            writeAt(&mut res, iy,ix, v);
+        }
+    }
+    res
+}
+
 // helper to draw a box
 pub fn map2dDrawBox<T:Copy>(m:&mut Map2d<T>, cx:i32,cy:i32,w:i32,h:i32,v:T) {
     for iy in 0..h {
@@ -77,7 +89,7 @@ pub fn drawLine<T:Copy>(m:&mut Map2d<T>, ax:i32,ay:i32,bx:i32,by:i32,v:T) {
             let diff2x = (ix as f64) - px;
             let diff2y = (iy as f64) - py;
 
-            let mut d:f64 = (diff2x*diff2x + diff2y*diff2y).sqrt(); // compute distance from line
+            let d:f64 = (diff2x*diff2x + diff2y*diff2y).sqrt(); // compute distance from line
             if d > 1.5 {
                 continue; // not on line
             }
