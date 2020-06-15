@@ -3,12 +3,11 @@
 
 extern crate rand;
 
-use std::collections::HashMap;
-
-use std::rc::Rc;
+//use std::collections::HashMap;
+//use std::rc::Rc;
 
 //use std::default::Default;
-use std::process::exit;
+//use std::process::exit;
 use rand::Rng;
 use rand::distributions::{Normal, Distribution};
 
@@ -19,7 +18,7 @@ mod ad;
 mod mlutils;
 
 mod narPerception;
-
+mod Nars;
 
 pub fn main() {
     //expGa0();return;
