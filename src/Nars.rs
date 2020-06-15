@@ -2,6 +2,8 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+// TODO< add ops and fill op with op for ^l and ^r >
+
 // DONE< check for events which were anticipated and remove anticipations! >
 // DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
 
@@ -24,6 +26,14 @@ pub struct Nar {
     
     pub trace: Vec<SimpleSentence>,
     pub anticipatedEvents: Vec<AnticipationEvent>,
+
+    pub t:i64, // NAR time
+
+
+    pub rng: rand::rngs::ThreadRng,
+
+    //table with exponential intervals
+    pub expIntervalsTable:Vec<i64>,
 }
 
 // init and set to default values
@@ -34,15 +44,15 @@ pub fn narInit() -> Nar {
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
-    };
-    nar
-}
+        t: 0,
 
-pub fn narEntry() {
-    let mut nar:Nar = narInit();
-    
+        rng: rand::thread_rng(),
+
+        expIntervalsTable: Vec::new(),
+    };
+
+
     // build table with exponential intervals
-    let mut expIntervalsTable:Vec<i64> = Vec::new();
     {
         let mut lastExpInterval:i64 = 0;
         let mut i:i64 = 0;
@@ -53,19 +63,250 @@ pub fn narEntry() {
             }
             if thisInterval > lastExpInterval {
                 lastExpInterval = thisInterval;
-                expIntervalsTable.push(thisInterval); // store
+                nar.expIntervalsTable.push(thisInterval); // store
             }
             
             i+=1;
         }
     }
     
-    for ii in &expIntervalsTable {
-        println!("{}", ii);
+    // DEBUG
+    //for ii in &expIntervalsTable {
+    //    println!("{}", ii);
+    //}
+
+
+    nar
+}
+
+// does one reasoner step
+pub fn narStep0(nar:&mut Nar) {
+    println!("ae# = {}", nar.anticipatedEvents.len()); // debug number of anticipated events
+    
+    // remove confirmed anticipations
+    if nar.trace.len() > 0 {
+        let curEvent = &nar.trace[nar.trace.len()-1].name;
+        
+        let mut newanticipatedEvents = Vec::new();
+        for iDeadline in &nar.anticipatedEvents {
+            let evi = (*iDeadline).evi.borrow();
+            if evi.pred != *curEvent { // is predicted event not current event?
+                newanticipatedEvents.push(iDeadline.clone());
+            }
+        }
+        nar.anticipatedEvents = newanticipatedEvents;
     }
+    
+    { // neg confirm for anticipated events
+
+        {
+            for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= nar.t) {
+                let mut mutEvi = (*iDeadlineViolated).evi.borrow_mut();
+                mutEvi.eviCnt+=1; // add negative evidence
+            }
+        }
+        
+        
+        // TODO< refactor this as filtering >
+        {
+            let mut newanticipatedEvents = Vec::new();
+            for iDeadline in &nar.anticipatedEvents {
+                if iDeadline.deadline > nar.t {
+                    newanticipatedEvents.push(iDeadline.clone());                        
+                }
+            }
+            
+            nar.anticipatedEvents = newanticipatedEvents;
+        }
+        
+
+    }
+    
+    if nar.trace.len() >= 3 { // add evidence
+        // filter middle by ops and select random first event before that!
+        let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar.trace);
+        if idxsOfOps.len() > 0 { // there must be at least one op to sample
 
 
-    let mut rng = rand::thread_rng();
+            let mut idx1 = 0;
+            {
+                let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
+                idx1 = idxsOfOps[idx1Idx] as usize;
+            }
+            
+            if idx1 > 0 {
+                
+                
+                
+                let mut idx0 = nar.rng.gen_range(0, idx1);
+                let mut idx2 = nar.trace.len()-1; // last event is always last
+                
+                let mut idxs = vec![idx0,idx1,idx2];
+                idxs.sort();
+                
+                // middle must be op
+                if nar.trace[idxs[1]].name == "R" || nar.trace[idxs[1]].name == "L" {
+                    // first and last must not be op
+                    if
+                        nar.trace[idxs[0]].name != "R" && nar.trace[idxs[0]].name != "L"  &&
+                        nar.trace[idxs[2]].name != "R" && nar.trace[idxs[2]].name != "L" && 
+                        nar.trace[idxs[0]].name != nar.trace[idxs[2]].name {
+                        
+                        // found a potential sequence to be perceived
+                        
+                        let e0 = &nar.trace[idxs[0]];
+                        let e1 = &nar.trace[idxs[1]];
+                        let e2 = &nar.trace[idxs[2]];
+                        
+                        println!("perceive ({},{})=/>{}", e0.name, e1.name, e2.name);
+                        
+                        //println!("TODO - improve store (we need to try to revise knowledge)");
+                        
+                        let dt:i64 = e2.occT - e1.occT;
+                        // compute exponential delta time
+                        let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
+                        
+                        let mut addEvidence:bool = true; // do we need to add new evidence?
+                        
+                        {
+                            for iEERc in &nar.evidence {
+                                let iEE = &mut(*iEERc).borrow_mut();
+                                
+                                if !checkOverlap(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi)) { // evidence must no overlap!
+                                    if
+                                        iEE.expDt >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
+                                        iEE.seqCond == e0.name && iEE.seqOp == e1.name && iEE.pred == e2.name { // does impl seq match?
+                                        iEE.stamp = stampMerge(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi));
+                                        iEE.eviPos += 1;
+                                        iEE.eviCnt += 1;
+                                        
+                                        println!("dbg - REV");
+                                        
+                                        addEvidence = false; // because we revised
+                                    }                                
+                                }
+    
+                            }
+                        }
+                        
+                        if addEvidence {
+                            nar.evidence.push(Rc::new(RefCell::new(EE {
+                                stamp:vec!(e0.evi,e1.evi,e2.evi),
+                                expDt:expDt,
+                                seqCond:e0.name.clone(),
+                                seqOp:e1.name.clone(),
+                                pred:e2.name.clone(),
+                                eviPos:1,
+                                eviCnt:1,
+                            })));
+                        }
+                    }
+                    
+                }
+            }
+        }
+    }
+    
+}
+
+pub fn narStep1(nar:&mut Nar, batVelX: &mut f64) {
+    let cfgDescnThreshold:f64 = 0.48;
+    
+    let mut pickedAction:Option<String> = None;
+    
+    
+    match &pickedAction {
+        Some(act) => {},
+        None => {
+            // TODO< search with highest exp and exec only if above descision threshold! >
+            
+            struct Picked {
+                evidence:Rc<RefCell<EE>>, // the evidence of the picked option
+                
+            }
+            
+            let mut pickedOpt:Option<Picked> = None;
+            let mut pickedExp:f64 = 0.0;
+            
+            
+            
+            // search if we can satisfy goal
+            for iEERc in &nar.evidence {
+                let iEE:&EE = &(*iEERc).borrow();
+                
+                // check impl seq first ! for current event!
+                if iEE.seqCond == nar.trace[nar.trace.len()-1].name && iEE.pred == "c" { // does it fullfil goal?
+
+                    let iFreq = retFreq(&iEE);
+                    let iConf = retConf(&iEE);
+                    let exp = calcExp(&Tv{f:iFreq,c:iConf});
+                    
+                    if exp > pickedExp {
+                        pickedExp = exp;
+                        pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
+                    }
+                }
+            }
+            
+            if pickedExp > cfgDescnThreshold {
+                let picked = pickedOpt.unwrap().evidence;
+                let implSeqAsStr = format!("({},{})=/>{}",(*picked).borrow().seqCond,(*picked).borrow().seqOp,(*picked).borrow().pred);
+                println!("descnMaking: found best act = {}   implSeq={}    exp = {}", (*picked).borrow().seqOp, &implSeqAsStr, pickedExp);
+
+                pickedAction = Some((*picked).borrow().seqOp.clone());
+                
+                // add anticipated event
+                let expIntervalIdx:i64 = (*picked).borrow().expDt;
+                let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
+                let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
+                nar.anticipatedEvents.push(AnticipationEvent {
+                    evi:Rc::clone(&picked),
+                    deadline:deadline,
+                });
+            }
+        },
+    }
+    
+    match &pickedAction {
+        Some(act) => {},
+        None => {
+            let p = nar.rng.gen_range(0, 18);
+            if p == 1 {
+                pickedAction = Some("L".to_string());
+            }
+            else if p == 2 {
+                pickedAction = Some("R".to_string());
+            }
+        }
+    }
+    
+    
+    match &pickedAction {
+        Some(act) => {
+            if act == "L" {
+                *batVelX = -1.0;
+            }
+            else if act == "R" {
+                *batVelX = 1.0;
+            }
+            
+            nar.trace.push(SimpleSentence {name:act.clone(),evi:nar.t,occT:nar.t});
+        },
+        None => {},
+    }
+    
+    
+    // limit trace (AIKR)
+    if nar.trace.len() > 20 {
+        nar.trace = (&nar.trace[nar.trace.len()-20..]).to_vec();
+    }
+    
+    nar.t+=1; // increment time of NAR
+}
+
+pub fn narEntry() {
+    let mut nar:Nar = narInit();
+    
 
 
     let mut ballX:f64 = 3.0;
@@ -74,132 +315,8 @@ pub fn narEntry() {
     
     
     for _t in 0..350 {
-        println!("ae# = {}", nar.anticipatedEvents.len()); // debug number of anticipated events
-    
-        // remove confirmed anticipations
-        if nar.trace.len() > 0 {
-            let curEvent = &nar.trace[nar.trace.len()-1].name;
-            
-            let mut newanticipatedEvents = Vec::new();
-            for iDeadline in &nar.anticipatedEvents {
-                let evi = (*iDeadline).evi.borrow();
-                if evi.pred != *curEvent { // is predicted event not current event?
-                    newanticipatedEvents.push(iDeadline.clone());
-                }
-            }
-            nar.anticipatedEvents = newanticipatedEvents;
-        }
-        
-        { // neg confirm for anticipated events
+        narStep0(&mut nar);
 
-            {
-                for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= _t) {
-                    let mut mutEvi = (*iDeadlineViolated).evi.borrow_mut();
-                    mutEvi.eviCnt+=1; // add negative evidence
-                }
-            }
-            
-            
-            // TODO< refactor this as filtering >
-            {
-                let mut newanticipatedEvents = Vec::new();
-                for iDeadline in &nar.anticipatedEvents {
-                    if iDeadline.deadline > _t {
-                        newanticipatedEvents.push(iDeadline.clone());                        
-                    }
-                }
-                
-                nar.anticipatedEvents = newanticipatedEvents;
-            }
-            
-
-        }
-        
-        if nar.trace.len() >= 3 { // add evidence
-            // filter middle by ops and select random first event before that!
-            let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar.trace);
-            if idxsOfOps.len() > 0 { // there must be at least one op to sample
-
-    
-                let mut idx1 = 0;
-                {
-                    let idx1Idx = rng.gen_range(0, idxsOfOps.len());
-                    idx1 = idxsOfOps[idx1Idx] as usize;
-                }
-                
-                if idx1 > 0 {
-                    
-                    
-                    
-                    let mut idx0 = rng.gen_range(0, idx1);
-                    let mut idx2 = nar.trace.len()-1; // last event is always last
-                    
-                    let mut idxs = vec![idx0,idx1,idx2];
-                    idxs.sort();
-                    
-                    // middle must be op
-                    if nar.trace[idxs[1]].name == "R" || nar.trace[idxs[1]].name == "L" {
-                        // first and last must not be op
-                        if
-                            nar.trace[idxs[0]].name != "R" && nar.trace[idxs[0]].name != "L"  &&
-                            nar.trace[idxs[2]].name != "R" && nar.trace[idxs[2]].name != "L" && 
-                            nar.trace[idxs[0]].name != nar.trace[idxs[2]].name {
-                            
-                            // found a potential sequence to be perceived
-                            
-                            let e0 = &nar.trace[idxs[0]];
-                            let e1 = &nar.trace[idxs[1]];
-                            let e2 = &nar.trace[idxs[2]];
-                            
-                            println!("perceive ({},{})=/>{}", e0.name, e1.name, e2.name);
-                            
-                            //println!("TODO - improve store (we need to try to revise knowledge)");
-                            
-                            let dt:i64 = e2.occT - e1.occT;
-                            // compute exponential delta time
-                            let expDt:i64 = findMinTableIdx(dt, &expIntervalsTable);
-                            
-                            let mut addEvidence:bool = true; // do we need to add new evidence?
-                            
-                            {
-                                for iEERc in &nar.evidence {
-                                    let iEE = &mut(*iEERc).borrow_mut();
-                                    
-                                    if !checkOverlap(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi)) { // evidence must no overlap!
-                                        if
-                                            iEE.expDt >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
-                                            iEE.seqCond == e0.name && iEE.seqOp == e1.name && iEE.pred == e2.name { // does impl seq match?
-                                            iEE.stamp = stampMerge(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi));
-                                            iEE.eviPos += 1;
-                                            iEE.eviCnt += 1;
-                                            
-                                            println!("dbg - REV");
-                                            
-                                            addEvidence = false; // because we revised
-                                        }                                
-                                    }
-        
-                                }
-                            }
-                            
-                            if addEvidence {
-                                nar.evidence.push(Rc::new(RefCell::new(EE {
-                                    stamp:vec!(e0.evi,e1.evi,e2.evi),
-                                    expDt:expDt,
-                                    seqCond:e0.name.clone(),
-                                    seqOp:e1.name.clone(),
-                                    pred:e2.name.clone(),
-                                    eviPos:1,
-                                    eviCnt:1,
-                                })));
-                            }
-                        }
-                        
-                    }
-                }
-            }
-        }
-        
         {
             let diff = ballX - batX;
             if diff > 1.0 {
@@ -212,100 +329,11 @@ pub fn narEntry() {
                 nar.trace.push(SimpleSentence {name:"c".to_string(),evi:_t,occT:_t});
             }
         }
-        
-        let cfgDescnThreshold:f64 = 0.48;
-        
-        let mut pickedAction:Option<String> = None;
-        
-        
-        match &pickedAction {
-            Some(act) => {},
-            None => {
-                // TODO< search with highest exp and exec only if above descision threshold! >
-                
-                struct Picked {
-                    evidence:Rc<RefCell<EE>>, // the evidence of the picked option
-                    
-                }
-                
-                let mut pickedOpt:Option<Picked> = None;
-                let mut pickedExp:f64 = 0.0;
-                
-                
-                
-                // search if we can satisfy goal
-                for iEERc in &nar.evidence {
-                    let iEE:&EE = &(*iEERc).borrow();
-                    
-                    // check impl seq first ! for current event!
-                    if iEE.seqCond == nar.trace[nar.trace.len()-1].name && iEE.pred == "c" { // does it fullfil goal?
 
-                        let iFreq = retFreq(&iEE);
-                        let iConf = retConf(&iEE);
-                        let exp = calcExp(&Tv{f:iFreq,c:iConf});
-                        
-                        if exp > pickedExp {
-                            pickedExp = exp;
-                            pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
-                        }
-                    }
-                }
-                
-                if pickedExp > cfgDescnThreshold {
-                    let picked = pickedOpt.unwrap().evidence;
-                    let implSeqAsStr = format!("({},{})=/>{}",(*picked).borrow().seqCond,(*picked).borrow().seqOp,(*picked).borrow().pred);
-                    println!("descnMaking: found best act = {}   implSeq={}    exp = {}", (*picked).borrow().seqOp, &implSeqAsStr, pickedExp);
-    
-                    pickedAction = Some((*picked).borrow().seqOp.clone());
-                    
-                    // add anticipated event
-                    let expIntervalIdx:i64 = (*picked).borrow().expDt;
-                    let interval:i64 = expIntervalsTable[expIntervalIdx as usize];
-                    let deadline:i64 = _t + interval; // compute real deadline by exponential interval
-                    nar.anticipatedEvents.push(AnticipationEvent {
-                        evi:Rc::clone(&picked),
-                        deadline:deadline,
-                    });
-                }
-            },
-        }
-        
-        match &pickedAction {
-            Some(act) => {},
-            None => {
-                let p = rng.gen_range(0, 18);
-                if p == 1 {
-                    pickedAction = Some("L".to_string());
-                }
-                else if p == 2 {
-                    pickedAction = Some("R".to_string());
-                }
-            }
-        }
-        
-        
+
         println!("{} {}", nar.trace[nar.trace.len()-1].name, ballX - batX);
         
-        match &pickedAction {
-            Some(act) => {
-                if act == "L" {
-                    batVelX = -1.0;
-                }
-                else if act == "R" {
-                    batVelX = 1.0;
-                }
-                
-                nar.trace.push(SimpleSentence {name:act.clone(),evi:_t,occT:_t});
-            },
-            None => {},
-        }
-        
-        
-        // limit trace (AIKR)
-        if nar.trace.len() > 20 {
-            nar.trace = (&nar.trace[nar.trace.len()-20..]).to_vec();
-        }
-        
+        narStep1(&mut nar, &mut batVelX);
         
         
         batX += batVelX;
