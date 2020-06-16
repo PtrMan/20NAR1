@@ -42,7 +42,7 @@ pub fn reasoner0Entry() {
     }));
     
     // current perception of the NAR"channel"
-    let mut currentPerceived : Vec< PerceptItem::< expRepresent0::ClsnWVal > > = Vec::new();
+    let mut currentPerceived : Vec< PerceptItem::< ClsnObj > > = Vec::new();
     
 
     
@@ -50,7 +50,7 @@ pub fn reasoner0Entry() {
     
         // select option to focus on
         // we hardcoded it so it always returns the first option, which is the only one
-        let selFocusItem:usize = pickByMass(&[1.0, 0.1], rng.gen_range(0.0, 1.0));
+        let selFocusItem:usize = pickByMass(&[1.0, 0.8], rng.gen_range(0.0, 1.0));
         
         if selFocusItem == 0 { // do we want to spend the time in the NARS reasoning?
             Nars::narStep0(&mut nar);
@@ -87,9 +87,34 @@ pub fn reasoner0Entry() {
         else if selFocusItem == 1 { // perceive outside sensor
             // TODO< call into real perception here to perceive environment >
 
-            let mut perceived : Vec< PerceptItem::< expRepresent0::ClsnWVal > > = Vec::new();
+            let mut perceived : Vec< PerceptItem::< ClsnObj > > = Vec::new();
             { // fill with dummy percepts for testing
-                println!("TODO - fill with dummy perceptions");
+                println!("[d] percept: fill with dummy perceptions");
+
+                perceived.push(PerceptItem::<ClsnObj> {
+                    dat:ClsnObj{
+                        objCat:0, // object category, found with some kind of classifier
+                        conf:0.98, // classification confidence
+
+                        posX:batX,
+                        posY:0.1,
+                    }, // actual data
+                    salience:0.5,
+                    novelity:0.01,
+                });
+
+                perceived.push(PerceptItem::<ClsnObj> {
+                    dat:ClsnObj{
+                        objCat:1, // object category, found with some kind of classifier
+                        conf:0.98, // classification confidence
+
+                        posX:ballX,
+                        posY:0.1,
+                    }, // actual data
+                    salience:0.5,
+                    novelity:0.01,
+                });
+
             }
 
             // TODO< call into process for attention modulation to manipulate PerceptItem.salience >
@@ -146,6 +171,19 @@ pub fn pickByMass(massArr:&[f64], selVal:f64) -> usize {
     
     massArr.len()-1 // sel last
 }
+
+
+// classification of a object in the "glocal" perceptive field
+#[derive(Clone)]
+pub struct ClsnObj {
+    pub objCat:i64, // object category, found with some kind of classifier
+    pub conf:f64, // classification confidence
+
+    pub posX:f64, // position in perceptive field
+    pub posY:f64, // position in perceptive field
+}
+
+
 
 
 // pong environment
