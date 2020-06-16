@@ -12,7 +12,7 @@ use ::expRepresent0;
 
 pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time
-    let mut maxT:Option<i64> = Some(350);
+    let mut maxT:Option<i64> = Some(700);
 
 
     let mut nar:Nars::Nar = Nars::narInit();
@@ -20,12 +20,11 @@ pub fn reasoner0Entry() {
     let mut rng = rand::thread_rng();
 
 
-    let mut ballX:f64 = 3.0;
-    let mut batX:f64 = 7.0;
-    //let mut batVelX:f64 = 0.0;
-
+    
     let mut envPong = RefCell::new(PongEnv {
         batVelX:0.0,
+        batX:7.0,
+        ballX:3.0,
     });
     let envPongRc = Rc::new(envPong);
 
@@ -56,32 +55,51 @@ pub fn reasoner0Entry() {
             Nars::narStep0(&mut nar);
 
             {
-                let diff = ballX - batX;
-                if diff > 1.0 {
-                    nar.trace.push(Nars::SimpleSentence {name:"r".to_string(),evi:nar.t,occT:nar.t});
-                }
-                else if diff < -1.0 {
-                    nar.trace.push(Nars::SimpleSentence {name:"l".to_string(),evi:nar.t,occT:nar.t});
-                }
-                else {
-                    nar.trace.push(Nars::SimpleSentence {name:"c".to_string(),evi:nar.t,occT:nar.t});
+                // build relations between perceived proto-"objects"
+                // NOTE< hardcoded for line following ! >
+                
+                if currentPerceived.len() >= 2 { // we need to perceive at least two proto-objects
+                    let mut a:ClsnObj = currentPerceived[0].dat.clone();
+                    let mut b:ClsnObj = currentPerceived[1].dat.clone();
+                    
+                    if a.objCat != b.objCat { // categories must be different to allow forming of relationship
+                        // sort by class, because it reduces the amount of concepts
+                        if a.objCat > b.objCat {
+                            let t = a;
+                            a = b;
+                            b = t;
+                        }
+
+                        let diffX:f64 = a.posX - b.posX;
+
+                        if diffX > 1.0 {
+                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
+                        }
+                        else if diffX < -1.0 {
+                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
+                        }
+                        else {
+                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                        }
+                    }
                 }
             }
     
-    
-            println!("{} {}", nar.trace[nar.trace.len()-1].name, ballX - batX);
+            if nar.trace.len() > 0 {
+                println!("{} {}", nar.trace[nar.trace.len()-1].name, (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
+            }
             
             Nars::narStep1(&mut nar);
             
-            
-            batX += (*envPongRc).borrow_mut().batVelX; //envPongRc.get().batVelX;
+            let mut envPong = (*envPongRc).borrow_mut();
+            envPong.batX += envPong.batVelX; //envPongRc.get().batVelX;
             
             // limit bat
-            if batX < 0.0 {
-                batX = 0.0;
+            if envPong.batX < 0.0 {
+                envPong.batX = 0.0;
             }
-            if batX > 10.0 {
-                batX = 10.0;
+            if envPong.batX > 10.0 {
+                envPong.batX = 10.0;
             }
         }
         else if selFocusItem == 1 { // perceive outside sensor
@@ -93,10 +111,10 @@ pub fn reasoner0Entry() {
 
                 perceived.push(PerceptItem::<ClsnObj> {
                     dat:ClsnObj{
-                        objCat:0, // object category, found with some kind of classifier
+                        objCat:1, // object category, found with some kind of classifier
                         conf:0.98, // classification confidence
 
-                        posX:batX,
+                        posX:(*envPongRc).borrow().ballX,
                         posY:0.1,
                     }, // actual data
                     salience:0.5,
@@ -105,10 +123,10 @@ pub fn reasoner0Entry() {
 
                 perceived.push(PerceptItem::<ClsnObj> {
                     dat:ClsnObj{
-                        objCat:1, // object category, found with some kind of classifier
+                        objCat:0, // object category, found with some kind of classifier
                         conf:0.98, // classification confidence
 
-                        posX:ballX,
+                        posX:(*envPongRc).borrow().batX,
                         posY:0.1,
                     }, // actual data
                     salience:0.5,
@@ -119,7 +137,8 @@ pub fn reasoner0Entry() {
 
             // TODO< call into process for attention modulation to manipulate PerceptItem.salience >
 
-            // TODO< sort by PerceptItem.salience >
+            // sort by PerceptItem.salience
+            perceived.sort_by(|a, b| b.salience.partial_cmp(&a.salience).unwrap());
 
             // filter with simple attention based on limited throughput
             perceived = AeraishPerceptionComp::limit(&perceived, 10);
@@ -127,9 +146,8 @@ pub fn reasoner0Entry() {
             // set as global perceived of this (NAR)"channel"
             currentPerceived = perceived;
         }
-
-        // TODO< add AERA reasoning >
-        // TODO< add self improvement things >
+        // TODO< add AERA planning reasoning case >
+        // TODO< add self control things case >
         
         
         // logic to decide when to break up
@@ -190,6 +208,8 @@ pub struct ClsnObj {
 #[derive(Copy, Clone)]
 pub struct PongEnv {
     pub batVelX:f64,
+    pub batX:f64,
+    pub ballX:f64,
 }
 
 
