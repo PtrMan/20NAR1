@@ -2,6 +2,8 @@
 #![allow(dead_code)]
 
 use rand::Rng;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use ::Nars;
 use ::AeraishPerceptionComp;
@@ -20,8 +22,27 @@ pub fn reasoner0Entry() {
 
     let mut ballX:f64 = 3.0;
     let mut batX:f64 = 7.0;
-    let mut batVelX:f64 = 0.0;
+    //let mut batVelX:f64 = 0.0;
+
+    let mut envPong = RefCell::new(PongEnv {
+        batVelX:0.0,
+    });
+    let envPongRc = Rc::new(envPong);
+
+    nar.ops.push(Box::new( OpPong {
+        env: Rc::clone(&envPongRc),
+        opDir: 1.0,
+        selfName: "^L".to_string(),
+    }));
+
+    nar.ops.push(Box::new( OpPong {
+        env: Rc::clone(&envPongRc),
+        opDir: -1.0,
+        selfName: "^R".to_string(),
+    }));
     
+    // current perception of the NAR"channel"
+    let mut currentPerceived : Vec< PerceptItem::< expRepresent0::ClsnWVal > > = Vec::new();
     
 
     
@@ -50,10 +71,10 @@ pub fn reasoner0Entry() {
     
             println!("{} {}", nar.trace[nar.trace.len()-1].name, ballX - batX);
             
-            Nars::narStep1(&mut nar, &mut batVelX);
+            Nars::narStep1(&mut nar);
             
             
-            batX += batVelX;
+            batX += (*envPongRc).borrow_mut().batVelX; //envPongRc.get().batVelX;
             
             // limit bat
             if batX < 0.0 {
@@ -79,7 +100,7 @@ pub fn reasoner0Entry() {
             perceived = AeraishPerceptionComp::limit(&perceived, 10);
 
             // set as global perceived of this (NAR)"channel"
-            //currentPerceived = perceived;
+            currentPerceived = perceived;
         }
 
         // TODO< add AERA reasoning >
@@ -124,4 +145,32 @@ pub fn pickByMass(massArr:&[f64], selVal:f64) -> usize {
     }
     
     massArr.len()-1 // sel last
+}
+
+
+// pong environment
+#[derive(Copy, Clone)]
+pub struct PongEnv {
+    pub batVelX:f64,
+}
+
+
+
+// ops for pong environment
+pub struct OpPong {
+    pub env: Rc<RefCell<PongEnv>>, // points at environment
+    pub opDir: f64, // direction which is set when this op is called
+    pub selfName: String, // name of this op
+}
+
+
+// Implement the `Animal` trait for `Sheep`.
+impl Nars::Op for OpPong {
+    fn retName(&self) -> String {
+        self.selfName.clone()
+    }
+    fn call(&self, args:&Vec<String>) {
+        (*self.env).borrow_mut().batVelX = self.opDir;
+        println!("CALL {}", self.selfName);
+    }
 }

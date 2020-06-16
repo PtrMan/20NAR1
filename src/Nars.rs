@@ -2,8 +2,6 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-// TODO< add ops and fill op with op for ^l and ^r >
-
 // DONE< check for events which were anticipated and remove anticipations! >
 // DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
 
@@ -27,6 +25,8 @@ pub struct Nar {
     pub trace: Vec<SimpleSentence>,
     pub anticipatedEvents: Vec<AnticipationEvent>,
 
+    pub ops: Vec<Box<dyn Op>>, // all registered ops
+
     pub t:i64, // NAR time
 
 
@@ -44,6 +44,7 @@ pub fn narInit() -> Nar {
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
+        ops: Vec::new(),
         t: 0,
 
         rng: rand::thread_rng(),
@@ -143,14 +144,25 @@ pub fn narStep0(nar:&mut Nar) {
                 
                 let mut idxs = vec![idx0,idx1,idx2];
                 idxs.sort();
+
+                // is the name a op?
+                let checkIsOp=|name:&String| {
+                    for i in &nar.ops {
+                        if &i.retName() == name {
+                            return true;
+                        }
+                    }
+                    false
+                };
                 
                 // middle must be op
-                if nar.trace[idxs[1]].name == "R" || nar.trace[idxs[1]].name == "L" {
+                if checkIsOp(&nar.trace[idxs[1]].name) {
                     // first and last must not be op
                     if
-                        nar.trace[idxs[0]].name != "R" && nar.trace[idxs[0]].name != "L"  &&
-                        nar.trace[idxs[2]].name != "R" && nar.trace[idxs[2]].name != "L" && 
-                        nar.trace[idxs[0]].name != nar.trace[idxs[2]].name {
+                        !checkIsOp(&nar.trace[idxs[0]].name)  &&
+                        !checkIsOp(&nar.trace[idxs[2]].name) && 
+                        nar.trace[idxs[0]].name != nar.trace[idxs[2]].name
+                    {
                         
                         // found a potential sequence to be perceived
                         
@@ -209,7 +221,7 @@ pub fn narStep0(nar:&mut Nar) {
     
 }
 
-pub fn narStep1(nar:&mut Nar, batVelX: &mut f64) {
+pub fn narStep1(nar:&mut Nar) {
     let cfgDescnThreshold:f64 = 0.48;
     
     let mut pickedAction:Option<String> = None;
@@ -270,12 +282,11 @@ pub fn narStep1(nar:&mut Nar, batVelX: &mut f64) {
     match &pickedAction {
         Some(act) => {},
         None => {
+            // TODO< better distribution >
             let p = nar.rng.gen_range(0, 18);
-            if p == 1 {
-                pickedAction = Some("L".to_string());
-            }
-            else if p == 2 {
-                pickedAction = Some("R".to_string());
+            if p < nar.ops.len() {
+                let idx = p;
+                pickedAction = Some(nar.ops[idx].retName());
             }
         }
     }
@@ -283,13 +294,14 @@ pub fn narStep1(nar:&mut Nar, batVelX: &mut f64) {
     
     match &pickedAction {
         Some(act) => {
-            if act == "L" {
-                *batVelX = -1.0;
+            // scan for action
+            for iOp in &nar.ops {
+                if &iOp.retName() == act {
+                    iOp.call(&Vec::new()); // call op
+                    break;
+                }
             }
-            else if act == "R" {
-                *batVelX = 1.0;
-            }
-            
+
             nar.trace.push(SimpleSentence {name:act.clone(),evi:nar.t,occT:nar.t});
         },
         None => {},
@@ -340,7 +352,7 @@ pub struct SimpleSentence {
 pub fn calcIdxsOfOps(trace:&Vec<SimpleSentence>) -> Vec<i64> {
     let mut res = Vec::new();
     for idx in 0..trace.len() {
-        if trace[idx].name == "R" || trace[idx].name == "L" {
+        if trace[idx].name.chars().next().unwrap() == '^' { // is it a op?
             res.push(idx as i64);
         } 
     }
@@ -396,4 +408,10 @@ pub fn stampMerge(a:&Vec<i64>, b:&Vec<i64>) -> Vec<i64> {
         res.push(*ib);
     }
     return res;
+}
+
+// trait for a op, all implementations implement a op
+pub trait Op {
+    fn retName(&self) -> String; // return name of the op
+    fn call(&self, args:&Vec<String>);
 }

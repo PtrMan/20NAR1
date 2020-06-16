@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 extern crate rand;
+//extern crate rand_distr;
 
 //use std::collections::HashMap;
 //use std::rc::Rc;
@@ -10,6 +11,7 @@ extern crate rand;
 //use std::process::exit;
 use rand::Rng;
 use rand::distributions::{Normal, Distribution};
+//use rand_distr::Normal;
 
 mod Reasoner0Entry;
 use Reasoner0Entry::{reasoner0Entry};
