@@ -25,6 +25,7 @@ pub fn reasoner0Entry() {
         batVelX:0.0,
         batX:7.0,
         ballX:3.0,
+        score:0.0,
     });
     let envPongRc = Rc::new(envPong);
 
@@ -46,6 +47,14 @@ pub fn reasoner0Entry() {
 
     
     loop { // reasoner/modification mainloop
+
+
+        { // calc score
+            let distX:f64 = ((*envPongRc).borrow().batX - (*envPongRc).borrow().ballX).abs();
+            if distX <= 1.1 {
+                (*envPongRc).borrow_mut().score+=1.0; // add score because bat is in the center
+            }
+        }
     
         // select option to focus on
         // we hardcoded it so it always returns the first option, which is the only one
@@ -71,15 +80,28 @@ pub fn reasoner0Entry() {
                         }
 
                         let diffX:f64 = a.posX - b.posX;
+                        let diffY:f64 = a.posY - b.posY;
 
                         if diffX > 1.0 {
-                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
+                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
                         }
                         else if diffX < -1.0 {
-                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
+                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
                         }
                         else {
-                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                        }
+
+                        if false { // do we want to handle y events too?
+                            if diffY > 1.0 {
+                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
+                            }
+                            else if diffY < -1.0 {
+                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
+                            }
+                            else {
+                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                            }
                         }
                     }
                 }
@@ -170,6 +192,11 @@ pub fn reasoner0Entry() {
         println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt, (*iEvi).borrow().eviPos, (*iEvi).borrow().eviCnt);
     }
     
+    { // print environment score
+        println!("[i] env score = {}", (*envPongRc).borrow().score);
+    }
+
+
     println!("[d] reasoner: DONE!");
 }
 
@@ -210,6 +237,7 @@ pub struct PongEnv {
     pub batVelX:f64,
     pub batX:f64,
     pub ballX:f64,
+    pub score:f64,
 }
 
 

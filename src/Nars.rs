@@ -247,7 +247,7 @@ pub fn narStep1(nar:&mut Nar) {
                 let iEE:&EE = &(*iEERc).borrow();
                 
                 // check impl seq first ! for current event!
-                if iEE.seqCond == nar.trace[nar.trace.len()-1].name && iEE.pred == "c" { // does it fullfil goal?
+                if iEE.seqCond == nar.trace[nar.trace.len()-1].name && iEE.pred == "0-1-xc" { // does it fullfil goal?
 
                     let iFreq = retFreq(&iEE);
                     let iConf = retConf(&iEE);
