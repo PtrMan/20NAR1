@@ -81,16 +81,19 @@ pub fn reasoner0Entry() {
 
                         let diffX:f64 = a.posX - b.posX;
                         let diffY:f64 = a.posY - b.posY;
+                        
+                        if true {
+                            if diffX > 1.0 {
+                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
+                            }
+                            else if diffX < -1.0 {
+                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
+                            }
+                            else {
+                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                            }
+                        }
 
-                        if diffX > 1.0 {
-                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
-                        }
-                        else if diffX < -1.0 {
-                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
-                        }
-                        else {
-                            nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
-                        }
 
                         if false { // do we want to handle y events too?
                             if diffY > 1.0 {

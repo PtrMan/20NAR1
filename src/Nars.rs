@@ -137,13 +137,11 @@ pub fn narStep0(nar:&mut Nar) {
             
             if idx1 > 0 {
                 
+                let rng0:i64 = nar.rng.gen_range(0, 2);
                 
+                let idx0 = nar.rng.gen_range(0, idx1);
+                let mut idx2 = nar.trace.len()-1; // last event is last
                 
-                let mut idx0 = nar.rng.gen_range(0, idx1);
-                let mut idx2 = nar.trace.len()-1; // last event is always last
-                
-                let mut idxs = vec![idx0,idx1,idx2];
-                idxs.sort();
 
                 // is the name a op?
                 let checkIsOp=|name:&String| {
@@ -154,6 +152,21 @@ pub fn narStep0(nar:&mut Nar) {
                     }
                     false
                 };
+
+                // TODO< rewrite to logic which scans for the first op between idxLast and idx1, select random event as idx2 between these!
+                
+                // check if we can select previous event
+                {
+                    let sel = nar.trace[nar.trace.len()-1-1].clone();
+                    if rng0 == 0 && nar.trace.len()-1-1 > idx1 && !checkIsOp(&sel.name) {
+                        idx2 = nar.trace.len()-1-1;
+                    }
+                }
+
+
+                let mut idxs = vec![idx0,idx1,idx2];
+                idxs.sort();
+
                 
                 // middle must be op
                 if checkIsOp(&nar.trace[idxs[1]].name) {
