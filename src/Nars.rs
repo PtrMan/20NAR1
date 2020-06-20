@@ -20,6 +20,8 @@ pub struct Nar {
     pub cfgIntervalExpBase:f64, // base for the exponential intervals
     pub cfgIntervalMax:i64, // maximal interval time
 
+    pub cfgPerceptWindow:i64, // perception window for current events
+
     pub evidence: Vec<Rc<RefCell<EE>>>,
     
     pub trace: Vec<SimpleSentence>,
@@ -41,6 +43,7 @@ pub fn narInit() -> Nar {
     let mut nar = Nar {
         cfgIntervalExpBase: 1.5,
         cfgIntervalMax: 40,
+        cfgPerceptWindow: 2,
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -85,18 +88,21 @@ pub fn narStep0(nar:&mut Nar) {
     println!("ae# = {}", nar.anticipatedEvents.len()); // debug number of anticipated events
     
     // remove confirmed anticipations
-    if nar.trace.len() > 0 {
-        let curEvent = &nar.trace[nar.trace.len()-1].name;
-        
-        let mut newanticipatedEvents = Vec::new();
-        for iDeadline in &nar.anticipatedEvents {
-            let evi = (*iDeadline).evi.borrow();
-            if evi.pred != *curEvent { // is predicted event not current event?
-                newanticipatedEvents.push(iDeadline.clone());
+    for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+        if nar.trace.len() > perceptIdx {
+            let curEvent = &nar.trace[nar.trace.len()-1-perceptIdx].name;
+            
+            let mut newanticipatedEvents = Vec::new();
+            for iDeadline in &nar.anticipatedEvents {
+                let evi = (*iDeadline).evi.borrow();
+                if evi.pred != *curEvent { // is predicted event not current event?
+                    newanticipatedEvents.push(iDeadline.clone());
+                }
             }
+            nar.anticipatedEvents = newanticipatedEvents;
         }
-        nar.anticipatedEvents = newanticipatedEvents;
     }
+
     
     { // neg confirm for anticipated events
 
@@ -206,7 +212,7 @@ pub fn narStep0(nar:&mut Nar) {
                                             iEE.eviPos += 1;
                                             iEE.eviCnt += 1;
                                             
-                                            println!("dbg - REV");
+                                            if false {println!("dbg - REV")};
                                             
                                             addEvidence = false; // because we revised
                                         }                                
@@ -263,15 +269,21 @@ pub fn narStep1(nar:&mut Nar) {
                 let iEE:&EE = &(*iEERc).borrow();
                 
                 // check impl seq first ! for current event!
-                if iEE.seqCond == nar.trace[nar.trace.len()-1].name && iEE.pred == "0-1-xc" { // does it fullfil goal?
+                for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+                    if nar.trace.len() > perceptIdx {
 
-                    let iFreq = retFreq(&iEE);
-                    let iConf = retConf(&iEE);
-                    let exp = calcExp(&Tv{f:iFreq,c:iConf});
-                    
-                    if exp > pickedExp {
-                        pickedExp = exp;
-                        pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
+                                
+                        if iEE.seqCond == nar.trace[nar.trace.len()-1-perceptIdx].name && iEE.pred == "0-1-xc" { // does it fullfil goal?
+
+                            let iFreq = retFreq(&iEE);
+                            let iConf = retConf(&iEE);
+                            let exp = calcExp(&Tv{f:iFreq,c:iConf});
+                            
+                            if exp > pickedExp {
+                                pickedExp = exp;
+                                pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
+                            }
+                        }
                     }
                 }
             }
