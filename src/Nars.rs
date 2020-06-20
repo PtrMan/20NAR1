@@ -122,114 +122,117 @@ pub fn narStep0(nar:&mut Nar) {
         
 
     }
+
+    let cfgPerceptionSamplesPerStep = 4; // how ofter should event-FIFO get sampled for perception in cycle?
     
     if nar.trace.len() >= 3 { // add evidence
-        // filter middle by ops and select random first event before that!
-        let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar.trace);
-        if idxsOfOps.len() > 0 { // there must be at least one op to sample
+        for sampleIt in 0..cfgPerceptionSamplesPerStep {
+            // filter middle by ops and select random first event before that!
+            let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar.trace);
+            if idxsOfOps.len() > 0 { // there must be at least one op to sample
 
 
-            let mut idx1 = 0;
-            {
-                let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
-                idx1 = idxsOfOps[idx1Idx] as usize;
-            }
-            
-            if idx1 > 0 {
+                let mut idx1 = 0;
+                {
+                    let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
+                    idx1 = idxsOfOps[idx1Idx] as usize;
+                }
                 
-                let rng0:i64 = nar.rng.gen_range(0, 2);
-                
-                let idx0 = nar.rng.gen_range(0, idx1);
-                let mut idx2 = nar.trace.len()-1; // last event is last
-                
+                if idx1 > 0 {
+                    
+                    let rng0:i64 = nar.rng.gen_range(0, 2);
+                    
+                    let idx0 = nar.rng.gen_range(0, idx1);
+                    let mut idx2 = nar.trace.len()-1; // last event is last
+                    
 
-                // is the name a op?
-                let checkIsOp=|name:&String| {
-                    for i in &nar.ops {
-                        if &i.retName() == name {
-                            return true;
+                    // is the name a op?
+                    let checkIsOp=|name:&String| {
+                        for i in &nar.ops {
+                            if &i.retName() == name {
+                                return true;
+                            }
+                        }
+                        false
+                    };
+
+                    // TODO< rewrite to logic which scans for the first op between idxLast and idx1, select random event as idx2 between these!
+                    
+                    // check if we can select previous event
+                    {
+                        let sel = nar.trace[nar.trace.len()-1-1].clone();
+                        if rng0 == 1 && nar.trace.len()-1-1 > idx1 && !checkIsOp(&sel.name) {
+                            idx2 = nar.trace.len()-1-1;
                         }
                     }
-                    false
-                };
-
-                // TODO< rewrite to logic which scans for the first op between idxLast and idx1, select random event as idx2 between these!
-                
-                // check if we can select previous event
-                {
-                    let sel = nar.trace[nar.trace.len()-1-1].clone();
-                    if rng0 == 0 && nar.trace.len()-1-1 > idx1 && !checkIsOp(&sel.name) {
-                        idx2 = nar.trace.len()-1-1;
-                    }
-                }
 
 
-                let mut idxs = vec![idx0,idx1,idx2];
-                idxs.sort();
+                    let mut idxs = vec![idx0,idx1,idx2];
+                    idxs.sort();
 
-                
-                // middle must be op
-                if checkIsOp(&nar.trace[idxs[1]].name) {
-                    // first and last must not be op
-                    if
-                        !checkIsOp(&nar.trace[idxs[0]].name)  &&
-                        !checkIsOp(&nar.trace[idxs[2]].name) && 
-                        nar.trace[idxs[0]].name != nar.trace[idxs[2]].name
-                    {
-                        
-                        // found a potential sequence to be perceived
-                        
-                        let e0 = &nar.trace[idxs[0]];
-                        let e1 = &nar.trace[idxs[1]];
-                        let e2 = &nar.trace[idxs[2]];
-                        
-                        println!("perceive ({},{})=/>{}", e0.name, e1.name, e2.name);
-                        
-                        //println!("TODO - improve store (we need to try to revise knowledge)");
-                        
-                        let dt:i64 = e2.occT - e1.occT;
-                        // compute exponential delta time
-                        let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
-                        
-                        let mut addEvidence:bool = true; // do we need to add new evidence?
-                        
+                    
+                    // middle must be op
+                    if checkIsOp(&nar.trace[idxs[1]].name) {
+                        // first and last must not be op
+                        if
+                            !checkIsOp(&nar.trace[idxs[0]].name)  &&
+                            !checkIsOp(&nar.trace[idxs[2]].name) && 
+                            nar.trace[idxs[0]].name != nar.trace[idxs[2]].name
                         {
-                            for iEERc in &nar.evidence {
-                                let iEE = &mut(*iEERc).borrow_mut();
-                                
-                                if !checkOverlap(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi)) { // evidence must no overlap!
-                                    if
-                                        iEE.expDt >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
-                                        iEE.seqCond == e0.name && iEE.seqOp == e1.name && iEE.pred == e2.name { // does impl seq match?
-                                        iEE.stamp = stampMerge(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi));
-                                        iEE.eviPos += 1;
-                                        iEE.eviCnt += 1;
-                                        
-                                        println!("dbg - REV");
-                                        
-                                        addEvidence = false; // because we revised
-                                    }                                
+                            
+                            // found a potential sequence to be perceived
+                            
+                            let e0 = &nar.trace[idxs[0]];
+                            let e1 = &nar.trace[idxs[1]];
+                            let e2 = &nar.trace[idxs[2]];
+                            
+                            println!("perceive ({},{})=/>{}", e0.name, e1.name, e2.name);
+                            
+                            let dt:i64 = e2.occT - e1.occT;
+                            // compute exponential delta time
+                            let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
+                            
+                            let mut addEvidence:bool = true; // do we need to add new evidence?
+                            
+                            {
+                                for iEERc in &nar.evidence {
+                                    let iEE = &mut(*iEERc).borrow_mut();
+                                    
+                                    if !checkOverlap(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi)) { // evidence must no overlap!
+                                        if
+                                            iEE.expDt >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
+                                            iEE.seqCond == e0.name && iEE.seqOp == e1.name && iEE.pred == e2.name { // does impl seq match?
+                                            iEE.stamp = stampMerge(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi));
+                                            iEE.eviPos += 1;
+                                            iEE.eviCnt += 1;
+                                            
+                                            println!("dbg - REV");
+                                            
+                                            addEvidence = false; // because we revised
+                                        }                                
+                                    }
+        
                                 }
-    
+                            }
+                            
+                            if addEvidence {
+                                nar.evidence.push(Rc::new(RefCell::new(EE {
+                                    stamp:vec!(e0.evi,e1.evi,e2.evi),
+                                    expDt:expDt,
+                                    seqCond:e0.name.clone(),
+                                    seqOp:e1.name.clone(),
+                                    pred:e2.name.clone(),
+                                    eviPos:1,
+                                    eviCnt:1,
+                                })));
                             }
                         }
                         
-                        if addEvidence {
-                            nar.evidence.push(Rc::new(RefCell::new(EE {
-                                stamp:vec!(e0.evi,e1.evi,e2.evi),
-                                expDt:expDt,
-                                seqCond:e0.name.clone(),
-                                seqOp:e1.name.clone(),
-                                pred:e2.name.clone(),
-                                eviPos:1,
-                                eviCnt:1,
-                            })));
-                        }
                     }
-                    
                 }
             }
         }
+        
     }
     
 }

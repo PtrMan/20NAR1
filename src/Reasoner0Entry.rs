@@ -95,7 +95,7 @@ pub fn reasoner0Entry() {
                         }
 
 
-                        if false { // do we want to handle y events too?
+                        if true { // do we want to handle y events too?
                             if diffY > 1.0 {
                                 nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
                             }
