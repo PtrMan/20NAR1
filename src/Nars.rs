@@ -21,6 +21,7 @@ pub struct Nar {
     pub cfgIntervalMax:i64, // maximal interval time
 
     pub cfgPerceptWindow:i64, // perception window for current events
+    pub cfgDescnThreshold:f64,
 
     pub evidence: Vec<Rc<RefCell<EE>>>,
     
@@ -44,6 +45,7 @@ pub fn narInit() -> Nar {
         cfgIntervalExpBase: 1.5,
         cfgIntervalMax: 40,
         cfgPerceptWindow: 2,
+        cfgDescnThreshold: 0.48,
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -243,9 +245,7 @@ pub fn narStep0(nar:&mut Nar) {
     
 }
 
-pub fn narStep1(nar:&mut Nar) {
-    let cfgDescnThreshold:f64 = 0.48;
-    
+pub fn narStep1(nar:&mut Nar) {    
     let mut pickedAction:Option<String> = None;
     
     
@@ -288,7 +288,7 @@ pub fn narStep1(nar:&mut Nar) {
                 }
             }
             
-            if pickedExp > cfgDescnThreshold {
+            if pickedExp > nar.cfgDescnThreshold {
                 let picked = pickedOpt.unwrap().evidence;
                 let implSeqAsStr = format!("({},{})=/>{}",(*picked).borrow().seqCond,(*picked).borrow().seqOp,(*picked).borrow().pred);
                 println!("descnMaking: found best act = {}   implSeq={}    exp = {}", (*picked).borrow().seqOp, &implSeqAsStr, pickedExp);
