@@ -4,6 +4,7 @@
 use ::mlutils;
 use ::map2d;
 use ::map2d::{Map2d,writeAt,readAt,map2dDrawCircle};
+use ::Misc::{flattenVec2Map, Vec2};
 
 // TODO< draw a object in motion and display result maxima classifications >
 
@@ -141,28 +142,6 @@ pub fn boolVecSim(a: &[bool], b: &[bool]) -> f64 {
     }
     let sim1:f64 = 1.0 - (diffCnt as f64) / (a.len() as f64);
     return sim1;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Vec2{
-    pub x:f64,
-    pub y:f64,
-}
-
-impl Default for Vec2 {
-    fn default() -> Vec2 {Vec2{x:0.0,y:0.0}}
-}
-
-// flattens a vec2 map to a f64 array
-pub fn flattenVec2Map(m:&Map2d<Vec2>) -> Vec<f64> {
-    let mut res = vec![];
-    for iy in 0..m.h {
-        for ix in 0..m.w {
-            res.push(readAt(&m,iy,ix).x);
-            res.push(readAt(&m,iy,ix).y);
-        }
-    }
-    res
 }
 
 

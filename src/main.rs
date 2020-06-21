@@ -23,6 +23,8 @@ mod narPerception;
 mod Nars;
 mod AeraishPerceptionComp;
 mod expRepresent0;
+mod Misc;
+mod Classifier;
 
 pub fn main() {
     //expGa0();return;
