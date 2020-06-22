@@ -11,7 +11,7 @@ pub struct Network {
 
 // helper to build network from parameters
 // /param diffIdx ad is set to 1.0 for this idx
-pub fn buildNnFromParameters(paramsIdx:&mut i64, params:&Vec<f64>, nNeuronsLayer0:i64, nNeuronsLayer1:i64, diffIdx:Option<usize>) -> Network {
+pub fn buildNnFromParameters(paramsIdx:&mut i64, params:&Vec<f64>, nInput:i64, act0:u32, nNeuronsLayer0:i64, nNeuronsLayer1:i64, diffIdx:Option<usize>) -> Network {
     let mut network:Network = Network { // network of the solver
         neuronsLayer0:Vec::<ad::Neuron>::new(),
         neuronsLayer1:Vec::<ad::Neuron>::new(),
@@ -19,7 +19,7 @@ pub fn buildNnFromParameters(paramsIdx:&mut i64, params:&Vec<f64>, nNeuronsLayer
 
     for _iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
         let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-        for _i in 0..5*5 {
+        for _i in 0..nInput {
             let v = params[*paramsIdx as usize];
             weights.push(ad::Ad{r:v,d:if diffIdx.is_some() && diffIdx.unwrap() as i64 == *paramsIdx {1.0} else {0.0}});
             *paramsIdx+=1;
@@ -28,7 +28,7 @@ pub fn buildNnFromParameters(paramsIdx:&mut i64, params:&Vec<f64>, nNeuronsLayer
         network.neuronsLayer0.push(ad::Neuron{
             weights: weights,
             bias:ad::Ad{r:bias,d:if diffIdx.is_some() && diffIdx.unwrap() as i64 == *paramsIdx {1.0} else {0.0}},
-            act: 0,
+            act: act0, // 0
         });
         *paramsIdx+=1;
     }

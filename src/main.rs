@@ -27,6 +27,7 @@ mod Misc;
 mod Classifier;
 mod EnvPong3;
 mod Nn;
+mod NnTrain;
 
 use Nn::{Network, buildNnFromParameters};
 
@@ -36,8 +37,10 @@ pub fn main() {
     // POWERPLAY like algorithm to solve simple problem(s)
     //expInvent0();
 
+    NnTrain::testTrainingNn0();
+
     // jump to reasoner
-    reasoner0Entry();
+    //reasoner0Entry();
 }
 
 
@@ -136,7 +139,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
         
     
         let mut paramsIdx = 0;
-        let mut network:Network = buildNnFromParameters(&mut paramsIdx, &params, nNeuronsLayer0, nNeuronsLayer1, None); // build network from parameters
+        let mut network:Network = buildNnFromParameters(&mut paramsIdx, &params, 5*5, 0, nNeuronsLayer0, nNeuronsLayer1, None); // build network from parameters
 
         let nProblems = currentProblems.len()+solvedProblems.len();
         for iEnvStimulusVersion in 0..nProblems {
