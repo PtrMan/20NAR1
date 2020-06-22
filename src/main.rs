@@ -26,6 +26,9 @@ mod expRepresent0;
 mod Misc;
 mod Classifier;
 mod EnvPong3;
+mod Nn;
+
+use Nn::{Network, buildNnFromParameters};
 
 pub fn main() {
     //expGa0();return;
@@ -133,7 +136,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
         
     
         let mut paramsIdx = 0;
-        let mut network:Network = buildNnFromParameters(&mut paramsIdx, &params, nNeuronsLayer0, nNeuronsLayer1); // build network from parameters
+        let mut network:Network = buildNnFromParameters(&mut paramsIdx, &params, nNeuronsLayer0, nNeuronsLayer1, None); // build network from parameters
 
         let nProblems = currentProblems.len()+solvedProblems.len();
         for iEnvStimulusVersion in 0..nProblems {
@@ -168,48 +171,6 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
             }
         }
     }
-}
-
-// helper to build network from parameters
-pub fn buildNnFromParameters(paramsIdx:&mut i64, params:&Vec<f64>, nNeuronsLayer0:i64, nNeuronsLayer1:i64) -> Network {
-    let mut network:Network = Network { // network of the solver
-        neuronsLayer0:Vec::<ad::Neuron>::new(),
-        neuronsLayer1:Vec::<ad::Neuron>::new(),
-    };
-
-    for _iNeuronIdx in 0..nNeuronsLayer0 { // loop to transfer to neurons
-        let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-        for _i in 0..5*5 {
-            let v = params[*paramsIdx as usize];
-            *paramsIdx+=1;
-            weights.push(ad::Ad{r:v,d:0.0});
-        }
-        let bias = params[*paramsIdx as usize] * 15.0; // boost parameter because it is the bias
-        *paramsIdx+=1;
-        network.neuronsLayer0.push(ad::Neuron{
-            weights: weights,
-            bias:ad::Ad{r:bias,d:0.0},
-            act: 0,
-        });
-    }
-
-    for _iNeuronIdx in 0..nNeuronsLayer1 { // loop to transfer to neurons
-        let mut weights:Vec::<ad::Ad> = Vec::<ad::Ad>::new();
-        for _i in 0..nNeuronsLayer0 {
-            let v = params[*paramsIdx as usize];
-            *paramsIdx+=1;
-            weights.push(ad::Ad{r:v,d:0.0});
-        }
-        let bias = params[*paramsIdx as usize] * 8.0; // boost parameter because it is the bias
-        *paramsIdx+=1;
-        network.neuronsLayer1.push(ad::Neuron{
-            weights: weights,
-            bias:ad::Ad{r:bias,d:0.0},
-            act: 1,
-        });
-    }
-
-    network
 }
 
 
@@ -400,12 +361,6 @@ pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::
     return map; // give up
 }
 
-
-// network used to solve a problem
-pub struct Network {
-    pub neuronsLayer0:Vec::<ad::Neuron>,
-    pub neuronsLayer1:Vec::<ad::Neuron>,
-}
 
 // state of the solver
 pub struct SolverState {
