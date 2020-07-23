@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 extern crate rand;
+extern crate nom;
 //extern crate rand_distr;
 
 //use std::collections::HashMap;
@@ -19,7 +20,6 @@ mod map2d;
 mod ad;
 mod mlutils;
 
-mod narPerception;
 mod Nars;
 mod AeraishPerceptionComp;
 mod expRepresent0;
@@ -28,6 +28,12 @@ mod Classifier;
 mod EnvPong3;
 mod Nn;
 mod NnTrain;
+mod NarseseParser;
+mod NarSentence;
+mod NarMem;
+mod NarWorkingCycle;
+mod Term;
+//mod narPerception; // not include because file has issues
 
 use Nn::{Network, buildNnFromParameters};
 
@@ -37,7 +43,8 @@ pub fn main() {
     // POWERPLAY like algorithm to solve simple problem(s)
     //expInvent0();
 
-    NnTrain::testTrainingNn0();
+    //NnTrain::testTrainingNn0();
+    NarWorkingCycle::expNarsWorkingCycle0(); // experiment with NAR working cycle
 
     // jump to reasoner
     //reasoner0Entry();

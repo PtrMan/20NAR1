@@ -21,12 +21,7 @@ extern crate rand;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
-#[derive(Clone)]
-pub struct SentenceDummy {
-    pub isOp:bool, // is it a operation?
-    pub term:Rc<Term>,
-    pub t:i64, // time of occurence 
-}
+use Term::Term;
 
 // map if the sentence is a op
 pub fn mapArrSentencesByOp(sentences:&Vec<SentenceDummy>) -> Vec<bool> {
@@ -84,87 +79,6 @@ pub fn perceiveImpl(events:&Vec<SentenceDummy>, rng:&mut ThreadRng) -> Vec<Sente
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
-pub enum Copula {
-    SIM, // <-> similarity
-    INH, // --> inheritance
-    PREDIMPL, // =/> predictive implication
-}
-
-#[derive(PartialEq, Eq, Hash, Clone)]
-pub enum Term {
-    Cop(Copula, Rc<Term>, Rc<Term>),
-    Name(String),
-    Seq(Vec<Rc<Term>>), // sequence
-}
-
-pub fn convTermToStr(t:&Term) -> String {
-    match t {
-        Term::Cop(Copula, subj, pred) => {
-            let subjStr = convTermToStr(subj);
-            let predStr = convTermToStr(pred);
-            let copStr = match Copula {Copula::SIM=>{"<->"},Copula::INH=>{"-->"},Copula::PREDIMPL=>"=/>"};
-            format!("<{} {} {}>", subjStr, copStr, predStr)
-        }
-        Term::Name(name) => name.to_string(),
-        Term::Seq(seq) => {
-            let mut inner = convTermToStr(&seq[0]);
-            for i in 1..seq.len() {
-                inner = format!("{} &/ {}", inner, convTermToStr(&seq[i]));
-            }
-            format!("( {} )", inner)
-        }
-    }
-}
-
-
-
-
-
-// memory system
-pub struct Concept {
-    pub name:Rc<Term>,
-
-    pub implBeliefs:Vec<Arc<SentenceDummy>>, // =/> beliefs
-}
-
-// memory
-pub struct Mem {
-    pub concepts:HashMap<Term, Arc<Concept>>,
-}
-
-pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
-    for iTerm in termEnum(&*s.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
-        match mem.concepts.get_mut(&iTerm.clone()) {
-            Some(arcConcept) => {
-                match Arc::get_mut(arcConcept) {
-                    Some(concept) => {
-                        println!("TODO - add belief only if it doesn't already exist!");
-
-                        concept.implBeliefs.push(Arc::new((*s).clone())); // add belief
-
-                        // TODO< order by importance >
-
-                        concept.implBeliefs = concept.implBeliefs[..concept.implBeliefs.len().min(20)].to_vec(); // keep under AIKR
-                    }
-                    None => {
-                        println!("INTERNAL ERROR - couldn't aquire arc!");
-                    }
-                }
-            },
-            None => { // concept doesn't exist
-                // * insert new concept if we are here
-                
-                let concept = Arc::new(Concept {
-                    name:Rc::new(iTerm.clone()),
-                    implBeliefs:vec![Arc::new((*s).clone())],
-                });
-                
-                mem.concepts.insert(iTerm.clone(), concept); // add concept to memory
-            }
-        }
-    }
-}
 
 // enumerate terms inside term
 // DESC< doesn't remove duplicates! >
