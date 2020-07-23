@@ -723,18 +723,8 @@ pub struct Task2 {
 }
 
 use std::collections::HashMap;
-//use std::cell::Cell;
 use std::cell::{RefCell};
-//use std::cell::{Ref};
-//use std::rc::Rc;
 
-/*
-pub struct Mem<'a,'b> {
-    pub judgementTasks:Vec<Ref<'a, RefCell<Task>>>,
-    pub judgementTasksByTerm:HashMap<Term, Vec<Ref<'a, RefCell<Task>>>>, // for fast lookup
-    pub questionTasks:Vec<Box<&'b Task2>>,
-}
-*/
 pub struct Mem2 {
     pub judgementTasks:Vec<Rc<RefCell<Task>>>,
     pub judgementTasksByTerm:HashMap<Term, Vec<Rc<RefCell<Task>>>>, // for fast lookup
