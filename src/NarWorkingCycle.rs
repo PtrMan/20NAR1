@@ -878,8 +878,6 @@ pub fn expNarsWorkingCycle0() {
     }
 
 
-    /////////storeInConcepts(&mut mem2, s:&SentenceDummy) 
-
     { // one working cycle - select for processing
         println!("TODO - select by credit distribution");
         let mut selIdx:usize = 0;
