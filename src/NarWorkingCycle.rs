@@ -10,6 +10,8 @@
 // TODO   < add tv >
 // TODO   < add stamp and stamp overlap check >
 
+use rand::Rng;
+use rand::rngs::ThreadRng;
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -315,7 +317,7 @@ pub fn unify(a: &Term, b: &Term) -> Option<Vec<Asgnment>> {
 // substitute variables with values
 pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
     match t {
-        Term::DepVar(name) => {
+        Term::DepVar(_name) => {
             // search for variable
             for iasgn in subst {
                 if checkEqTerm(&t, &iasgn.var) {
@@ -324,7 +326,7 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
             }
             (*t).clone()
         },
-        Term::IndepVar(name) => {
+        Term::IndepVar(_name) => {
             // search for variable
             for iasgn in subst {
                 if checkEqTerm(&t, &iasgn.var) {
@@ -335,7 +337,7 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
         },
         
         Term::Cop(copula, subj, pred) => {Term::Cop(*copula, Box::new(unifySubst(subj, subst)), Box::new(unifySubst(pred, subst)))},
-        Term::Name(name) => (*t).clone(),
+        Term::Name(_) => (*t).clone(),
         
         Term::Seq(subterms) => {
             let mut arr = vec![];
@@ -731,6 +733,26 @@ pub struct Mem2 {
     pub questionTasks:Vec<Box<Task2>>,
 
     pub mem: Rc<RefCell<NarMem::Mem>>,
+
+    pub rng: ThreadRng,
+}
+
+
+
+// helper to select random task by credit
+pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Rc<RefCell<Task>>>)->usize {
+    let sum:f64 = arr.iter().map(|iv| iv.borrow().credit).sum();
+    let mut acc = 0.0;
+    let mut idx = 0;
+    for iv in arr {
+        if acc >= selVal*sum {
+            return idx;
+        }
+        acc += iv.borrow().credit;
+        idx+=1;
+    }
+    
+    arr.len()-1 // sel last
 }
 
 // helper to select task with highest prio
@@ -800,7 +822,7 @@ pub fn expNarsWorkingCycle0() {
             concepts:HashMap::new(),
         };
     
-        mem = Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0))};
+        mem = Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), };
     }
     
     // add testing tasks
@@ -872,21 +894,69 @@ pub fn expNarsWorkingCycle0() {
         println!("TODO - select by credit distribution");
         let mut selIdx:usize = 0;
 
-        let selTask = &mem.judgementTasks[selIdx];
+        let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+        let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks);
 
-        match mem.mem.borrow_mut().concepts.get_mut(&selTask.borrow().sentence.term.clone()) {
-            Some(arcConcept) => {
-                match Arc::get_mut(arcConcept) {
-                    Some(concept) => {
-                        println!("TODO< do stuff with beliefs inside concept!!! >!!!");
-                    }
-                    None => {
-                        println!("INTERNAL ERROR - couldn't aquire arc!");
+        let selPrimaryTask = &mem.judgementTasks[selIdx];
+
+        {
+            // attention mechanism which select the secondary task from the table 
+            // TODO< selection by mass is unfair, because we select the same task multiple times.
+            //       we should add each task only once here, this can be realized by giving each task
+            //       a unique id and by storing the task in a hashmap to guarantue that each task is taken just once
+            //     >
+            println!("TODO - select secondary task canditate just once!");
+            
+            let mut secondaryElligable:Vec<Rc<RefCell<Task>>> = vec![]; // tasks which are eligable to get selected as the secondary
+            
+            for iSubTerm in &retSubterms(&selPrimaryTask.borrow().sentence.term.clone()) {
+                if mem.judgementTasksByTerm.contains_key(iSubTerm) {
+                    let itJudgementTasksByTerm:Vec<Rc<RefCell<Task>>> = mem.judgementTasksByTerm.get(iSubTerm).unwrap().to_vec();
+                    for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
+                        secondaryElligable.push(Rc::clone(&it));
                     }
                 }
-            },
-            None => {} // concept doesn't exist, ignore
+            }
+
+            // sample from secondaryElligable by priority
+            let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+            let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
+            let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
+
+            // debug premsises
+            {
+                {
+                    let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence);
+                    println!("DBG  primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
+                }
+                {
+                    let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence);
+                    println!("DBG  secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
+                }
+            }
+
+            println!("TODO - do inference with premises");
+
+
         }
+
+        { // attention mechanism which selects the secondary task from concepts
+            match mem.mem.borrow_mut().concepts.get_mut(&selPrimaryTask.borrow().sentence.term.clone()) {
+                Some(arcConcept) => {
+                    match Arc::get_mut(arcConcept) {
+                        Some(concept) => {
+                            println!("TODO< do stuff with beliefs inside concept!!! >!!!");
+                        }
+                        None => {
+                            println!("INTERNAL ERROR - couldn't aquire arc!");
+                        }
+                    }
+                },
+                None => {} // concept doesn't exist, ignore
+            }
+        }
+
+
     }
 
 
