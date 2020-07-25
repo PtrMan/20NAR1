@@ -449,42 +449,43 @@ pub fn inf7(a: &Term, punctA:EnumPunctation, b: &Term, punctB:EnumPunctation) ->
 
 
 // do binary inference
-pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, b: &Term, bPunct:EnumPunctation) -> Vec<Term> {
+pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, b: &Term, bPunct:EnumPunctation, wereRulesApplied:&mut bool) -> Vec<Term> {
     let mut res = vec![];
     
     match inf0(&a, aPunct, &b, bPunct) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf1(&a, aPunct, &b, bPunct) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf3(&a, aPunct, &b, bPunct) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf4(&a, aPunct, &b, bPunct) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf5(&a, aPunct, &b, bPunct, 0) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf5(&a, aPunct, &b, bPunct, 1) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf6(&a, aPunct, &b, bPunct) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf7(&a, aPunct, &b, bPunct) {
-        Some(x) => { res.push(x); } _ => {}
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     
     res
 }
 
 // do binary inference
-pub fn infBinary(a: &Term, aPunct:EnumPunctation, b: &Term, bPunct:EnumPunctation) -> Vec<Term> {
+pub fn infBinary(a: &Term, aPunct:EnumPunctation, b: &Term, bPunct:EnumPunctation, wereRulesApplied:&mut bool) -> Vec<Term> {
     let mut res = vec![];
-    res.extend(infBinaryInner(&a, aPunct, &b, bPunct).iter().cloned());
-    res.extend(infBinaryInner(&b, bPunct, &a, aPunct).iter().cloned());
+    *wereRulesApplied = false; // because no rules were applied yet
+    res.extend(infBinaryInner(&a, aPunct, &b, bPunct, wereRulesApplied).iter().cloned());
+    res.extend(infBinaryInner(&b, bPunct, &a, aPunct, wereRulesApplied).iter().cloned());
     res
 }
 
@@ -654,7 +655,8 @@ pub fn testManual0() {
     println!("{}", &convTermToStr(&inh1));
     println!("concl:");
     
-    let infConcl = infBinary(&impl0, EnumPunctation::JUGEMENT, &inh1, EnumPunctation::JUGEMENT);
+    let mut wereRulesApplied = false;
+    let infConcl = infBinary(&impl0, EnumPunctation::JUGEMENT, &inh1, EnumPunctation::JUGEMENT, &mut wereRulesApplied);
     for iInfConcl in infConcl {
         println!("{}", &convTermToStr(&iInfConcl));
     }
@@ -694,7 +696,8 @@ mod tests {
         
         let mut success=false;
         
-        let infConcl = infBinary(&impl0, EnumPunctation::QUESTION, &inh2, EnumPunctation::JUGEMENT);
+        let mut wereRulesApplied = false;
+        let infConcl = infBinary(&impl0, EnumPunctation::QUESTION, &inh2, EnumPunctation::JUGEMENT, &mut wereRulesApplied);
         for iInfConcl in infConcl {
             let concl = convTermToStr(&iInfConcl);
             println!("{}", &concl);
@@ -708,6 +711,33 @@ mod tests {
 }
 
 
+
+
+// do inference of two sentences
+// /param wereRulesApplied is true if any rules were applied
+pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<SentenceDummy> {
+    *wereRulesApplied = false;
+
+    let mut concl = vec![];
+
+    let infConcl = infBinary(&pa.term, pa.punct, &pb.term, pb.punct, wereRulesApplied);
+    for iInfConcl in infConcl {
+        println!("TODO - infBinary must compute the punctation!");
+        concl.push(SentenceDummy{
+            isOp:false,
+            term:Rc::new(iInfConcl.clone()),
+            t:-1, // time of occurence 
+            punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
+        });
+    }
+
+    println!("TODO - implement stamp overlap!");
+    //if !stampOverlap(&pa.stamp, &pb.stamp) { // check for overlap
+    //  concl = vec![]; // flush conclusions because we don't have any conclusions when the premises overlapped
+    //}
+    
+    concl
+}
 
 
 
@@ -774,15 +804,22 @@ pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>) -> Option<usize> {
 
 
 
-pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy) {
+// /param calcCredit compute the credit?
+pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
     NarMem::storeInConcepts(&mut mem.mem.borrow_mut(), sentence); // store sentence in memory, adressed by concepts
     
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
-            let x:RefCell<Task> = RefCell::new(Task {
+            let mut task = Task {
                 sentence:sentence.clone(),
-                credit:0.0,
-            });
+                credit:1.0,
+            };
+
+            if calcCredit {
+                divCreditByComplexity(&mut task); // punish more complicated terms
+            }
+
+            let x:RefCell<Task> = RefCell::new(task);
             let y = Rc::new(x);
             mem.judgementTasks.push(Rc::clone(&y));
             
@@ -811,7 +848,10 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy) {
     
 }
 
-
+// helper for attention
+pub fn divCreditByComplexity(task:&mut Task) {
+    task.credit /= (calcComplexity(&task.sentence.term) as f64);
+}
 
 // not working prototype of attention mechanism based on credits
 pub fn expNarsWorkingCycle0() {
@@ -834,7 +874,7 @@ pub fn expNarsWorkingCycle0() {
                 t:0, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
             };
-            memAddTask(&mut mem, &sentence);
+            memAddTask(&mut mem, &sentence, true);
         }
 
         { // .
@@ -844,7 +884,7 @@ pub fn expNarsWorkingCycle0() {
                 t:0, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
             };
-            memAddTask(&mut mem, &sentence);
+            memAddTask(&mut mem, &sentence, true);
         }
 
         { // ?
@@ -854,7 +894,7 @@ pub fn expNarsWorkingCycle0() {
                 t:0, // time of occurence 
                 punct:EnumPunctation::QUESTION,
             };
-            memAddTask(&mut mem, &sentence);
+            memAddTask(&mut mem, &sentence, true);
         }
     }
 
@@ -882,10 +922,7 @@ pub fn expNarsWorkingCycle0() {
     // let them pay for their complexity
     {
         for iIdx in 0..mem.judgementTasks.len() {
-            let complexity:f64 = calcComplexity(&*mem.judgementTasks[iIdx].borrow().sentence.term) as f64;
-            
-            let x:&RefCell<Task> = &(*mem.judgementTasks[iIdx]);
-            x.borrow_mut().credit /= complexity;
+            divCreditByComplexity(&mut *mem.judgementTasks[iIdx].borrow_mut());
         }
     }
 
@@ -898,6 +935,7 @@ pub fn expNarsWorkingCycle0() {
         let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks);
 
         let selPrimaryTask = &mem.judgementTasks[selIdx];
+        let selPrimaryTaskTerm = selPrimaryTask.borrow().sentence.term.clone();
 
         {
             // attention mechanism which select the secondary task from the table 
@@ -935,13 +973,24 @@ pub fn expNarsWorkingCycle0() {
                 }
             }
 
-            println!("TODO - do inference with premises");
+            // do inference with premises
+            let mut wereRulesApplied = false;
+            let concl: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
 
-
+            // put conclusions back into memory!
+            {
+                println!("TODO TODO TODO - put conclusions back into memory te right way");
+                println!("TODO TODO - answer questions here");
+ 
+                for iConcl in &concl {
+                    // TODO< check if task exists already, don't add if it exists >
+                    memAddTask(&mut mem, iConcl, true);
+                }
+            }
         }
 
         { // attention mechanism which selects the secondary task from concepts
-            match mem.mem.borrow_mut().concepts.get_mut(&selPrimaryTask.borrow().sentence.term.clone()) {
+            match mem.mem.borrow_mut().concepts.get_mut(&selPrimaryTaskTerm) {
                 Some(arcConcept) => {
                     match Arc::get_mut(arcConcept) {
                         Some(concept) => {

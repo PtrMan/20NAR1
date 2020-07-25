@@ -32,6 +32,7 @@ mod NarseseParser;
 mod NarSentence;
 mod NarMem;
 mod NarWorkingCycle;
+mod NarStamp;
 mod Term;
 //mod narPerception; // not include because file has issues
 

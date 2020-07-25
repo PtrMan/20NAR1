@@ -15,5 +15,5 @@ pub struct SentenceDummy {
     pub term:Rc<Term>,
     pub t:i64, // time of occurence 
     pub punct:EnumPunctation,
+    //pub stamp:Stamp,
 }
-
