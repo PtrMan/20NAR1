@@ -10,9 +10,9 @@ use Nn::{Network, buildNnFromParameters};
 
 // prototyping for training
 pub fn testTrainingNn0() {
-    let mut nInput = 5*5+2;
-    let mut nNeuronsLayer0 = 8;
-    let mut nNeuronsLayer1 = 3;
+    let nInput = 5*5+2;
+    let nNeuronsLayer0 = 8;
+    let nNeuronsLayer1 = 3;
 
     let mut params:Vec<f64> = vec![];
     // TODO< compute number of parameters ! >
@@ -76,7 +76,7 @@ pub fn testTrainingNn0() {
             out = ys1;
         }
 
-        let mut lRate:f64 = 0.1 / 16.0; // learning rate
+        let lRate:f64 = 0.1 / 16.0; // learning rate
     
         //let mut trainingY:Vec<f64> = vec![0.9, 0.1];
         let ref trainingY:Vec<f64> = selTrainingTuple.o;

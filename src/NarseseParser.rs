@@ -3,12 +3,12 @@ use nom::{
   IResult,
   bytes::complete::{tag, take_while_m_n},
   combinator::map_res,
-  sequence::tuple,
-  take_while,
-  alt,
+//  sequence::tuple,
+//  take_while,
+//  alt,
 };
-use nom::character::is_alphanumeric;
-use nom::named;
+//use nom::character::is_alphanumeric;
+//use nom::named;
 //use nom::many_m_n;
 
 // finds out if narsese has tv and returns TV if TV exists
@@ -120,6 +120,60 @@ fn parseSubjOrPred(input: &str) -> IResult<&str, &str> {
   //dragon_or_beast(input)
 }
 
+
+
+fn copInh(input:&str)  -> IResult<&str, &str> {
+  let (input, _) = tag(" --> ")(input)?;
+  Ok((input, ""))
+}
+fn copSim(input:&str)  -> IResult<&str, &str> {
+  let (input, _) = tag(" <-> ")(input)?;
+  Ok((input, ""))
+}
+fn copImpl(input:&str)  -> IResult<&str, &str> {
+  let (input, _) = tag(" ==> ")(input)?;
+  Ok((input, ""))
+}
+fn copEquiv(input:&str)  -> IResult<&str, &str> {
+  let (input, _) = tag(" <=> ")(input)?;
+  Ok((input, ""))
+}
+
+fn parseCopula(input: &str) -> IResult<&str, &str> {
+  {
+    let res0 = copInh(input);
+    match res0 {
+      Ok(X) => {
+        return res0;
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  {
+    let res0 = copSim(input);
+    match res0 {
+      Ok(X) => {
+        return res0;
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  {
+    let res0 = copImpl(input);
+    match res0 {
+      Ok(X) => {
+        return res0;
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  {
+    return copEquiv(input);
+  }
+}
+
+
+
 // TODO< return real term >
 fn parse0(input: &str) -> IResult<&str, X> {
     //named!( alpha, take_while!( is_alphanumeric ) );
@@ -132,8 +186,9 @@ fn parse0(input: &str) -> IResult<&str, X> {
     //let (input, _) = tag("}")(input)?;
     let (input, subj) = parseSubjOrPred(input)?;
 
-    let (input, _) = tag(" --> ")(input)?; // TODO< remove spaces >
-    
+    //let (input, _) = tag(" --> ")(input)?; // TODO< remove spaces >
+    let (input, _) = parseCopula(input)?;
+
     //let (input, pred) = alpha2(input)?;
     let (input, pred) = parseSubjOrPred(input)?;
     

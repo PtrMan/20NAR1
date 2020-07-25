@@ -205,10 +205,10 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
                 }
             }
         },
-        Term::IndepVar(namea) => {
+        Term::IndepVar(_namea) => {
             match b2 {
-                Term::DepVar(nameb) => false, // can't unify var with var
-                Term::IndepVar(nameb) => false, // can't unify var with var
+                Term::DepVar(_nameb) => false, // can't unify var with var
+                Term::IndepVar(_nameb) => false, // can't unify var with var
                 _ => {
                     if checkAssigned(&a2, &assignments) {
                         return checkSameVal(&a2, &b2, &assignments);
@@ -665,7 +665,7 @@ pub fn testManual0() {
     let mut wereRulesApplied = false;
     let infConcl = infBinary(&impl0, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &inh1, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &mut wereRulesApplied);
     for iInfConcl in infConcl {
-        let (conclTerm, conclTv) = iInfConcl;
+        let (conclTerm, _conclTv) = iInfConcl;
         println!("{}", &convTermToStr(&conclTerm));
     }
 }
@@ -945,8 +945,6 @@ pub fn expNarsWorkingCycle0() {
 
     { // one working cycle - select for processing
         println!("TODO - select by credit distribution");
-        let mut selIdx:usize = 0;
-
         let selVal:f64 = mem.rng.gen_range(0.0,1.0);
         let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks);
 

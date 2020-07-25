@@ -23,6 +23,7 @@ pub fn merge(a:&Stamp, b:&Stamp) -> Stamp {
     while idx < a.ids.len().min(b.ids.len()) {
         res.ids.push(a.ids[idx]);
         res.ids.push(b.ids[idx]);
+        idx+=1;
     }
     res.ids.extend(&a.ids[idx+1..a.ids.len()]);
     res.ids.extend(&b.ids[idx+1..b.ids.len()]);
