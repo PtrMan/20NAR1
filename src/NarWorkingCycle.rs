@@ -50,7 +50,7 @@ pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
         Term::Cop(Copula::INH, asubj, apred) => {
             match b {
                 Term::Cop(Copula::INH, bsubj, bpred) => {
-                    if checkEqTerm(&apred, &bsubj) {
+                    if !checkEqTerm(&asubj, &bpred) && checkEqTerm(&apred, &bsubj) {
                         return Some(( Term::Cop(Copula::INH, Box::clone(asubj), Box::clone(bpred)), ded(&aTv,&bTv) )); // a.subj --> b.pred
                     }
                 },
