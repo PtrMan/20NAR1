@@ -2,6 +2,8 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use Tv::*;
+
 // DONE< check for events which were anticipated and remove anticipations! >
 // DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
 
@@ -404,16 +406,6 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
 pub struct AnticipationEvent {
     pub evi:Rc<RefCell<EE>>, // evidence
     pub deadline:i64, // deadline in absolute cycles
-}
-
-#[derive(Clone)]
-pub struct Tv {
-    pub f:f64,
-    pub c:f64,
-}
-
-pub fn calcExp(tv:&Tv)->f64 {
-    tv.c*(tv.f - 0.5)+0.5
 }
 
 

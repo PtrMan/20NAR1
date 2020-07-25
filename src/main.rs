@@ -33,6 +33,7 @@ mod NarSentence;
 mod NarMem;
 mod NarWorkingCycle;
 mod NarStamp;
+mod Tv;
 mod Term;
 //mod narPerception; // not include because file has issues
 
