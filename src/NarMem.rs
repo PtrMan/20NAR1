@@ -5,9 +5,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 use Term::Term;
-use Term::Copula;
 use Term::retSubterms;
-use Term::calcComplexity;
 
 use NarSentence::SentenceDummy;
 

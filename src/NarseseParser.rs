@@ -11,6 +11,8 @@ use nom::{
 //use nom::named;
 //use nom::many_m_n;
 
+use Term::*;
+
 // finds out if narsese has tv and returns TV if TV exists
 // cuts away narsese of TV if TV is detected
 // TODO REFACTOR< return option of TV >
@@ -58,7 +60,7 @@ pub fn mainX() {
     println!("f = {}", f);
     println!("c = {}", c);
 
-    let parsed:IResult<&str, X> = parse0(&narseseInner);
+    let parsed:IResult<&str, Term> = parse0(&narseseInner);
     
 }
 
@@ -86,24 +88,24 @@ fn alpha2(input: &str) -> IResult<&str, &str> {
   )(input)
 }
 
-fn a(input:&str)  -> IResult<&str, &str> {
+fn a(input:&str)  -> IResult<&str, Term> {
   let (input, _) = tag("{")(input)?;
-  let (input, subj) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
+  let (input, termContent) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
   let (input, _) = tag("}")(input)?;
 
-  Ok((input, subj))
+  Ok((input, Term::SetInt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
 }
 
-fn b(input:&str)  -> IResult<&str, &str> {
-  let (input, subj) = alpha2(input)?;
-  Ok((input, subj))
+fn b(input:&str)  -> IResult<&str, Term> {
+  let (input, termContent) = alpha2(input)?;
+  Ok((input, Term::Name(termContent.to_string())))
 }
 
-fn parseSubjOrPred(input: &str) -> IResult<&str, &str> {
+fn parseSubjOrPred(input: &str) -> IResult<&str, Term> {
   let res0 = a(input);
   match res0 {
-    Ok(X) => {
-      return res0;
+    Ok(term) => {
+      return Ok(term.clone())
     },
     Err(_) => {}, // try other choice
   }
@@ -122,24 +124,25 @@ fn parseSubjOrPred(input: &str) -> IResult<&str, &str> {
 
 
 
-fn copInh(input:&str)  -> IResult<&str, &str> {
+fn copInh(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" --> ")(input)?;
-  Ok((input, ""))
+  Ok((input, Copula::INH))
 }
-fn copSim(input:&str)  -> IResult<&str, &str> {
+fn copSim(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" <-> ")(input)?;
-  Ok((input, ""))
+  Ok((input, Copula::SIM))
 }
-fn copImpl(input:&str)  -> IResult<&str, &str> {
+fn copImpl(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" ==> ")(input)?;
-  Ok((input, ""))
+  Ok((input, Copula::IMPL))
 }
-fn copEquiv(input:&str)  -> IResult<&str, &str> {
+fn copEquiv(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" <=> ")(input)?;
-  Ok((input, ""))
+  // TODO< add copula::EQUIV
+  Ok((input, Copula::IMPL))
 }
 
-fn parseCopula(input: &str) -> IResult<&str, &str> {
+fn parseCopula(input: &str) -> IResult<&str, Copula> {
   {
     let res0 = copInh(input);
     match res0 {
@@ -167,15 +170,14 @@ fn parseCopula(input: &str) -> IResult<&str, &str> {
       Err(_) => {}, // try other choice
     }
   }
-  {
-    return copEquiv(input);
-  }
+  
+  return copEquiv(input);
 }
 
 
 
 // TODO< return real term >
-fn parse0(input: &str) -> IResult<&str, X> {
+fn parse0(input: &str) -> IResult<&str, Term> {
     //named!( alpha, take_while!( is_alphanumeric ) );
 
     let (input, _) = tag("<")(input)?;
@@ -187,13 +189,13 @@ fn parse0(input: &str) -> IResult<&str, X> {
     let (input, subj) = parseSubjOrPred(input)?;
 
     //let (input, _) = tag(" --> ")(input)?; // TODO< remove spaces >
-    let (input, _) = parseCopula(input)?;
+    let (input, copula) = parseCopula(input)?;
 
     //let (input, pred) = alpha2(input)?;
     let (input, pred) = parseSubjOrPred(input)?;
     
     let (input, _) = tag(">")(input)?;
   
-    Ok((input, X { subj:subj.to_string(), pred:pred.to_string()}))
+    Ok((input, Term::Cop(copula, Box::new(subj), Box::new(pred))))
 }
 
