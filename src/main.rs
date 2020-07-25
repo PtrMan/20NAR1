@@ -35,6 +35,7 @@ mod NarWorkingCycle;
 mod NarStamp;
 mod Tv;
 mod Term;
+mod NarInteractive;
 //mod narPerception; // not include because file has issues
 
 use Nn::{Network, buildNnFromParameters};
@@ -47,6 +48,12 @@ pub fn main() {
 
     //NnTrain::testTrainingNn0();
     NarWorkingCycle::expNarsWorkingCycle0(); // experiment with NAR working cycle
+
+    // run interactive
+    {
+        let mut nar = NarInteractive::Nar {};
+        NarInteractive::runInteractive(&mut nar);
+    }
 
     // jump to reasoner
     //reasoner0Entry();

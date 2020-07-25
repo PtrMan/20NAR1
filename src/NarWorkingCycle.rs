@@ -6,10 +6,6 @@
 
 // TODO< add question variable >
 
-// sentence
-// TODO   < add tv >
-// TODO   < add stamp and stamp overlap check >
-
 use rand::Rng;
 use rand::rngs::ThreadRng;
 
@@ -20,6 +16,7 @@ use Term::Term;
 use Term::Copula;
 use Term::retSubterms;
 use Term::calcComplexity;
+use Term::convTermToStr;
 
 use NarSentence::EnumPunctation;
 use NarSentence::SentenceDummy;
@@ -584,51 +581,6 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
     }
 }
 
-pub fn convTermToStr(t:&Term) -> String {
-    match t {
-        Term::Cop(Copula, subj, pred) => {
-            let subjStr = convTermToStr(subj);
-            let predStr = convTermToStr(pred);
-            let copStr = match Copula {Copula::SIM=>{"<->"},Copula::INH=>{"-->"},Copula::PREDIMPL=>"=/>",Copula::IMPL=>{"==>"}};
-            format!("<{} {} {}>", subjStr, copStr, predStr)
-        }
-        Term::Name(name) => name.to_string(),
-        Term::Seq(seq) => {
-            let mut inner = convTermToStr(&seq[0]);
-            for i in 1..seq.len() {
-                inner = format!("{} &/ {}", inner, convTermToStr(&seq[i]));
-            }
-            format!("( {} )", inner)
-        },
-        Term::SetInt(set) => {
-            let mut inner = convTermToStr(&set[0]);
-            for i in 1..set.len() {
-                inner = format!("{} {}", inner, convTermToStr(&set[i]));
-            }
-            format!("[{}]", inner)
-        },
-        Term::SetExt(set) => {
-            let mut inner = convTermToStr(&set[0]);
-            for i in 1..set.len() {
-                inner = format!("{} {}", inner, convTermToStr(&set[i]));
-            }
-            format!("{{{}}}", inner)
-        },
-        Term::DepVar(name) => {
-            format!("#{}", name)
-        },
-        Term::IndepVar(name) => {
-            format!("${}", name)
-        },
-        Term::Conj(elements) => {
-            let mut inner = convTermToStr(&elements[0]);
-            for i in 1..elements.len() {
-                inner = format!("{} && {}", inner, convTermToStr(&elements[i]));
-            }
-            format!("( {} )", inner)
-        },
-    }
-}
 
 
 

@@ -65,14 +65,6 @@ pub fn mainX() {
 }
 
 
-
-#[derive(Debug,PartialEq)]
-pub struct X {
-  pub subj: String,
-  pub pred: String,
-}
-
-
 fn ok1(input: &str) -> Result<&str, std::num::ParseIntError> {
   Ok(input)
 }
@@ -93,7 +85,7 @@ fn a(input:&str)  -> IResult<&str, Term> {
   let (input, termContent) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
   let (input, _) = tag("}")(input)?;
 
-  Ok((input, Term::SetInt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
+  Ok((input, Term::SetExt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
 }
 
 fn b(input:&str)  -> IResult<&str, Term> {
@@ -176,8 +168,7 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
 
 
 
-// TODO< return real term >
-fn parse0(input: &str) -> IResult<&str, Term> {
+pub fn parse0(input: &str) -> IResult<&str, Term> {
     //named!( alpha, take_while!( is_alphanumeric ) );
 
     let (input, _) = tag("<")(input)?;
