@@ -20,6 +20,7 @@ use Term::convTermToStr;
 
 use NarSentence::EnumPunctation;
 use NarSentence::SentenceDummy;
+use NarSentence::convSentenceTermPunctToStr;
 
 use NarMem;
 use Tv::*;
@@ -817,58 +818,8 @@ pub fn divCreditByComplexity(task:&mut Task) {
     task.credit /= (calcComplexity(&task.sentence.term) as f64);
 }
 
-// not working prototype of attention mechanism based on credits
-pub fn expNarsWorkingCycle0() {
-    // TODO< create and fill concepts! by sentence when storing sentence into memory >
-    let mut mem:Mem2;
-    {
-        let mut mem0:NarMem::Mem = NarMem::Mem{
-            concepts:HashMap::new(),
-        };
-    
-        mem = Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), };
-    }
-    
-    // add testing tasks
-    {
-        { // .
-            let sentence = SentenceDummy {
-                isOp:false, // is it a operation?
-                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
-                t:0, // time of occurence 
-                punct:EnumPunctation::JUGEMENT,
-                tv:Tv{f:1.0,c:0.9}
-            };
-            memAddTask(&mut mem, &sentence, true);
-        }
-
-        { // .
-            let sentence = SentenceDummy {
-                isOp:false, // is it a operation?
-                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
-                t:0, // time of occurence 
-                punct:EnumPunctation::JUGEMENT,
-                tv:Tv{f:1.0,c:0.9}
-            };
-            memAddTask(&mut mem, &sentence, true);
-        }
-
-        { // ?
-            println!("TODO - questions don't have a tv!");
-            let sentence = SentenceDummy {
-                isOp:false, // is it a operation?
-                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
-                t:0, // time of occurence 
-                punct:EnumPunctation::QUESTION,
-                tv:Tv{f:1.0,c:0.0},
-            };
-            memAddTask(&mut mem, &sentence, true);
-        }
-    }
-
-
-
-
+// performs one reasoning cycle
+pub fn reasonCycle(mem:&mut Mem2) {
     // transfer credits from questionTasks to Judgement tasks
     for iTask in &mem.questionTasks {
         {
@@ -950,7 +901,7 @@ pub fn expNarsWorkingCycle0() {
  
                 for iConcl in &concl {
                     // TODO< check if task exists already, don't add if it exists >
-                    memAddTask(&mut mem, iConcl, true);
+                    memAddTask(mem, iConcl, true);
                 }
             }
         }
@@ -975,8 +926,64 @@ pub fn expNarsWorkingCycle0() {
     }
 
 
+}
 
+pub fn createMem2()->Mem2 {
+    let mut mem0:NarMem::Mem = NarMem::Mem{
+        concepts:HashMap::new(),
+    };
+    
+    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), }
+}
 
+// not working prototype of attention mechanism based on credits
+pub fn expNarsWorkingCycle0() {
+    // TODO< create and fill concepts! by sentence when storing sentence into memory >
+    let mut mem:Mem2 = createMem2();
+    
+    // add testing tasks
+    {
+        { // .
+            let sentence = SentenceDummy {
+                isOp:false, // is it a operation?
+                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
+                t:0, // time of occurence 
+                punct:EnumPunctation::JUGEMENT,
+                tv:Tv{f:1.0,c:0.9}
+            };
+            memAddTask(&mut mem, &sentence, true);
+        }
+
+        { // .
+            let sentence = SentenceDummy {
+                isOp:false, // is it a operation?
+                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
+                t:0, // time of occurence 
+                punct:EnumPunctation::JUGEMENT,
+                tv:Tv{f:1.0,c:0.9}
+            };
+            memAddTask(&mut mem, &sentence, true);
+        }
+
+        { // ?
+            println!("TODO - questions don't have a tv!");
+            let sentence = SentenceDummy {
+                isOp:false, // is it a operation?
+                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
+                t:0, // time of occurence 
+                punct:EnumPunctation::QUESTION,
+                tv:Tv{f:1.0,c:0.0},
+            };
+            memAddTask(&mut mem, &sentence, true);
+        }
+    }
+
+    reasonCycle(&mut mem);
+
+    debugCreditsOfTasks(&mut mem);
+}
+
+pub fn debugCreditsOfTasks(mem: &mut Mem2) {
     // debug credit of tasks
     {
         for iTask in &mem.judgementTasks {
@@ -985,17 +992,6 @@ pub fn expNarsWorkingCycle0() {
         }
     }
 }
-
-// convert only term and punctation to string
-pub fn convSentenceTermPunctToStr(s:&SentenceDummy) -> String {
-    let punct = match s.punct{
-        EnumPunctation::QUESTION=>"?",
-        EnumPunctation::JUGEMENT=>".",
-        EnumPunctation::GOAL=>"!",
-    };    
-    convTermToStr(&s.term) + punct
-}
-
 
 
 

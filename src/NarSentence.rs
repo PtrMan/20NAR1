@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use Term::Term;
 use Tv::*;
+use Term::convTermToStr;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum EnumPunctation {
@@ -18,4 +19,15 @@ pub struct SentenceDummy {
     pub punct:EnumPunctation,
     //pub stamp:Stamp,
     pub tv:Tv,
+}
+
+
+// convert only term and punctation to string
+pub fn convSentenceTermPunctToStr(s:&SentenceDummy) -> String {
+    let punct = match s.punct{
+        EnumPunctation::QUESTION=>"?",
+        EnumPunctation::JUGEMENT=>".",
+        EnumPunctation::GOAL=>"!",
+    };    
+    convTermToStr(&s.term) + punct
 }

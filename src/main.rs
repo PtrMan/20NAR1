@@ -51,7 +51,7 @@ pub fn main() {
 
     // run interactive
     {
-        let mut nar = NarInteractive::Nar {};
+        let mut nar = NarInteractive::createNar();
         NarInteractive::runInteractive(&mut nar);
     }
 
