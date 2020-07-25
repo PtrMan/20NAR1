@@ -4,6 +4,7 @@ pub enum Copula {
     INH, // --> inheritance
     PREDIMPL, // =/> predictive implication
     IMPL, // ==>
+    EQUIV, // <=>
 }
 
 #[derive(PartialEq, Eq, Hash/*, Clone*/)]
@@ -150,7 +151,7 @@ pub fn convTermToStr(t:&Term) -> String {
         Term::Cop(Copula, subj, pred) => {
             let subjStr = convTermToStr(subj);
             let predStr = convTermToStr(pred);
-            let copStr = match Copula {Copula::SIM=>{"<->"},Copula::INH=>{"-->"},Copula::PREDIMPL=>"=/>",Copula::IMPL=>{"==>"}};
+            let copStr = match Copula {Copula::SIM=>{"<->"},Copula::INH=>{"-->"},Copula::PREDIMPL=>"=/>",Copula::IMPL=>{"==>"},Copula::EQUIV=>{"<=>"}};
             format!("<{} {} {}>", subjStr, copStr, predStr)
         }
         Term::Name(name) => name.to_string(),

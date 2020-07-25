@@ -130,8 +130,7 @@ fn copImpl(input:&str)  -> IResult<&str, Copula> {
 }
 fn copEquiv(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" <=> ")(input)?;
-  // TODO< add copula::EQUIV
-  Ok((input, Copula::IMPL))
+  Ok((input, Copula::EQUIV))
 }
 
 fn parseCopula(input: &str) -> IResult<&str, Copula> {
