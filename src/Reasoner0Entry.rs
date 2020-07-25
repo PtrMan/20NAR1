@@ -253,7 +253,6 @@ pub struct OpPong {
 }
 
 
-// Implement the `Animal` trait for `Sheep`.
 impl Nars::Op for OpPong {
     fn retName(&self) -> String {
         self.selfName.clone()

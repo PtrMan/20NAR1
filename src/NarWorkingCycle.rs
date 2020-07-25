@@ -188,10 +188,10 @@ pub struct Asgnment { // structure to store assignment of var
 
 fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
     match a2 {
-        Term::DepVar(namea) => {
+        Term::DepVar(_namea) => {
             match b2 {
-                Term::DepVar(nameb) => false, // can't unify var with var
-                Term::IndepVar(nameb) => false, // can't unify var with var
+                Term::DepVar(_nameb) => false, // can't unify var with var
+                Term::IndepVar(_nameb) => false, // can't unify var with var
                 _ => {
                     if checkAssigned(&a2, &assignments) {
                         return checkSameVal(&a2, &b2, &assignments);
@@ -815,7 +815,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
 
 // helper for attention
 pub fn divCreditByComplexity(task:&mut Task) {
-    task.credit /= (calcComplexity(&task.sentence.term) as f64);
+    task.credit /= calcComplexity(&task.sentence.term) as f64;
 }
 
 // performs one reasoning cycle
@@ -847,7 +847,6 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
 
     { // one working cycle - select for processing
-        println!("TODO - select by credit distribution");
         let selVal:f64 = mem.rng.gen_range(0.0,1.0);
         let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks);
 
@@ -929,7 +928,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 }
 
 pub fn createMem2()->Mem2 {
-    let mut mem0:NarMem::Mem = NarMem::Mem{
+    let mem0:NarMem::Mem = NarMem::Mem{
         concepts:HashMap::new(),
     };
     

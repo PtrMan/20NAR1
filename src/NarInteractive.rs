@@ -51,7 +51,7 @@ pub fn runInteractive(nar:&mut Nar) {
     loop {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
-            Ok(n) => {
+            Ok(_) => {
                 println!("{}", input);
                 inputN(nar, &input);
             }
