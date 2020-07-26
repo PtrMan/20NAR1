@@ -837,13 +837,18 @@ pub fn reasonCycle(mem:&mut Mem2) {
             } 
         }
     }
+
+    // give base credit
+    // JUSTIFICATION< else the tasks die down for forward inference >
+    for iIdx in 0..mem.judgementTasks.len() {
+        mem.judgementTasks[iIdx].borrow_mut().credit += 0.5;
+    }
     
     // let them pay for their complexity
-    {
-        for iIdx in 0..mem.judgementTasks.len() {
-            divCreditByComplexity(&mut *mem.judgementTasks[iIdx].borrow_mut());
-        }
+    for iIdx in 0..mem.judgementTasks.len() {
+        divCreditByComplexity(&mut *mem.judgementTasks[iIdx].borrow_mut());
     }
+    
 
 
     if mem.judgementTasks.len() > 0 { // one working cycle - select for processing
