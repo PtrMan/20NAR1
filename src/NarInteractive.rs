@@ -43,19 +43,40 @@ pub fn inputN(nar:&mut Nar, n:&String) {
     }
 }
 
+pub fn cycle(nar:&mut Nar) {
+    reasonCycle(&mut nar.mem);
+}
+
 use std::io;
 use NarWorkingCycle::*;
 
 pub fn runInteractive(nar:&mut Nar) {
     // TODO< parse commands ! >
     loop {
-        let mut input = String::new();
-        match io::stdin().read_line(&mut input) {
+        let mut input2 = String::new();
+        match io::stdin().read_line(&mut input2) {
             Ok(_) => {
+                let mut input = input2.clone();
+                trimNewline(&mut input);
+                
                 println!("{}", input);
-                inputN(nar, &input);
+                if input == "s" {
+                    cycle(nar);
+                }
+                else {
+                    inputN(nar, &input);
+                }
+                
+
             }
             Err(error) => println!("error: {}", error),
         }
+    }
+}
+
+fn trimNewline(s: &mut String) {
+    // from https://blog.v-gar.de/2019/04/rust-remove-trailing-newline-after-input/
+    while s.ends_with('\n') || s.ends_with('\r') {
+        s.pop();
     }
 }

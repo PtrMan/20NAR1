@@ -846,7 +846,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
     }
 
 
-    { // one working cycle - select for processing
+    if mem.judgementTasks.len() > 0 { // one working cycle - select for processing
         let selVal:f64 = mem.rng.gen_range(0.0,1.0);
         let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks);
 
