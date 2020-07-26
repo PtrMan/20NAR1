@@ -982,7 +982,7 @@ pub fn expNarsWorkingCycle0() {
     debugCreditsOfTasks(&mut mem);
 }
 
-pub fn debugCreditsOfTasks(mem: &mut Mem2) {
+pub fn debugCreditsOfTasks(mem: &Mem2) {
     // debug credit of tasks
     {
         for iTask in &mem.judgementTasks {

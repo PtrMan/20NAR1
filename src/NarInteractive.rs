@@ -63,6 +63,9 @@ pub fn runInteractive(nar:&mut Nar) {
                 if input == "s" {
                     cycle(nar);
                 }
+                else if input == "dt" { // debug tasks
+                    debugCreditsOfTasks(&nar.mem);
+                }
                 else {
                     inputN(nar, &input);
                 }
