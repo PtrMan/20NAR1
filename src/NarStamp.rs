@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct Stamp {
     pub ids:Vec<i64>,
 }
@@ -25,10 +26,10 @@ pub fn merge(a:&Stamp, b:&Stamp) -> Stamp {
         res.ids.push(b.ids[idx]);
         idx+=1;
     }
-    res.ids.extend(&a.ids[idx+1..a.ids.len()]);
-    res.ids.extend(&b.ids[idx+1..b.ids.len()]);
+    res.ids.extend(&a.ids[idx..a.ids.len()]);
+    res.ids.extend(&b.ids[idx..b.ids.len()]);
 
-    println!("TODO - limit length of stamp");
+    res.ids = res.ids[0..(res.ids.len()).min(120)].to_vec(); // AIKR
 
     res
 }

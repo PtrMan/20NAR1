@@ -24,6 +24,7 @@ use NarSentence::convSentenceTermPunctToStr;
 
 use NarMem;
 use Tv::*;
+use NarStamp::*;
 
 // a --> b  b --> a
 pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
@@ -691,6 +692,7 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
             isOp:false,
             term:Rc::new(term.clone()),
             tv:tv.clone(),
+            stamp:merge(&pa.stamp, &pb.stamp),
             t:-1, // time of occurence 
             punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
         });
@@ -728,6 +730,7 @@ pub struct Mem2 {
     pub questionTasks:Vec<Box<Task2>>,
 
     pub mem: Rc<RefCell<NarMem::Mem>>,
+    pub stampIdCounter: i64, // counter for stamp id
 
     pub rng: ThreadRng,
 }
@@ -937,7 +940,7 @@ pub fn createMem2()->Mem2 {
         concepts:HashMap::new(),
     };
     
-    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), }
+    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), stampIdCounter:0, }
 }
 
 // not working prototype of attention mechanism based on credits
@@ -953,6 +956,7 @@ pub fn expNarsWorkingCycle0() {
                 term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
                 t:0, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
+                stamp:newStamp(&vec![0]),
                 tv:Tv{f:1.0,c:0.9}
             };
             memAddTask(&mut mem, &sentence, true);
@@ -964,6 +968,7 @@ pub fn expNarsWorkingCycle0() {
                 term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
                 t:0, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
+                stamp:newStamp(&vec![1]),
                 tv:Tv{f:1.0,c:0.9}
             };
             memAddTask(&mut mem, &sentence, true);
@@ -976,6 +981,7 @@ pub fn expNarsWorkingCycle0() {
                 term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
                 t:0, // time of occurence 
                 punct:EnumPunctation::QUESTION,
+                stamp:newStamp(&vec![2]),
                 tv:Tv{f:1.0,c:0.0},
             };
             memAddTask(&mut mem, &sentence, true);

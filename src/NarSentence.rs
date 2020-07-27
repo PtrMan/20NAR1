@@ -3,6 +3,7 @@ use std::rc::Rc;
 use Term::Term;
 use Tv::*;
 use Term::convTermToStr;
+use NarStamp::*;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum EnumPunctation {
@@ -17,7 +18,7 @@ pub struct SentenceDummy {
     pub term:Rc<Term>,
     pub t:i64, // time of occurence 
     pub punct:EnumPunctation,
-    //pub stamp:Stamp,
+    pub stamp:Stamp,
     pub tv:Tv,
 }
 

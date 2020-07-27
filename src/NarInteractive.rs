@@ -6,6 +6,7 @@ use Tv::*;
 use Term::*;
 use NarseseParser::parse0;
 use NarSentence::*;
+use NarStamp::*;
 
 pub struct Nar {
     pub mem:Mem2, // actual (declarative) memory
@@ -23,9 +24,11 @@ pub fn inputT(nar:&mut Nar, term:&Term) {
         isOp:false,
         term:Rc::new(term.clone()),
         tv:Tv{f:1.0,c:0.9},
+        stamp:newStamp(&vec![nar.mem.stampIdCounter]),
         t:-1, // time of occurence 
         punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
     };
+    nar.mem.stampIdCounter+=1;
 
     memAddTask(&mut nar.mem, &sentence, true);
 }
