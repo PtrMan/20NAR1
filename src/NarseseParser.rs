@@ -180,14 +180,17 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
 // parses product with two components
 pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
-  let (input, a) = parse0(input)?;
+  let (input, a) = b(input)?;//parse0(input)?;
   let (input, _) = tag("*")(input)?;
-  let (input, b) = parse0(input)?;
+  let (input, b) = b(input)?;//parse0(input)?;
   let (input, _) = tag(")")(input)?;
   Ok((input, p2(&a, &b)))
 }
 
 pub fn parse0(input: &str) -> IResult<&str, Term> {
+  //parseProd2(input)
+
+  
   //named!( alpha, take_while!( is_alphanumeric ) );
 
   let (input, _) = tag("<")(input)?;
