@@ -180,9 +180,9 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
 // parses product with two components
 pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
-  let (input, a) = b(input)?;//parse0(input)?;
+  let (input, a) = parseSubjOrPred(input)?;//parse0(input)?;
   let (input, _) = tag("*")(input)?;
-  let (input, b) = b(input)?;//parse0(input)?;
+  let (input, b) = parseSubjOrPred(input)?;//parse0(input)?;
   let (input, _) = tag(")")(input)?;
   Ok((input, p2(&a, &b)))
 }
