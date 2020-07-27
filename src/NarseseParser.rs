@@ -13,6 +13,14 @@ use nom::{
 
 use Term::*;
 
+
+
+// sseehh API
+pub fn p2(a:&Term,b:&Term)->Term {
+  Term::Prod(vec![Box::new(a.clone()), Box::new(b.clone())])
+}
+
+
 // finds out if narsese has tv and returns TV if TV exists
 // cuts away narsese of TV if TV is detected
 // TODO REFACTOR< return option of TV >
@@ -94,24 +102,27 @@ fn b(input:&str)  -> IResult<&str, Term> {
 }
 
 fn parseSubjOrPred(input: &str) -> IResult<&str, Term> {
-  let res0 = a(input);
-  match res0 {
-    Ok(term) => {
-      return Ok(term.clone())
-    },
-    Err(_) => {}, // try other choice
+  {
+    let res0 = a(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
   }
-  
+
+  {
+    let res0 = parseProd2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
   return b(input)
-  //alt!(a(input) | a(input))
-  
-
-
-  //alt!(a(input) | b(input))
-
-  //named!( dragon_or_beast, alt!(tag("<")(input)) );
-  
-  //dragon_or_beast(input)
 }
 
 
@@ -166,26 +177,35 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
 }
 
 
+// parses product with two components
+pub fn parseProd2(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parse0(input)?;
+  let (input, _) = tag("*")(input)?;
+  let (input, b) = parse0(input)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, p2(&a, &b)))
+}
 
 pub fn parse0(input: &str) -> IResult<&str, Term> {
-    //named!( alpha, take_while!( is_alphanumeric ) );
+  //named!( alpha, take_while!( is_alphanumeric ) );
 
-    let (input, _) = tag("<")(input)?;
-    //let (input, subj) = tag("b")(input)?;
-    
-    //let (input, _) = tag("{")(input)?;
-    //let (input, subj) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
-    //let (input, _) = tag("}")(input)?;
-    let (input, subj) = parseSubjOrPred(input)?;
-
-    //let (input, _) = tag(" --> ")(input)?; // TODO< remove spaces >
-    let (input, copula) = parseCopula(input)?;
-
-    //let (input, pred) = alpha2(input)?;
-    let (input, pred) = parseSubjOrPred(input)?;
-    
-    let (input, _) = tag(">")(input)?;
+  let (input, _) = tag("<")(input)?;
+  //let (input, subj) = tag("b")(input)?;
   
-    Ok((input, Term::Cop(copula, Box::new(subj), Box::new(pred))))
+  //let (input, _) = tag("{")(input)?;
+  //let (input, subj) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
+  //let (input, _) = tag("}")(input)?;
+  let (input, subj) = parseSubjOrPred(input)?;
+
+  //let (input, _) = tag(" --> ")(input)?; // TODO< remove spaces >
+  let (input, copula) = parseCopula(input)?;
+
+  //let (input, pred) = alpha2(input)?;
+  let (input, pred) = parseSubjOrPred(input)?;
+  
+  let (input, _) = tag(">")(input)?;
+
+  Ok((input, Term::Cop(copula, Box::new(subj), Box::new(pred))))
 }
 

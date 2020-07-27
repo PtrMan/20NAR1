@@ -17,6 +17,7 @@ use Term::Copula;
 use Term::retSubterms;
 use Term::calcComplexity;
 use Term::convTermToStr;
+use Term::checkEqTerm;
 
 use NarSentence::EnumPunctation;
 use NarSentence::SentenceDummy;
@@ -291,6 +292,20 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
                 _ => false
             }
         },
+        Term::Prod(elementsa) => {
+            match b2 {
+                Term::Prod(elementsb) => {
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !unify2(&elementsa[idx], &elementsb[idx], assignments) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
     }
 }
 
@@ -369,6 +384,13 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
                 arr.push(Box::new(unifySubst(i, subst)));
             }
             Term::Conj(arr)
+        },
+        Term::Prod(subterms) => {
+            let mut arr = vec![];
+            for i in subterms {
+                arr.push(Box::new(unifySubst(i, subst)));
+            }
+            Term::Prod(arr)
         },
     }
 }
@@ -498,90 +520,6 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct:Enum
 
 
 
-pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
-    match a {
-        Term::Cop(copulaa, subja, preda) => {
-            match b {
-                Term::Cop(copulab, subjb, predb) => copulaa == copulab && checkEqTerm(&subja, &subjb) && checkEqTerm(&preda, &predb),
-                _ => false
-            }
-        }
-        Term::Name(namea) => {
-            match b {
-                Term::Name(nameb) => namea == nameb,
-                _ => false
-            }
-        },
-        Term::Seq(seqa) => {
-            match b {
-                Term::Seq(seqb) => {
-                    if seqa.len() == seqb.len() {
-                        for idx in 0..seqa.len() {
-                            if !checkEqTerm(&seqa[idx], &seqb[idx]) {return false};
-                        }
-                        true
-                    }
-                    else {false}
-                },
-                _ => false
-            }
-        },
-        Term::SetInt(seta) => {
-            match b {
-                Term::SetInt(setb) => {
-                    if seta.len() == setb.len() {
-                        for idx in 0..seta.len() {
-                            if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
-                        }
-                        true
-                    }
-                    else {false}
-                },
-                _ => false
-            }
-        },
-        Term::SetExt(seta) => {
-            match b {
-                Term::SetExt(setb) => {
-                    if seta.len() == setb.len() {
-                        for idx in 0..seta.len() {
-                            if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
-                        }
-                        true
-                    }
-                    else {false}
-                },
-                _ => false
-            }
-        },
-        Term::DepVar(namea) => {
-            match b {
-                Term::DepVar(nameb) => namea == nameb,
-                _ => false
-            }
-        },
-        Term::IndepVar(namea) => {
-            match b {
-                Term::IndepVar(nameb) => namea == nameb,
-                _ => false
-            }
-        },
-        Term::Conj(elementsa) => {
-            match b {
-                Term::Conj(elementsb) => {
-                    if elementsa.len() == elementsb.len() {
-                        for idx in 0..elementsa.len() {
-                            if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
-                        }
-                        true
-                    }
-                    else {false}
-                },
-                _ => false
-            }
-        },
-    }
-}
 
 
 

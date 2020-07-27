@@ -17,6 +17,7 @@ pub enum Term {
     DepVar(String), // #
     IndepVar(String), // $
     Conj(Vec<Box<Term>>), // &&
+    Prod(Vec<Box<Term>>), // product
 }
 
 impl Clone for Term {
@@ -60,6 +61,13 @@ impl Clone for Term {
                 }
                 Term::Conj(arr)
             },
+            Term::Prod(elements) => {
+                let mut arr = vec![];
+                for i in elements {
+                    arr.push(i.clone());
+                }
+                Term::Prod(arr)
+            },
         }
     }
 }
@@ -89,6 +97,11 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
             }
         },
         Term::Conj(elements) => {
+            for i in elements {
+                retSubterms2(&i, res);
+            }
+        },
+        Term::Prod(elements) => {
             for i in elements {
                 retSubterms2(&i, res);
             }
@@ -143,6 +156,13 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
+        Term::Prod(elements) => {
+            let mut c = 0;
+            for i in elements {
+                c+=calcComplexity(i);
+            }
+            c
+        },
     }
 }
 
@@ -188,6 +208,113 @@ pub fn convTermToStr(t:&Term) -> String {
                 inner = format!("{} && {}", inner, convTermToStr(&elements[i]));
             }
             format!("( {} )", inner)
+        },
+        Term::Prod(elements) => {
+            let mut inner = convTermToStr(&elements[0]);
+            for i in 1..elements.len() {
+                inner = format!("{} * {}", inner, convTermToStr(&elements[i]));
+            }
+            format!("( {} )", inner)
+        },
+    }
+}
+
+
+pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
+    match a {
+        Term::Cop(copulaa, subja, preda) => {
+            match b {
+                Term::Cop(copulab, subjb, predb) => copulaa == copulab && checkEqTerm(&subja, &subjb) && checkEqTerm(&preda, &predb),
+                _ => false
+            }
+        }
+        Term::Name(namea) => {
+            match b {
+                Term::Name(nameb) => namea == nameb,
+                _ => false
+            }
+        },
+        Term::Seq(seqa) => {
+            match b {
+                Term::Seq(seqb) => {
+                    if seqa.len() == seqb.len() {
+                        for idx in 0..seqa.len() {
+                            if !checkEqTerm(&seqa[idx], &seqb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::SetInt(seta) => {
+            match b {
+                Term::SetInt(setb) => {
+                    if seta.len() == setb.len() {
+                        for idx in 0..seta.len() {
+                            if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::SetExt(seta) => {
+            match b {
+                Term::SetExt(setb) => {
+                    if seta.len() == setb.len() {
+                        for idx in 0..seta.len() {
+                            if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::DepVar(namea) => {
+            match b {
+                Term::DepVar(nameb) => namea == nameb,
+                _ => false
+            }
+        },
+        Term::IndepVar(namea) => {
+            match b {
+                Term::IndepVar(nameb) => namea == nameb,
+                _ => false
+            }
+        },
+        Term::Conj(elementsa) => {
+            match b {
+                Term::Conj(elementsb) => {
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::Prod(elementsa) => {
+            match b {
+                Term::Prod(elementsb) => {
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
         },
     }
 }
