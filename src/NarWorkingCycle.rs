@@ -776,8 +776,17 @@ pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>) -> Option<usize> {
 pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
     NarMem::storeInConcepts(&mut mem.mem.borrow_mut(), sentence); // store sentence in memory, adressed by concepts
     
+
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
+            if true { // check if we should check if it already exist in the tasks
+                for ijt in &mem.judgementTasks { // ijt:iteration-judgement-task
+                    if checkSame(&sentence.stamp, &ijt.borrow().sentence.stamp) {
+                        return; // don't add if it exists already! because we would skew the fairness if we would add it
+                    }
+                }
+            }
+
             let mut task = Task {
                 sentence:sentence.clone(),
                 credit:1.0,
@@ -804,6 +813,8 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             }
         },
         EnumPunctation::QUESTION => {
+            println!("TODO - check if we should check if it already exist in the tasks");
+            
             mem.questionTasks.push(Box::new(Task2 {
                 sentence:sentence.clone(),
                 prio:1.0,

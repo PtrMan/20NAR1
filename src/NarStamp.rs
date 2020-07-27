@@ -34,3 +34,16 @@ pub fn merge(a:&Stamp, b:&Stamp) -> Stamp {
     res
 }
 
+pub fn checkSame(a:&Stamp, b:&Stamp) -> bool {
+    if a.ids.len() != b.ids.len() {
+        return false; // can't be the same!
+    }
+    let mut idx=0;
+    while idx < a.ids.len() {
+        if a.ids[idx] != b.ids[idx] {
+            return false;
+        }
+        idx+=1;
+    }
+    true
+}
