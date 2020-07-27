@@ -698,10 +698,9 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
         });
     }
 
-    println!("TODO - implement stamp overlap!");
-    //if !stampOverlap(&pa.stamp, &pb.stamp) { // check for overlap
-    //  concl = vec![]; // flush conclusions because we don't have any conclusions when the premises overlapped
-    //}
+    if concl.len() > 0 && checkOverlap(&pa.stamp, &pb.stamp) { // check for overlap
+      concl = vec![]; // flush conclusions because we don't have any conclusions when the premises overlapped
+    }
     
     concl
 }
