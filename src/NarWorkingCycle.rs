@@ -602,7 +602,7 @@ mod tests {
         let mut wereRulesApplied = false;
         let infConcl = infBinary(&impl0, EnumPunctation::QUESTION, &Tv{f:1.0,c:0.9}, &inh2, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &mut wereRulesApplied);
         for iInfConcl in infConcl {
-            let (conclTerm, conclTv) = iInfConcl;
+            let (conclTerm, _conclTv) = iInfConcl;
             let conclTermStr = convTermToStr(&conclTerm);
             println!("{}", &conclTermStr);
             if conclTermStr == "<<a --> b> ==> <c --> d>>" {
@@ -658,7 +658,7 @@ pub struct Task {
 
 pub struct Task2 {
     pub sentence:SentenceDummy,
-    pub handler:Option<Box<QHandler>>, // handler which is called when a better answer is found
+    pub handler:Option<Box<dyn QHandler>>, // handler which is called when a better answer is found
     pub bestAnswerExp:f64, // expectation of best answer
     pub prio:f64, // priority
 }

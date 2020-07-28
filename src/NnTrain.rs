@@ -58,7 +58,7 @@ pub fn testTrainingNn0() {
 
         // TODO< fill stimulus
 
-        let mut out = vec![];
+        let out;
         {
             // y vector, which is the result of the NN for layer[0]
             let mut ys0 = vec!(ad::Ad{r:0.0,d:0.0}; network.neuronsLayer0.len());
@@ -83,7 +83,7 @@ pub fn testTrainingNn0() {
 
         for idx in 0..out.len() {
             let diff:f64 = out[idx].r-trainingY[idx];
-            params[paramsIdx] -= (/*(if diff > 0.0 {1.0} else {-1.0})*/diff * out[idx].d * lRate);
+            params[paramsIdx] -= /*(if diff > 0.0 {1.0} else {-1.0})*/diff * out[idx].d * lRate;
         }
         
         if it % 100 == 0 {

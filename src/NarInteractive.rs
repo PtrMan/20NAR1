@@ -1,7 +1,5 @@
 // interactive NAR
 
-use std::rc::Rc;
-
 use Tv::*;
 use Term::*;
 use NarseseParser::parseNarsese;

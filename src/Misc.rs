@@ -1,4 +1,3 @@
-use ::map2d;
 use ::map2d::{Map2d,readAt};
 
 #[derive(Debug, Clone, Copy)]

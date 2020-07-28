@@ -49,7 +49,7 @@ pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
   let mut tv = Tv{f:1.0,c:0.9};
   parseNarseseRetTv(&mut narsese2, &mut tv);
   println!("{}", &narsese2);
-  narsese2 = narsese2.trim_right().to_string();
+  narsese2 = narsese2.trim_end().to_string();
   println!("{}", &narsese2);
   
   let punctationChar = narsese2.chars().nth(narsese2.len()-1).unwrap();
@@ -89,7 +89,7 @@ mod tests {
 
   #[test]
   pub fn testParserWithTv() {
-    let mut narsese = "<a --> {b}>. {0.4 0.8}".to_string();
+    let narsese = "<a --> {b}>. {0.4 0.8}".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
@@ -102,7 +102,7 @@ mod tests {
 
   #[test]
   pub fn testParserWithoutTv() {
-    let mut narsese = "<a --> {b}>.".to_string();
+    let narsese = "<a --> {b}>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     

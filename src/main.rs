@@ -92,7 +92,7 @@ pub fn expInvent0() {
 pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solvedProblems:&mut Vec<Box<dyn ProblemInstance>>) {
     let mut rng = rand::thread_rng();
 
-    let mut cfgVerbosity = 1;
+    let cfgVerbosity = 1;
 
     if cfgVerbosity>0{println!("- search for NN which solves the task in this environment")};
     //println!("- refine NN till it solves the task"); // TODO?
@@ -134,7 +134,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
         let nNeuronsLayer0:i64 = 5; // number of neurons
         let nNeuronsLayer1:i64 = 5; // number of neurons
 
-        let mut params:Vec::<f64> = match lastParameters {
+        let params:Vec::<f64> = match lastParameters {
             // agent is already parameterized by last winner
             Some(params) => {
                 // mutation of EA candidate
@@ -159,7 +159,7 @@ pub fn solveProblem(problemNr:i64, lastParameters:&mut Option<Vec::<f64>>, solve
         
     
         let mut paramsIdx = 0;
-        let mut network:Network = buildNnFromParameters(&mut paramsIdx, &params, 5*5, 0, nNeuronsLayer0, nNeuronsLayer1, None); // build network from parameters
+        let network:Network = buildNnFromParameters(&mut paramsIdx, &params, 5*5, 0, nNeuronsLayer0, nNeuronsLayer1, None); // build network from parameters
 
         let nProblems = currentProblems.len()+solvedProblems.len();
         for iEnvStimulusVersion in 0..nProblems {
@@ -339,7 +339,7 @@ pub fn invent0(problemDifficulty:i64, boxX0:&mut i32, boxY0:&mut i32) -> map2d::
             map2d::drawLine(&mut map, *boxX0 - 1, *boxY0 - 1, *boxX0 + 1, *boxY0 + 1, 1.0);
         }
         else if problemDifficulty >= 2 {
-            let mut r=3;
+            let r=3;
             map2d::map2dDrawCircle(&mut map, *boxX0 ,*boxY0,r,1.0); // draw circle with radius 3
         }
         else {

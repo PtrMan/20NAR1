@@ -14,7 +14,7 @@ use ::AeraishPerceptionComp::{PerceptItem};
 
 pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time
-    let mut maxT:Option<i64> = Some(700);
+    let maxT:Option<i64> = Some(700);
 
 
     let mut nar:Nars::Nar = Nars::narInit();
@@ -23,7 +23,7 @@ pub fn reasoner0Entry() {
 
 
     
-    let mut envPong = RefCell::new(PongEnv {
+    let envPong = RefCell::new(PongEnv {
         batVelX:0.0,
         batX:7.0,
         ballX:3.0,
@@ -266,7 +266,7 @@ impl Nars::Op for OpPong {
     fn retName(&self) -> Term {
         Term::Name(self.selfName.clone())
     }
-    fn call(&self, args:&Vec<Term>) {
+    fn call(&self, _args:&Vec<Term>) {
         (*self.env).borrow_mut().batVelX = self.opDir;
         println!("CALL {}", &self.selfName);
     }

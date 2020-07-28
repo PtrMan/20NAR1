@@ -61,7 +61,7 @@ pub fn retFreq(evidence:&Evidence)->f64 {
 
 pub fn retConf(evidence:&Evidence)->f64 {
     match evidence {
-        Evidence::CNT{pos,cnt} => {(*cnt as f64) / ((*cnt as f64) + 1.0)}
+        Evidence::CNT{pos:_,cnt} => {(*cnt as f64) / ((*cnt as f64) + 1.0)}
         _ => {panic!("expected CNT")},
     }
 }

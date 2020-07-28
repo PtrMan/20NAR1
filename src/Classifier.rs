@@ -1,6 +1,5 @@
 // classifier
 
-use ::map2d;
 use ::map2d::{Map2d};
 use ::mlutils;
 use ::Misc::{flattenMap};
