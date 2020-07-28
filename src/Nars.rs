@@ -82,12 +82,6 @@ pub fn narInit() -> Nar {
         }
     }
     
-    // DEBUG
-    //for ii in &expIntervalsTable {
-    //    println!("{}", ii);
-    //}
-
-
     nar
 }
 
@@ -368,19 +362,6 @@ pub fn narStep1(nar:&mut Nar) {
     nar.t+=1; // increment time of NAR
 }
 
-/*
-// evidence
-pub struct EE {
-    pub stamp:Vec<i64>, // collection of evidence of stamp
-    
-    pub term:Term, // term of evidence, usually (c &/ op) =/> e
-    
-    pub expDt:i64, // exponential time delta
-    
-    pub eviPos:i64,
-    pub eviCnt:i64,
-}*/
-
 // abstraction over term
 
 // return predicate of impl seq
@@ -423,15 +404,6 @@ pub fn retSeqCond(term:&Term) -> Term {
     }
 }
 
-/*
-pub fn retFreq(evidence:&EE)->f64 {
-    (evidence.eviPos as f64) / (evidence.eviCnt as f64)
-}
-
-pub fn retConf(evidence:&EE)->f64 {
-    (evidence.eviCnt as f64) / ((evidence.eviCnt as f64) + 1.0)
-}*/
-
 // event
 // string and evidence
 // (emulation of sentence and term)
@@ -471,28 +443,6 @@ pub struct AnticipationEvent {
     pub evi:Rc<RefCell<SentenceDummy>>, // evidence
     pub deadline:i64, // deadline in absolute cycles
 }
-
-/*
-// stamp function
-pub fn checkOverlap(a:&Vec<i64>, b:&Vec<i64>) -> bool {
-    for ia in a {
-        if b.iter().any(|i| i==ia) {
-           return true;
-        }
-    }
-    false
-}
-
-pub fn stampMerge(a:&Vec<i64>, b:&Vec<i64>) -> Vec<i64> {
-    // TODO< merge the propper way >
-    // TODO< limit size >
-    
-    let mut res = a.clone();
-    for ib in b {
-        res.push(*ib);
-    }
-    return res;
-}*/
 
 // trait for a op, all implementations implement a op
 pub trait Op {
