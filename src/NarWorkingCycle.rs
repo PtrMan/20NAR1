@@ -874,8 +874,9 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
                                         iQTask.bestAnswerExp = calcExp(&iConcl.tv); // update exp of best found answer
 
-
-                                        println!("TODO - print question and answer sentence!");
+                                        // print question and answer
+                                        let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence) + " " + &convSentenceTermPunctToStr(&iConcl);
+                                        println!("{}", msg);
                                     }
                                 }
                             }
