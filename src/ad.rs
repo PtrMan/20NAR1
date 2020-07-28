@@ -1,5 +1,6 @@
-
 // automatic differentiation
+// version 1
+
 #[derive(Debug, Clone)]
 pub struct Ad {
     pub r: f64,
