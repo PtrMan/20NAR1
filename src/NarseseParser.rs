@@ -12,7 +12,8 @@ use nom::{
 //use nom::many_m_n;
 
 use Term::*;
-
+use NarSentence::EnumPunctation;
+use Tv::Tv;
 
 
 // sseehh API
@@ -23,54 +24,102 @@ pub fn p2(a:&Term,b:&Term)->Term {
 
 // finds out if narsese has tv and returns TV if TV exists
 // cuts away narsese of TV if TV is detected
-// TODO REFACTOR< return option of TV >
-pub fn parseNarseseRetTv(narsese:&mut String, f:&mut f64,c:&mut f64,hasTv:&mut bool) {
-    *hasTv = false;
-    
-    if narsese.chars().nth(narsese.len()-1).unwrap() == '}' {
-        for revIdx in 1..narsese.len() { // scan for '{'
-            let idx = narsese.len() - revIdx; // compute index from back
-            
-            if narsese.chars().nth(idx).unwrap() == '{' {
-                let tvStr = &narsese[idx+1..narsese.len()-1];
-                let splitted:Vec<&str> = tvStr.split(" ").collect();
-                
-                if splitted.len() == 2 { // must have two values
-                    // TODO< handle error better >
-                    *f = splitted[0].parse::<f64>().unwrap();
-                    *c = splitted[1].parse::<f64>().unwrap();
-                    *hasTv = true;
-                    *narsese = narsese[..idx].to_string(); // cut away
-                    return;
-                }
-                return;
-            }
+pub fn parseNarseseRetTv(narsese:&mut String, tv:&mut Tv) {
+  *tv = Tv{f:1.0,c:0.9}; // set TV to default
+  
+  if narsese.chars().nth(narsese.len()-1).unwrap() == '}' {
+    for revIdx in 1..narsese.len() { // scan for '{'
+      let idx = narsese.len() - revIdx; // compute index from back
+      
+      if narsese.chars().nth(idx).unwrap() == '{' {
+        let tvStr = &narsese[idx+1..narsese.len()-1];
+        let splitted:Vec<&str> = tvStr.split(" ").collect();
+        
+        if splitted.len() == 2 { // must have two values
+          // TODO< handle error better >
+          let f = splitted[0].parse::<f64>().unwrap();
+          let c = splitted[1].parse::<f64>().unwrap();
+          *narsese = narsese[..idx].to_string(); // cut away
+          *tv = Tv{f:f,c:c};
+          return;
         }
+        return;
+      }
     }
+  }
+}
+
+pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
+  let mut narsese2:String = narsese.clone();
+
+  let mut tv = Tv{f:1.0,c:0.9};
+  parseNarseseRetTv(&mut narsese2, &mut tv);
+  println!("{}", &narsese2);
+  narsese2 = narsese2.trim_right().to_string();
+  println!("{}", &narsese2);
+  
+  let punctationChar = narsese2.chars().nth(narsese2.len()-1).unwrap();
+  let narseseInner = narsese2[..narsese2.len()-1].to_string();
+  
+  let punctation = match punctationChar {
+    '.' => {EnumPunctation::JUGEMENT},
+    '!' => {EnumPunctation::GOAL},
+    '?' => {EnumPunctation::QUESTION},
+    _ => {return None;},
+  };
+
+  //println!("{}   {}", narseseInner, punctationChar);
+  //println!("f = {}", tv.f);
+  //println!("c = {}", tv.c);
+
+  let parsed:IResult<&str, Term> = parse0(&narseseInner);
+
+  match parsed {
+    Ok((str2, term)) => {
+      Some((term, tv, punctation))
+    },
+    Err(_) => {
+      None
+    }
+  }
 }
 
 
-// test for parsing of TV
-pub fn mainX() {
-    let mut f = 1.0;
-    let mut c = 0.9;
-    let mut hasTv = false;
-    let mut narsese = "<a --> {b}>. {1.0 0.9}".to_string();
-    parseNarseseRetTv(&mut narsese, &mut f, &mut c, &mut hasTv);
-    println!("{}", &narsese);
-    narsese = narsese.trim_right().to_string();
-    println!("{}", &narsese);
-    
-    let punctation = narsese.chars().nth(narsese.len()-1).unwrap();
-    let narseseInner = narsese[..narsese.len()-1].to_string();
-    
-    println!("{}   {}", narseseInner, punctation);
-    println!("f = {}", f);
-    println!("c = {}", c);
 
-    let parsed:IResult<&str, Term> = parse0(&narseseInner);
+
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use Term::convTermToStr;
+
+  #[test]
+  pub fn testParserWithTv() {
+    let mut narsese = "<a --> {b}>. {0.4 0.8}".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
     
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<a --> {b}>");
+    assert_eq!((tv.f - 0.4).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.8).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn testParserWithoutTv() {
+    let mut narsese = "<a --> {b}>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<a --> {b}>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
 }
+
 
 
 fn ok1(input: &str) -> Result<&str, std::num::ParseIntError> {

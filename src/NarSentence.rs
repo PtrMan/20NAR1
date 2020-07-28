@@ -5,7 +5,7 @@ use Tv::*;
 use Term::convTermToStr;
 use NarStamp::*;
 
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum EnumPunctation {
     JUGEMENT, // .
     QUESTION, // ?

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use Tv::*;
 use Term::*;
-use NarseseParser::parse0;
+use NarseseParser::parseNarsese;
 use NarSentence::*;
 use NarStamp::*;
 
@@ -16,17 +16,17 @@ pub fn createNar() -> Nar {
     Nar{mem:createMem2()}
 }
 
-pub fn inputT(nar:&mut Nar, term:&Term) {
+pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     println!("[v] input {}", convTermToStr(term));
     println!("TODO - parse puncation and TV");
 
     let sentence = SentenceDummy{
         isOp:false,
         term:Rc::new(term.clone()),
-        tv:Tv{f:1.0,c:0.9},
+        tv:tv.clone(),
         stamp:newStamp(&vec![nar.mem.stampIdCounter]),
         t:-1, // time of occurence 
-        punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
+        punct:punct,
     };
     nar.mem.stampIdCounter+=1;
 
@@ -34,15 +34,15 @@ pub fn inputT(nar:&mut Nar, term:&Term) {
 }
 
 // input narsese
-pub fn inputN(nar:&mut Nar, n:&String) {
-    let parseRes = parse0(n);
-    match parseRes {
-        Ok((str_, term)) => {
-            inputT(nar, &term);
+pub fn inputN(nar:&mut Nar, narsese:&String) {
+    match parseNarsese(narsese) {
+        Some((term, tv, punct)) => {
+            inputT(nar, &term, punct, &tv);
         },
-        Err(_) => {
-            println!("! parse error");
-        },
+        None => {
+            // TODO< handle error correctly by returning a error >
+            println!("ERR - couldn't parse!");
+        }
     }
 }
 
