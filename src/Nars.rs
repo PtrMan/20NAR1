@@ -2,6 +2,8 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use NarStamp::*;
+use NarSentence::*;
 use Tv::*;
 use Term::*;
 use TermApi::*;
@@ -27,7 +29,7 @@ pub struct Nar {
     pub cfgPerceptWindow:i64, // perception window for current events
     pub cfgDescnThreshold:f64,
 
-    pub evidence: Vec<Rc<RefCell<EE>>>,
+    pub evidence: Vec<Rc<RefCell<SentenceDummy>>>,
     
     pub trace: Vec<SimpleSentence>,
     pub anticipatedEvents: Vec<AnticipationEvent>,
@@ -115,7 +117,13 @@ pub fn narStep0(nar:&mut Nar) {
         {
             for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= nar.t) {
                 let mut mutEvi = (*iDeadlineViolated).evi.borrow_mut();
-                mutEvi.eviCnt+=1; // add negative evidence
+                
+                match mutEvi.evi {
+                    Evidence::CNT{pos,cnt} => {
+                        mutEvi.evi = Evidence::CNT{pos:pos,cnt:cnt+1}; // add negative evidence
+                    },
+                    _ => {panic!("expected CNT!");}
+                }
             }
         }
         
@@ -210,18 +218,22 @@ pub fn narStep0(nar:&mut Nar) {
                                 for iEERc in &nar.evidence {
                                     let iEE = &mut(*iEERc).borrow_mut();
                                     
-                                    if !checkOverlap(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi)) { // evidence must no overlap!
+                                    if !checkOverlap(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi))) { // evidence must no overlap!
                                         if
-                                            iEE.expDt >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
+                                            iEE.expDt.unwrap() >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
                                             
                                             // does impl seq match?
                                             checkEqTerm(&retSeqCond(&iEE.term), &e0.name) &&
                                             checkEqTerm(&retSeqOp(&iEE.term), &e1.name) &&
                                             checkEqTerm(&retPred(&iEE.term), &e2.name)
                                         {
-                                            iEE.stamp = stampMerge(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi));
-                                            iEE.eviPos += 1;
-                                            iEE.eviCnt += 1;
+                                            iEE.stamp = merge(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi)));
+                                            match iEE.evi {
+                                                Evidence::CNT{pos,cnt} => {
+                                                    iEE.evi = Evidence::CNT{pos:pos+1,cnt:cnt+1}; // bump positive counter
+                                                },
+                                                _ => {panic!("expected CNT!");}
+                                            }
                                             
                                             if false {println!("dbg - REV")};
                                             
@@ -233,12 +245,13 @@ pub fn narStep0(nar:&mut Nar) {
                             }
                             
                             if addEvidence {
-                                nar.evidence.push(Rc::new(RefCell::new(EE {
-                                    stamp:vec!(e0.evi,e1.evi,e2.evi),
-                                    expDt:expDt,
-                                    term:s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone()), // (e0 &/ e1) =/> e2
-                                    eviPos:1,
-                                    eviCnt:1,
+                                nar.evidence.push(Rc::new(RefCell::new(SentenceDummy {
+                                    punct:EnumPunctation::JUGEMENT,
+                                    t:None,
+                                    stamp:newStamp(&vec!(e0.evi,e1.evi,e2.evi)),
+                                    expDt:Some(expDt),
+                                    term:Rc::new(s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone())), // (e0 &/ e1) =/> e2
+                                    evi:Evidence::CNT{pos:1,cnt:1}
                                 })));
                             }
                         }
@@ -262,7 +275,7 @@ pub fn narStep1(nar:&mut Nar) {
             // TODO< search with highest exp and exec only if above descision threshold! >
             
             struct Picked {
-                evidence:Rc<RefCell<EE>>, // the evidence of the picked option
+                evidence:Rc<RefCell<SentenceDummy>>, // the evidence of the picked option
                 
             }
             
@@ -273,7 +286,7 @@ pub fn narStep1(nar:&mut Nar) {
             
             // search if we can satisfy goal
             for iEERc in &nar.evidence {
-                let iEE:&EE = &(*iEERc).borrow();
+                let iEE:&SentenceDummy = &(*iEERc).borrow();
                 
                 // check impl seq first ! for current event!
                 for perceptIdx in 0..nar.cfgPerceptWindow as usize {
@@ -283,10 +296,7 @@ pub fn narStep1(nar:&mut Nar) {
                         // TODO< don't hardcode goal!!! >
                         if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && convTermToStr(& retPred(& iEE.term) ) == "0-1-xc" { // does it fullfil goal?
 
-                            let iFreq = retFreq(&iEE);
-                            let iConf = retConf(&iEE);
-                            let exp = calcExp(&Tv{f:iFreq,c:iConf});
-                            
+                            let exp = calcExp(&retTv(&iEE));
                             if exp > pickedExp {
                                 pickedExp = exp;
                                 pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
@@ -310,7 +320,7 @@ pub fn narStep1(nar:&mut Nar) {
                 pickedAction = Some(retSeqOp(& (*picked).borrow().term));
                 
                 // add anticipated event
-                let expIntervalIdx:i64 = (*picked).borrow().expDt;
+                let expIntervalIdx:i64 = (*picked).borrow().expDt.unwrap();
                 let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
                 let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
                 nar.anticipatedEvents.push(AnticipationEvent {
@@ -358,6 +368,7 @@ pub fn narStep1(nar:&mut Nar) {
     nar.t+=1; // increment time of NAR
 }
 
+/*
 // evidence
 pub struct EE {
     pub stamp:Vec<i64>, // collection of evidence of stamp
@@ -368,7 +379,7 @@ pub struct EE {
     
     pub eviPos:i64,
     pub eviCnt:i64,
-}
+}*/
 
 // abstraction over term
 
@@ -412,14 +423,14 @@ pub fn retSeqCond(term:&Term) -> Term {
     }
 }
 
-
+/*
 pub fn retFreq(evidence:&EE)->f64 {
     (evidence.eviPos as f64) / (evidence.eviCnt as f64)
 }
 
 pub fn retConf(evidence:&EE)->f64 {
     (evidence.eviCnt as f64) / ((evidence.eviCnt as f64) + 1.0)
-}
+}*/
 
 // event
 // string and evidence
@@ -457,11 +468,11 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
 // anticipated event
 #[derive(Clone)]
 pub struct AnticipationEvent {
-    pub evi:Rc<RefCell<EE>>, // evidence
+    pub evi:Rc<RefCell<SentenceDummy>>, // evidence
     pub deadline:i64, // deadline in absolute cycles
 }
 
-
+/*
 // stamp function
 pub fn checkOverlap(a:&Vec<i64>, b:&Vec<i64>) -> bool {
     for ia in a {
@@ -481,7 +492,7 @@ pub fn stampMerge(a:&Vec<i64>, b:&Vec<i64>) -> Vec<i64> {
         res.push(*ib);
     }
     return res;
-}
+}*/
 
 // trait for a op, all implementations implement a op
 pub trait Op {

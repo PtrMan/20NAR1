@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use ::Term::*;
 use ::Term::convTermToStr;
+use ::NarSentence::*;
 use ::Nars;
 use ::AeraishPerceptionComp;
 use ::AeraishPerceptionComp::{PerceptItem};
@@ -193,7 +194,14 @@ pub fn reasoner0Entry() {
     println!("EVIDENCE:");
     for iEvi in &nar.evidence {
         let implSeqAsStr = convTermToStr(& (*iEvi).borrow().term);
-        println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt, (*iEvi).borrow().eviPos, (*iEvi).borrow().eviCnt);
+
+        let evi:&Evidence = &(*iEvi).borrow().evi;
+        let (pos,cnt) = match evi {
+            Evidence::CNT{pos,cnt} => {(pos,cnt)},
+            _ => {panic!("expected CNT");}
+        };
+
+        println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt.unwrap(), pos, cnt);
     }
     
     { // print environment score
