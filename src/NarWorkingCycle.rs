@@ -30,9 +30,9 @@ use NarStamp::*;
 // a --> b  b --> a
 pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
     match a {
-        Term::Cop(Copula::INH, asubj, apred) => {
+        Term::Stmt(Copula::INH, asubj, apred) => {
             println!("TODO - compute tv");
-            return Some((Term::Cop(Copula::INH, Box::clone(apred), Box::clone(asubj)), aTv.clone()));
+            return Some((Term::Stmt(Copula::INH, Box::clone(apred), Box::clone(asubj)), aTv.clone()));
         },
         _ => {},
     }
@@ -47,11 +47,11 @@ pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
     
     match a {
-        Term::Cop(Copula::INH, asubj, apred) => {
+        Term::Stmt(Copula::INH, asubj, apred) => {
             match b {
-                Term::Cop(Copula::INH, bsubj, bpred) => {
+                Term::Stmt(Copula::INH, bsubj, bpred) => {
                     if !checkEqTerm(&asubj, &bpred) && checkEqTerm(&apred, &bsubj) {
-                        return Some(( Term::Cop(Copula::INH, Box::clone(asubj), Box::clone(bpred)), ded(&aTv,&bTv) )); // a.subj --> b.pred
+                        return Some(( Term::Stmt(Copula::INH, Box::clone(asubj), Box::clone(bpred)), ded(&aTv,&bTv) )); // a.subj --> b.pred
                     }
                 },
                 _ => {},
@@ -70,12 +70,12 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
     
     match a {
-        Term::Cop(Copula::INH, asubj, apred2) => {
+        Term::Stmt(Copula::INH, asubj, apred2) => {
             match &**apred2 {
                 Term::SetInt(apred) => {
                     
                     match b {
-                        Term::Cop(Copula::INH, bsubj, bpred2) => {
+                        Term::Stmt(Copula::INH, bsubj, bpred2) => {
                             match &**bpred2 {
                                 Term::SetInt(bpred) => {
                                     
@@ -89,7 +89,7 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                                         let resTerm = Term::SetInt(union_);
                                         
                                         println!("TODO - compute tv");
-                                        return Some((Term::Cop(Copula::IMPL, Box::clone(asubj), Box::new(resTerm)), aTv.clone()));
+                                        return Some((Term::Stmt(Copula::IMPL, Box::clone(asubj), Box::new(resTerm)), aTv.clone()));
                                     }
                                     
                                 },
@@ -117,12 +117,12 @@ pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
 
     match a {
-        Term::Cop(Copula::INH, asubj2, apred) => {
+        Term::Stmt(Copula::INH, asubj2, apred) => {
             match &**asubj2 {
                 Term::SetExt(asubj) => {
                     
                     match b {
-                        Term::Cop(Copula::INH, bsubj2, bpred) => {
+                        Term::Stmt(Copula::INH, bsubj2, bpred) => {
                             match &**bsubj2 {
                                 Term::SetExt(bsubj) => {
                                     
@@ -136,7 +136,7 @@ pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                                         let resTerm = Term::SetInt(union_);
                                         
                                         println!("TODO - compute tv");
-                                        return Some((Term::Cop(Copula::IMPL, Box::new(resTerm), Box::clone(apred)), aTv.clone()));
+                                        return Some((Term::Stmt(Copula::IMPL, Box::new(resTerm), Box::clone(apred)), aTv.clone()));
                                     }
                                     
                                 },
@@ -163,12 +163,12 @@ pub fn inf1(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
 
     match a {
-        Term::Cop(Copula::IMPL, asubj, apred) => {
+        Term::Stmt(Copula::IMPL, asubj, apred) => {
             match b {
-                Term::Cop(Copula::IMPL, bsubj, bpred) => {
+                Term::Stmt(Copula::IMPL, bsubj, bpred) => {
                     if checkEqTerm(&apred, &bsubj) {
                         println!("TODO - compute TV correctly!");
-                        return Some((Term::Cop(Copula::IMPL, Box::clone(asubj), Box::clone(bpred)), Tv{f:1.0, c:0.99}));
+                        return Some((Term::Stmt(Copula::IMPL, Box::clone(asubj), Box::clone(bpred)), Tv{f:1.0, c:0.99}));
                     }
                 },
                 _ => {},
@@ -222,9 +222,9 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
         },
         
         
-        Term::Cop(copulaa, subja, preda) => {
+        Term::Stmt(copulaa, subja, preda) => {
             match b2 {
-                Term::Cop(copulab, subjb, predb) if copulaa == copulab => {
+                Term::Stmt(copulab, subjb, predb) if copulaa == copulab => {
                     unify2(&subja, &subjb, assignments) && unify2(&preda, &predb, assignments)
                 },
                 _ => false
@@ -354,7 +354,7 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
             (*t).clone()
         },
         
-        Term::Cop(copula, subj, pred) => {Term::Cop(*copula, Box::new(unifySubst(subj, subst)), Box::new(unifySubst(pred, subst)))},
+        Term::Stmt(copula, subj, pred) => {Term::Stmt(*copula, Box::new(unifySubst(subj, subst)), Box::new(unifySubst(pred, subst)))},
         Term::Name(_) => (*t).clone(),
         
         Term::Seq(subterms) => {
@@ -405,7 +405,7 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
     
     match a {
-        Term::Cop(Copula::IMPL, aconj, apred) => {
+        Term::Stmt(Copula::IMPL, aconj, apred) => {
             match &**aconj {
                 Term::Conj(arr) => {
                     if arr.len() == 2 {
@@ -413,7 +413,7 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                         if unifyRes.is_some() { // vars must unify
                             let subst = unifySubst(&arr[1-idx], &unifyRes.unwrap()); // substitute vars
                             println!("TODO - compute TV correctly!");
-                            return Some((Term::Cop(Copula::IMPL, Box::new(subst), Box::clone(apred)), aTv.clone()));
+                            return Some((Term::Stmt(Copula::IMPL, Box::new(subst), Box::clone(apred)), aTv.clone()));
                         }
                     }
                 },
@@ -437,7 +437,7 @@ pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
     
     match a {
-        Term::Cop(Copula::IMPL, asubj, apred) => {
+        Term::Stmt(Copula::IMPL, asubj, apred) => {
             let unifyRes = unify(asubj, &b);
             if unifyRes.is_some() { // vars must unify
                 let subst = unifySubst(&apred, &unifyRes.unwrap()); // substitute vars
@@ -461,7 +461,7 @@ pub fn inf7(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
     
     match a {
-        Term::Cop(Copula::IMPL, _, apred) => {
+        Term::Stmt(Copula::IMPL, _, apred) => {
             let unifyRes = unify(apred, &b);
             if unifyRes.is_some() { // vars must unify
                 let subst = unifySubst(&a, &unifyRes.unwrap()); // substitute vars
@@ -534,21 +534,21 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct:Enum
 pub fn testManual0() {
     let a0 = Term::Name("a".to_string());
     let b0 = Term::Name("b".to_string());
-    let inh0 = Term::Cop(Copula::INH, Box::new(a0), Box::new(b0));
+    let inh0 = Term::Stmt(Copula::INH, Box::new(a0), Box::new(b0));
     
     let c0 = Term::Name("c".to_string());
     let d0 = Term::Name("d".to_string());
-    let inh1 = Term::Cop(Copula::INH, Box::new(c0), Box::new(d0));
+    let inh1 = Term::Stmt(Copula::INH, Box::new(c0), Box::new(d0));
     
     let conj0 = Term::Conj(vec![Box::new(inh0), Box::new(inh1)]);
     
     let x0 = Term::Name("x".to_string());
-    let impl0 = Term::Cop(Copula::IMPL, Box::new(conj0), Box::new(x0));
+    let impl0 = Term::Stmt(Copula::IMPL, Box::new(conj0), Box::new(x0));
     
     
     let a1 = Term::Name("a".to_string());
     let b1 = Term::Name("b".to_string());
-    let inh1 = Term::Cop(Copula::INH, Box::new(a1), Box::new(b1));
+    let inh1 = Term::Stmt(Copula::INH, Box::new(a1), Box::new(b1));
     
     println!("{}", &convTermToStr(&impl0));
     println!("{}", &convTermToStr(&inh1));
@@ -577,18 +577,18 @@ mod tests {
     pub fn testManual1() {
         let a0 = Term::Name("a".to_string());
         let b0 = Term::Name("b".to_string());
-        let inh0 = Term::Cop(Copula::INH, Box::new(a0), Box::new(b0));
+        let inh0 = Term::Stmt(Copula::INH, Box::new(a0), Box::new(b0));
         
         let c0 = Term::IndepVar("c".to_string());
         let d0 = Term::Name("d".to_string());
-        let inh1 = Term::Cop(Copula::INH, Box::new(c0), Box::new(d0));
+        let inh1 = Term::Stmt(Copula::INH, Box::new(c0), Box::new(d0));
         
-        let impl0 = Term::Cop(Copula::IMPL, Box::new(inh0), Box::new(inh1));
+        let impl0 = Term::Stmt(Copula::IMPL, Box::new(inh0), Box::new(inh1));
         
         
         let c1 = Term::Name("c".to_string());
         let d1 = Term::Name("d".to_string());
-        let inh2 = Term::Cop(Copula::INH, Box::new(c1), Box::new(d1));
+        let inh2 = Term::Stmt(Copula::INH, Box::new(c1), Box::new(d1));
         
         println!("{}", &convTermToStr(&impl0));
         println!("{}", &convTermToStr(&inh2));
@@ -922,7 +922,7 @@ pub fn expNarsWorkingCycle0() {
         { // .
             let sentence = SentenceDummy {
                 isOp:false, // is it a operation?
-                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
+                term:Rc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
                 t:0, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
                 stamp:newStamp(&vec![0]),
@@ -934,7 +934,7 @@ pub fn expNarsWorkingCycle0() {
         { // .
             let sentence = SentenceDummy {
                 isOp:false, // is it a operation?
-                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
+                term:Rc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
                 t:0, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
                 stamp:newStamp(&vec![1]),
@@ -947,7 +947,7 @@ pub fn expNarsWorkingCycle0() {
             println!("TODO - questions don't have a tv!");
             let sentence = SentenceDummy {
                 isOp:false, // is it a operation?
-                term:Rc::new(Term::Cop(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
+                term:Rc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
                 t:0, // time of occurence 
                 punct:EnumPunctation::QUESTION,
                 stamp:newStamp(&vec![2]),

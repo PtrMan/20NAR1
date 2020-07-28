@@ -14,18 +14,7 @@ use nom::{
 use Term::*;
 use NarSentence::EnumPunctation;
 use Tv::Tv;
-
-
-// sseehh API
-pub fn p2(a:&Term,b:&Term)->Term {
-  Term::Prod(vec![Box::new(a.clone()), Box::new(b.clone())])
-}
-
-// sseehh API
-pub fn s(copula:Copula, subj:&Term,pred:&Term)->Term {
-  Term::Cop(copula, Box::new(subj.clone()), Box::new(pred.clone()))
-}
-
+use TermApi::*;
 
 // finds out if narsese has tv and returns TV if TV exists
 // cuts away narsese of TV if TV is detected

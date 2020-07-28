@@ -9,7 +9,7 @@ pub enum Copula {
 
 #[derive(PartialEq, Eq, Hash/*, Clone*/)]
 pub enum Term {
-    Cop(Copula, Box<Term>, Box<Term>),
+    Stmt(Copula, Box<Term>, Box<Term>), // statement ex: <a --> b>
     Name(String),
     Seq(Vec<Box<Term>>), // sequence
     SetInt(Vec<Box<Term>>),
@@ -23,8 +23,8 @@ pub enum Term {
 impl Clone for Term {
     fn clone(&self) -> Term {
         match &*self {
-            Term::Cop(copula, subj, pred) => {
-                Term::Cop(*copula, subj.clone(), pred.clone())
+            Term::Stmt(copula, subj, pred) => {
+                Term::Stmt(*copula, subj.clone(), pred.clone())
             }
             Term::Name(name) => Term::Name(name.clone()),
             Term::Seq(seq) => {
@@ -77,7 +77,7 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
     res.push(t.clone());
     
     match t {
-        Term::Cop(_, subj, pred) => {
+        Term::Stmt(_, subj, pred) => {
             retSubterms2(&subj, res);
             retSubterms2(&pred, res);
         }
@@ -118,7 +118,7 @@ pub fn retSubterms(t:&Term) -> Vec<Term> {
 
 pub fn calcComplexity(t:&Term) -> u64 {
     match t {
-        Term::Cop(_, subj, pred) => {
+        Term::Stmt(_, subj, pred) => {
             1 + calcComplexity(subj) + calcComplexity(pred)
         }
         Term::Name(_) => 1,
@@ -168,7 +168,7 @@ pub fn calcComplexity(t:&Term) -> u64 {
 
 pub fn convTermToStr(t:&Term) -> String {
     match t {
-        Term::Cop(Copula, subj, pred) => {
+        Term::Stmt(Copula, subj, pred) => {
             let subjStr = convTermToStr(subj);
             let predStr = convTermToStr(pred);
             let copStr = match Copula {Copula::SIM=>{"<->"},Copula::INH=>{"-->"},Copula::PREDIMPL=>"=/>",Copula::IMPL=>{"==>"},Copula::EQUIV=>{"<=>"}};
@@ -222,9 +222,9 @@ pub fn convTermToStr(t:&Term) -> String {
 
 pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
     match a {
-        Term::Cop(copulaa, subja, preda) => {
+        Term::Stmt(copulaa, subja, preda) => {
             match b {
-                Term::Cop(copulab, subjb, predb) => copulaa == copulab && checkEqTerm(&subja, &subjb) && checkEqTerm(&preda, &predb),
+                Term::Stmt(copulab, subjb, predb) => copulaa == copulab && checkEqTerm(&subja, &subjb) && checkEqTerm(&preda, &predb),
                 _ => false
             }
         }

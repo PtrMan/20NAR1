@@ -35,6 +35,7 @@ mod NarWorkingCycle;
 mod NarStamp;
 mod Tv;
 mod Term;
+mod TermApi;
 mod NarInteractive;
 //mod narPerception; // not include because file has issues
 
