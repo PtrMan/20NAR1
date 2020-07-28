@@ -21,6 +21,11 @@ pub fn p2(a:&Term,b:&Term)->Term {
   Term::Prod(vec![Box::new(a.clone()), Box::new(b.clone())])
 }
 
+// sseehh API
+pub fn s(copula:Copula, subj:&Term,pred:&Term)->Term {
+  Term::Cop(copula, Box::new(subj.clone()), Box::new(pred.clone()))
+}
+
 
 // finds out if narsese has tv and returns TV if TV exists
 // cuts away narsese of TV if TV is detected
@@ -258,6 +263,6 @@ pub fn parse0(input: &str) -> IResult<&str, Term> {
   
   let (input, _) = tag(">")(input)?;
 
-  Ok((input, Term::Cop(copula, Box::new(subj), Box::new(pred))))
+  Ok((input, s(copula, &subj, &pred)))
 }
 
