@@ -22,6 +22,8 @@ use Term::checkEqTerm;
 use NarSentence::EnumPunctation;
 use NarSentence::SentenceDummy;
 use NarSentence::convSentenceTermPunctToStr;
+use NarSentence::retTv;
+use NarSentence::Evidence;
 
 use NarMem;
 use Tv::*;
@@ -622,18 +624,18 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
 
     let mut concl = vec![];
 
-    let infConcl = infBinary(&pa.term, pa.punct, &pa.tv, &pb.term, pb.punct, &pb.tv, wereRulesApplied);
+    let infConcl = infBinary(&pa.term, pa.punct, &retTv(&pa), &pb.term, pb.punct, &retTv(&pb), wereRulesApplied);
     for iInfConcl in infConcl {
         let (term, tv) = iInfConcl;
         
         println!("TODO - infBinary must compute the punctation!");
         concl.push(SentenceDummy{
-            isOp:false,
             term:Rc::new(term.clone()),
-            tv:tv.clone(),
+            evi:Evidence::TV(tv.clone()),
             stamp:merge(&pa.stamp, &pb.stamp),
-            t:-1, // time of occurence 
+            t:None, // time of occurence 
             punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
+            expDt:None
         });
     }
 
@@ -863,7 +865,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                     for iConcl in &concl {
                         if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
                             for iQTask in &mut mem.questionTasks {
-                                if calcExp(&iConcl.tv) > iQTask.bestAnswerExp { // is the answer potentially better?
+                                if calcExp(&retTv(iConcl)) > iQTask.bestAnswerExp { // is the answer potentially better?
                                     let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
                                     if unifyRes.is_some() { // was answer found?
                                         let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
@@ -872,7 +874,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                                             iQTask.handler.as_ref().unwrap().answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
                                         }
 
-                                        iQTask.bestAnswerExp = calcExp(&iConcl.tv); // update exp of best found answer
+                                        iQTask.bestAnswerExp = calcExp(&retTv(&iConcl)); // update exp of best found answer
 
                                         // print question and answer
                                         let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence) + " " + &convSentenceTermPunctToStr(&iConcl);
@@ -931,24 +933,26 @@ pub fn expNarsWorkingCycle0() {
     {
         { // .
             let sentence = SentenceDummy {
-                isOp:false, // is it a operation?
+                //isOp:false, // is it a operation?
                 term:Rc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
-                t:0, // time of occurence 
+                t:None, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
                 stamp:newStamp(&vec![0]),
-                tv:Tv{f:1.0,c:0.9}
+                evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+                expDt:None
             };
             memAddTask(&mut mem, &sentence, true);
         }
 
         { // .
             let sentence = SentenceDummy {
-                isOp:false, // is it a operation?
+                //isOp:false, // is it a operation?
                 term:Rc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
-                t:0, // time of occurence 
+                t:None, // time of occurence 
                 punct:EnumPunctation::JUGEMENT,
                 stamp:newStamp(&vec![1]),
-                tv:Tv{f:1.0,c:0.9}
+                evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+                expDt:None
             };
             memAddTask(&mut mem, &sentence, true);
         }
@@ -956,12 +960,13 @@ pub fn expNarsWorkingCycle0() {
         { // ?
             println!("TODO - questions don't have a tv!");
             let sentence = SentenceDummy {
-                isOp:false, // is it a operation?
+                //isOp:false, // is it a operation?
                 term:Rc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
-                t:0, // time of occurence 
+                t:None, // time of occurence 
                 punct:EnumPunctation::QUESTION,
                 stamp:newStamp(&vec![2]),
-                tv:Tv{f:1.0,c:0.0},
+                evi:Evidence::TV(Tv{f:1.0,c:0.0}),
+                expDt:None
             };
             memAddTask(&mut mem, &sentence, true);
         }

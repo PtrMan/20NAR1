@@ -20,15 +20,9 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     println!("[v] input {}", convTermToStr(term));
     println!("TODO - parse puncation and TV");
 
-    let sentence = SentenceDummy{
-        isOp:false,
-        term:Rc::new(term.clone()),
-        tv:tv.clone(),
-        stamp:newStamp(&vec![nar.mem.stampIdCounter]),
-        t:-1, // time of occurence 
-        punct:punct,
-    };
+    let stamp = newStamp(&vec![nar.mem.stampIdCounter]);
     nar.mem.stampIdCounter+=1;
+    let sentence = newEternalSentenceByTv(&term,punct,&tv,stamp);
 
     memAddTask(&mut nar.mem, &sentence, true);
 }
