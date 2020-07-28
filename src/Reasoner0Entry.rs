@@ -5,10 +5,11 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use ::Term::*;
+use ::Term::convTermToStr;
 use ::Nars;
 use ::AeraishPerceptionComp;
 use ::AeraishPerceptionComp::{PerceptItem};
-use ::expRepresent0;
 
 pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time
@@ -84,26 +85,26 @@ pub fn reasoner0Entry() {
                         
                         if true {
                             if diffX > 1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
+                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "r")),evi:nar.t,occT:nar.t});
                             }
                             else if diffX < -1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
+                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "l")),evi:nar.t,occT:nar.t});
                             }
                             else {
-                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-x{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "c")),evi:nar.t,occT:nar.t});
                             }
                         }
 
 
                         if true { // do we want to handle y events too?
                             if diffY > 1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "r"),evi:nar.t,occT:nar.t});
+                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "r")),evi:nar.t,occT:nar.t});
                             }
                             else if diffY < -1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "l"),evi:nar.t,occT:nar.t});
+                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "l")),evi:nar.t,occT:nar.t});
                             }
                             else {
-                                nar.trace.push(Nars::SimpleSentence {name:format!("{}-{}-y{}", a.objCat, b.objCat, "c"),evi:nar.t,occT:nar.t});
+                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "c")),evi:nar.t,occT:nar.t});
                             }
                         }
                     }
@@ -111,7 +112,7 @@ pub fn reasoner0Entry() {
             }
     
             if nar.trace.len() > 0 {
-                println!("{} {}", nar.trace[nar.trace.len()-1].name, (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
+                println!("{} {}", convTermToStr(&nar.trace[nar.trace.len()-1].name), (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
             }
             
             Nars::narStep1(&mut nar);
@@ -191,7 +192,7 @@ pub fn reasoner0Entry() {
     println!("");
     println!("EVIDENCE:");
     for iEvi in &nar.evidence {
-        let implSeqAsStr = format!("({},{})=/>{}",(*iEvi).borrow().seqCond,(*iEvi).borrow().seqOp,(*iEvi).borrow().pred);
+        let implSeqAsStr = convTermToStr(& (*iEvi).borrow().term);
         println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt, (*iEvi).borrow().eviPos, (*iEvi).borrow().eviCnt);
     }
     
@@ -254,11 +255,11 @@ pub struct OpPong {
 
 
 impl Nars::Op for OpPong {
-    fn retName(&self) -> String {
-        self.selfName.clone()
+    fn retName(&self) -> Term {
+        Term::Name(self.selfName.clone())
     }
-    fn call(&self, args:&Vec<String>) {
+    fn call(&self, args:&Vec<Term>) {
         (*self.env).borrow_mut().batVelX = self.opDir;
-        println!("CALL {}", self.selfName);
+        println!("CALL {}", &self.selfName);
     }
 }

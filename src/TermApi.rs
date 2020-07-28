@@ -9,3 +9,8 @@ pub fn p2(a:&Term,b:&Term)->Term {
 pub fn s(copula:Copula, subj:&Term,pred:&Term)->Term {
   Term::Stmt(copula, Box::new(subj.clone()), Box::new(pred.clone()))
 }
+
+// sseehh API
+pub fn seq(ts:&Vec<Term>)->Term {
+  Term::Seq(ts.iter().map(|v| Box::new((*v).clone())).collect())
+}

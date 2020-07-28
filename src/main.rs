@@ -50,14 +50,17 @@ pub fn main() {
     //NnTrain::testTrainingNn0();
     NarWorkingCycle::expNarsWorkingCycle0(); // experiment with NAR working cycle
 
-    // run interactive
-    {
+
+    let runEnv:String = std::env::args().nth(1).expect("no environment given");
+
+    if runEnv == "it" { // run interactive
         let mut nar = NarInteractive::createNar();
         NarInteractive::runInteractive(&mut nar);
     }
-
-    // jump to reasoner
-    //reasoner0Entry();
+    else if runEnv == "env" { // run environment
+        // jump to reasoner
+        reasoner0Entry();
+    }
 }
 
 

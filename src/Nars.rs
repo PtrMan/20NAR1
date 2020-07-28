@@ -3,6 +3,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use Tv::*;
+use Term::*;
+use TermApi::*;
 
 // DONE< check for events which were anticipated and remove anticipations! >
 // DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
@@ -94,12 +96,12 @@ pub fn narStep0(nar:&mut Nar) {
     // remove confirmed anticipations
     for perceptIdx in 0..nar.cfgPerceptWindow as usize {
         if nar.trace.len() > perceptIdx {
-            let curEvent = &nar.trace[nar.trace.len()-1-perceptIdx].name;
+            let curEvent:&Term = &nar.trace[nar.trace.len()-1-perceptIdx].name;
             
             let mut newanticipatedEvents = Vec::new();
             for iDeadline in &nar.anticipatedEvents {
                 let evi = (*iDeadline).evi.borrow();
-                if evi.pred != *curEvent { // is predicted event not current event?
+                if !checkEqTerm( &retPred(& evi.term), &curEvent) { // is predicted event not current event?
                     newanticipatedEvents.push(iDeadline.clone());
                 }
             }
@@ -157,9 +159,9 @@ pub fn narStep0(nar:&mut Nar) {
                     
 
                     // is the name a op?
-                    let checkIsOp=|name:&String| {
+                    let checkIsOp=|name:&Term| {
                         for i in &nar.ops {
-                            if &i.retName() == name {
+                            if checkEqTerm(&i.retName(), &name) {
                                 return true;
                             }
                         }
@@ -196,7 +198,7 @@ pub fn narStep0(nar:&mut Nar) {
                             let e1 = &nar.trace[idxs[1]];
                             let e2 = &nar.trace[idxs[2]];
                             
-                            println!("perceive ({},{})=/>{}", e0.name, e1.name, e2.name);
+                            println!("perceive ({},{})=/>{}", convTermToStr(&e0.name), convTermToStr(&e1.name), convTermToStr(&e2.name));
                             
                             let dt:i64 = e2.occT - e1.occT;
                             // compute exponential delta time
@@ -211,7 +213,12 @@ pub fn narStep0(nar:&mut Nar) {
                                     if !checkOverlap(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi)) { // evidence must no overlap!
                                         if
                                             iEE.expDt >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
-                                            iEE.seqCond == e0.name && iEE.seqOp == e1.name && iEE.pred == e2.name { // does impl seq match?
+                                            
+                                            // does impl seq match?
+                                            checkEqTerm(&retSeqCond(&iEE.term), &e0.name) &&
+                                            checkEqTerm(&retSeqOp(&iEE.term), &e1.name) &&
+                                            checkEqTerm(&retPred(&iEE.term), &e2.name)
+                                        {
                                             iEE.stamp = stampMerge(&iEE.stamp, &vec!(e0.evi,e1.evi,e2.evi));
                                             iEE.eviPos += 1;
                                             iEE.eviCnt += 1;
@@ -229,9 +236,7 @@ pub fn narStep0(nar:&mut Nar) {
                                 nar.evidence.push(Rc::new(RefCell::new(EE {
                                     stamp:vec!(e0.evi,e1.evi,e2.evi),
                                     expDt:expDt,
-                                    seqCond:e0.name.clone(),
-                                    seqOp:e1.name.clone(),
-                                    pred:e2.name.clone(),
+                                    term:s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone()), // (e0 &/ e1) =/> e2
                                     eviPos:1,
                                     eviCnt:1,
                                 })));
@@ -248,7 +253,7 @@ pub fn narStep0(nar:&mut Nar) {
 }
 
 pub fn narStep1(nar:&mut Nar) {    
-    let mut pickedAction:Option<String> = None;
+    let mut pickedAction:Option<Term> = None;
     
     
     match &pickedAction {
@@ -274,8 +279,9 @@ pub fn narStep1(nar:&mut Nar) {
                 for perceptIdx in 0..nar.cfgPerceptWindow as usize {
                     if nar.trace.len() > perceptIdx {
 
-                                
-                        if iEE.seqCond == nar.trace[nar.trace.len()-1-perceptIdx].name && iEE.pred == "0-1-xc" { // does it fullfil goal?
+                        
+                        // TODO< don't hardcode goal!!! >
+                        if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && convTermToStr(& retPred(& iEE.term) ) == "0-1-xc" { // does it fullfil goal?
 
                             let iFreq = retFreq(&iEE);
                             let iConf = retConf(&iEE);
@@ -292,10 +298,16 @@ pub fn narStep1(nar:&mut Nar) {
             
             if pickedExp > nar.cfgDescnThreshold {
                 let picked = pickedOpt.unwrap().evidence;
-                let implSeqAsStr = format!("({},{})=/>{}",(*picked).borrow().seqCond,(*picked).borrow().seqOp,(*picked).borrow().pred);
-                println!("descnMaking: found best act = {}   implSeq={}    exp = {}", (*picked).borrow().seqOp, &implSeqAsStr, pickedExp);
+                let implSeqAsStr = convTermToStr(& (*picked).borrow().term);
+                
+                {
+                    let act:Term = retSeqOp(& (*picked).borrow().term);
+                    let actAsStr:String = convTermToStr(&act);
+                    println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
+                }
 
-                pickedAction = Some((*picked).borrow().seqOp.clone());
+
+                pickedAction = Some(retSeqOp(& (*picked).borrow().term));
                 
                 // add anticipated event
                 let expIntervalIdx:i64 = (*picked).borrow().expDt;
@@ -326,8 +338,8 @@ pub fn narStep1(nar:&mut Nar) {
         Some(act) => {
             // scan for action
             for iOp in &nar.ops {
-                if &iOp.retName() == act {
-                    iOp.call(&Vec::new()); // call op
+                if checkEqTerm(&iOp.retName(), &act) {
+                    iOp.call(&vec![]); // call op
                     break;
                 }
             }
@@ -350,15 +362,56 @@ pub fn narStep1(nar:&mut Nar) {
 pub struct EE {
     pub stamp:Vec<i64>, // collection of evidence of stamp
     
-    pub seqCond:String, // condition of sequence
-    pub seqOp:String, // op of sequence
-    pub pred:String, // predicate of impl seq
+    pub term:Term, // term of evidence, usually (c &/ op) =/> e
     
     pub expDt:i64, // exponential time delta
     
     pub eviPos:i64,
     pub eviCnt:i64,
 }
+
+// abstraction over term
+
+// return predicate of impl seq
+pub fn retPred(term:&Term) -> Term {
+    match term {
+        Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
+            (**pred).clone()
+        },
+        _ => {
+            panic!("expected pred impl!");
+        }
+    }
+}
+
+pub fn retSeqOp(term:&Term) -> Term {
+    match term {
+        Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+            match &**subj {
+                Term::Seq(seq) => {
+                    *seq[1].clone()
+                },
+                _ => {panic!("expected seq!");}
+            }
+        },
+        _ => {panic!("expected pred impl!");}
+    }
+}
+
+pub fn retSeqCond(term:&Term) -> Term {
+    match term {
+        Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+            match &**subj {
+                Term::Seq(seq) => {
+                    *seq[0].clone()
+                },
+                _ => {panic!("expected seq!");}
+            }
+        },
+        _ => {panic!("expected pred impl!");}
+    }
+}
+
 
 pub fn retFreq(evidence:&EE)->f64 {
     (evidence.eviPos as f64) / (evidence.eviCnt as f64)
@@ -373,7 +426,7 @@ pub fn retConf(evidence:&EE)->f64 {
 // (emulation of sentence and term)
 #[derive(Clone)]
 pub struct SimpleSentence {
-    pub name:String,
+    pub name:Term,
     pub evi:i64, // evidence id
     pub occT:i64, // occurcence time
 }
@@ -382,7 +435,7 @@ pub struct SimpleSentence {
 pub fn calcIdxsOfOps(trace:&Vec<SimpleSentence>) -> Vec<i64> {
     let mut res = Vec::new();
     for idx in 0..trace.len() {
-        if trace[idx].name.chars().next().unwrap() == '^' { // is it a op?
+        if convTermToStr(&trace[idx].name).chars().next().unwrap() == '^' { // is it a op?
             res.push(idx as i64);
         } 
     }
@@ -432,6 +485,6 @@ pub fn stampMerge(a:&Vec<i64>, b:&Vec<i64>) -> Vec<i64> {
 
 // trait for a op, all implementations implement a op
 pub trait Op {
-    fn retName(&self) -> String; // return name of the op
-    fn call(&self, args:&Vec<String>);
+    fn retName(&self) -> Term; // return name of the op
+    fn call(&self, args:&Vec<Term>);
 }
