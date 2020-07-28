@@ -47,3 +47,11 @@ pub fn checkSame(a:&Stamp, b:&Stamp) -> bool {
     }
     true
 }
+
+pub fn convToStr(s:&Stamp) -> String {
+    let mut res = "".to_string();
+    for iid in &s.ids {
+        res = format!("{},{}", res, iid);
+    }
+    res
+}

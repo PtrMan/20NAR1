@@ -26,6 +26,7 @@ use NarSentence::convSentenceTermPunctToStr;
 use NarMem;
 use Tv::*;
 use NarStamp::*;
+use NarStamp;
 
 // a --> b  b --> a
 pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
@@ -975,7 +976,15 @@ pub fn debugCreditsOfTasks(mem: &Mem2) {
     {
         for iTask in &mem.judgementTasks {
             let taskSentenceAsStr = convSentenceTermPunctToStr(&iTask.borrow().sentence);
-            println!("task  {}  credit={}", taskSentenceAsStr, iTask.borrow().credit);
+            
+            let mut taskAsStr = taskSentenceAsStr.clone();
+
+            let printStamp = true;
+            if printStamp {
+                taskAsStr = format!("{} {}", taskAsStr, NarStamp::convToStr(&iTask.borrow().sentence.stamp));
+            }
+
+            println!("task  {}  credit={}", taskAsStr, iTask.borrow().credit);
         }
     }
 }
