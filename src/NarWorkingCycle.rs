@@ -656,6 +656,7 @@ pub struct Task {
 pub struct Task2 {
     pub sentence:SentenceDummy,
     pub handler:Option<Box<QHandler>>, // handler which is called when a better answer is found
+    pub bestAnswerExp:f64, // expectation of best answer
     pub prio:f64, // priority
 }
 
@@ -756,6 +757,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             mem.questionTasks.push(Box::new(Task2 {
                 sentence:sentence.clone(),
                 handler:None,
+                bestAnswerExp:0.0, // because has no answer yet
                 prio:1.0,
             }));
         },
@@ -858,22 +860,28 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 // Q&A - answer questions
                 {
                     for iConcl in &concl {
-                        for iQTask in &mem.questionTasks {
-                            let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
-                            if unifyRes.is_some() { // was answer found?
-                                let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
-    
-                                if iQTask.handler.is_some() {
-                                    iQTask.handler.as_ref().unwrap().answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
+                        if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
+                            for iQTask in &mut mem.questionTasks {
+                                if calcExp(&iConcl.tv) > iQTask.bestAnswerExp { // is the answer potentially better?
+                                    let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
+                                    if unifyRes.is_some() { // was answer found?
+                                        let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
+            
+                                        if iQTask.handler.is_some() {
+                                            iQTask.handler.as_ref().unwrap().answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
+                                        }
+
+                                        iQTask.bestAnswerExp = calcExp(&iConcl.tv); // update exp of best found answer
+
+
+                                        println!("TODO - print question and answer sentence!");
+                                    }
                                 }
-    
-                                println!("TODO - Q&A check and update tv of best found answer of task!");
                             }
                         }
                     }
                 }
                 
-                println!("TODO TODO - answer questions here");
  
                 for iConcl in &concl {
                     // TODO< check if task exists already, don't add if it exists >
