@@ -88,26 +88,53 @@ mod tests {
   use Term::convTermToStr;
 
   #[test]
-  pub fn testParserWithTv() {
-    let narsese = "<a --> {b}>. {0.4 0.8}".to_string();
+  pub fn withTv() {
+    let narsese = "<a --> b>. {0.4 0.8}".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
     let (term, tv, punct) = parseResOpt.unwrap();
-    assert_eq!(convTermToStr(&term), "<a --> {b}>");
+    assert_eq!(convTermToStr(&term), "<a --> b>");
     assert_eq!((tv.f - 0.4).abs() < 0.01, true);
     assert_eq!((tv.c - 0.8).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
 
   #[test]
-  pub fn testParserWithoutTv() {
-    let narsese = "<a --> {b}>.".to_string();
+  pub fn withoutTv() {
+    let narsese = "<a --> b>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
     let (term, tv, punct) = parseResOpt.unwrap();
-    assert_eq!(convTermToStr(&term), "<a --> {b}>");
+    assert_eq!(convTermToStr(&term), "<a --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+
+  #[test]
+  pub fn setInt() {
+    let narsese = "<a --> [b]>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<a --> [b]>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn setExt() {
+    let narsese = "<{a} --> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<{a} --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
@@ -144,9 +171,29 @@ fn b(input:&str)  -> IResult<&str, Term> {
   Ok((input, Term::Name(termContent.to_string())))
 }
 
+
+fn c(input:&str)  -> IResult<&str, Term> {
+  let (input, _) = tag("[")(input)?;
+  let (input, termContent) = alpha2(input)?;
+  let (input, _) = tag("]")(input)?;
+
+  Ok((input, Term::SetInt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
+}
+
+
 fn parseSubjOrPred(input: &str) -> IResult<&str, Term> {
   {
     let res0 = a(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = c(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
