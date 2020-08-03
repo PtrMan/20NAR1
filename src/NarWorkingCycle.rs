@@ -712,10 +712,10 @@ pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Rc<RefCell<Task>>>)->usize {
     let mut acc = 0.0;
     let mut idx = 0;
     for iv in arr {
+        acc += iv.borrow().credit;
         if acc >= selVal*sum {
             return idx;
         }
-        acc += iv.borrow().credit;
         idx+=1;
     }
     
