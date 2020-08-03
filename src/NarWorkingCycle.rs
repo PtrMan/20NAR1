@@ -697,6 +697,8 @@ pub struct Mem2 {
     pub mem: Rc<RefCell<NarMem::Mem>>,
     pub stampIdCounter: i64, // counter for stamp id
 
+    pub cycleCounter: i64, // counter for done reasoning cycles
+
     pub rng: ThreadRng,
 }
 
@@ -800,7 +802,10 @@ pub fn divCreditByComplexity(task:&mut Task) {
 }
 
 // performs one reasoning cycle
+// /param cycleCounter counter of done cycles of reasoner
 pub fn reasonCycle(mem:&mut Mem2) {
+    mem.cycleCounter+=1;
+
     // transfer credits from questionTasks to Judgement tasks
     for iTask in &mem.questionTasks {
         {
@@ -936,6 +941,16 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     }
 
+    // keep working tasks of judgements under AIKR
+    {
+        let maxJudgementTasks = 10; // maximal number of judgement tasks
+        //if mem.judgementTasks.len() > maxJudgementTasks && cycleCounter % 111 == 0 //// commented for testing
+        {
+            mem.judgementTasks.sort_by(|a, b| b.borrow().credit.partial_cmp(&a.borrow().credit).unwrap());
+            mem.judgementTasks = mem.judgementTasks[0..maxJudgementTasks.min(mem.judgementTasks.len())].to_vec(); // limit to keep under AIKR
+        }
+    }
+
 
 }
 
@@ -944,7 +959,7 @@ pub fn createMem2()->Mem2 {
         concepts:HashMap::new(),
     };
     
-    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), stampIdCounter:0, }
+    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), stampIdCounter:0, cycleCounter:0, }
 }
 
 // not working prototype of attention mechanism based on credits
