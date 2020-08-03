@@ -139,6 +139,34 @@ mod tests {
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
+
+  #[test]
+  pub fn prod2() {
+    let narsese = "<(a*c) --> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a * c ) --> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+  
+
+  #[test]
+  pub fn conj2() {
+    let narsese = "<(a&&c) ==> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a && c ) ==> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+  
 }
 
 
@@ -212,6 +240,16 @@ fn parseSubjOrPred(input: &str) -> IResult<&str, Term> {
     }
   }
 
+  {
+    let res0 = parseConj2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
   return b(input)
 }
 
@@ -266,15 +304,58 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   return copEquiv(input);
 }
 
-
 // parses product with two components
 pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
   let (input, a) = parseSubjOrPred(input)?;//parse0(input)?;
   let (input, _) = tag("*")(input)?;
+  
+  /*
+  let mut type_:Option<&str> = None;
+
+  {
+    let res0 = conStar(input);
+    match res0 {
+      Ok((_,X)) => {
+        type_ = Some(X);
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  *
+  if !type_.is_some() {
+    let res0 = conConj(input);
+    match res0 {
+      Ok((_,X)) => {
+        type_ = Some(X);
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  *
+
+  if !type_.is_some() {
+    return Err(nom::Err::Incomplete(nom::Needed::Unknown)); // propagate error
+  }
+  
+  */
+
+
   let (input, b) = parseSubjOrPred(input)?;//parse0(input)?;
   let (input, _) = tag(")")(input)?;
   Ok((input, p2(&a, &b)))
+}
+
+
+// parses product with two components
+pub fn parseConj2(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input)?;
+  let (input, _) = tag("&&")(input)?;
+  let (input, b) = parseSubjOrPred(input)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, conj(&vec![a, b])))
 }
 
 pub fn parse0(input: &str) -> IResult<&str, Term> {
