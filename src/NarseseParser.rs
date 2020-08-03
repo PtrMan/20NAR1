@@ -66,7 +66,7 @@ pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
   //println!("f = {}", tv.f);
   //println!("c = {}", tv.c);
 
-  let parsed:IResult<&str, Term> = parse0(&narseseInner);
+  let parsed:IResult<&str, Term> = parseEntry(&narseseInner);
 
   match parsed {
     Ok((str2, term)) => {
@@ -155,13 +155,26 @@ mod tests {
   
 
   #[test]
-  pub fn conj2() {
+  pub fn conj2_0() {
     let narsese = "<(a&&c) ==> x>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
     let (term, tv, punct) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a && c ) ==> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn conj2_1() {
+    let narsese = "<(<a --> b>&&c) ==> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( <a --> b> && c ) ==> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
@@ -208,8 +221,8 @@ fn c(input:&str)  -> IResult<&str, Term> {
   Ok((input, Term::SetInt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
 }
 
-
-fn parseSubjOrPred(input: &str) -> IResult<&str, Term> {
+// /param enStatement enable parsing of statement
+fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
   {
     let res0 = a(input);
     match res0 {
@@ -242,6 +255,16 @@ fn parseSubjOrPred(input: &str) -> IResult<&str, Term> {
 
   {
     let res0 = parseConj2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = parseStatement(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -307,7 +330,7 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
 // parses product with two components
 pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
-  let (input, a) = parseSubjOrPred(input)?;//parse0(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;//parse0(input)?;
   let (input, _) = tag("*")(input)?;
   
   /*
@@ -342,7 +365,7 @@ pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   */
 
 
-  let (input, b) = parseSubjOrPred(input)?;//parse0(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;//parse0(input)?;
   let (input, _) = tag(")")(input)?;
   Ok((input, p2(&a, &b)))
 }
@@ -351,35 +374,33 @@ pub fn parseProd2(input: &str) -> IResult<&str, Term> {
 // parses product with two components
 pub fn parseConj2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
-  let (input, a) = parseSubjOrPred(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
   let (input, _) = tag("&&")(input)?;
-  let (input, b) = parseSubjOrPred(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;
   let (input, _) = tag(")")(input)?;
   Ok((input, conj(&vec![a, b])))
 }
 
-pub fn parse0(input: &str) -> IResult<&str, Term> {
-  //parseProd2(input)
-
-  
-  //named!( alpha, take_while!( is_alphanumeric ) );
-
+pub fn parseStatement(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("<")(input)?;
   //let (input, subj) = tag("b")(input)?;
   
   //let (input, _) = tag("{")(input)?;
   //let (input, subj) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
   //let (input, _) = tag("}")(input)?;
-  let (input, subj) = parseSubjOrPred(input)?;
+  let (input, subj) = parseSubjOrPred(input, true)?;
 
   //let (input, _) = tag(" --> ")(input)?; // TODO< remove spaces >
   let (input, copula) = parseCopula(input)?;
 
   //let (input, pred) = alpha2(input)?;
-  let (input, pred) = parseSubjOrPred(input)?;
+  let (input, pred) = parseSubjOrPred(input, true)?;
   
   let (input, _) = tag(">")(input)?;
 
   Ok((input, s(copula, &subj, &pred)))
 }
 
+pub fn parseEntry(input: &str) -> IResult<&str, Term> {
+  parseStatement(input) // must be statement
+}
