@@ -55,10 +55,10 @@ pub fn runInteractive(nar:&mut Nar) {
                 trimNewline(&mut input);
                 
                 println!("{}", input);
-                if input == "s" {
+                if input == "!s" {
                     cycle(nar);
                 }
-                else if input == "dt" { // debug tasks
+                else if input == "!dt" { // debug tasks
                     debugCreditsOfTasks(&nar.mem);
                 }
                 else {
