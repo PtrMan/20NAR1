@@ -54,8 +54,15 @@ pub fn runInteractive(nar:&mut Nar) {
                 trimNewline(&mut input);
                 
                 println!("{}", input);
-                if input == "!s" {
-                    cycle(nar);
+                if input.len() >= 2 && &input[..2] == "!s" {
+                    let mut nCycles = 1;
+                    if input.len() > 2 { // parse number of cycles
+                        // TODO< check if it was parsed fine! >
+                        nCycles = input[2..].parse::<i64>().unwrap();
+                    }
+                    for _i in 0..nCycles {
+                        cycle(nar);
+                    }
                 }
                 else if input == "!dt" { // debug tasks
                     debugCreditsOfTasks(&nar.mem);
