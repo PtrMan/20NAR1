@@ -209,6 +209,32 @@ mod tests {
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
+
+  #[test]
+  pub fn conj3_0() {
+    let narsese = "<(a&&c&&d) ==> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a && c && d ) ==> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn conj4_0() {
+    let narsese = "<(a&&c&&d&&e) ==> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a && c && d && e ) ==> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
   
 }
 
@@ -296,6 +322,24 @@ fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
 
   {
     let res0 = parseConj2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  {
+    let res0 = parseConj3(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  {
+    let res0 = parseConj4(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -440,6 +484,28 @@ pub fn parseConj2(input: &str) -> IResult<&str, Term> {
   let (input, b) = parseSubjOrPred(input, true)?;
   let (input, _) = tag(")")(input)?;
   Ok((input, conj(&vec![a, b])))
+}
+pub fn parseConj3(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("&&")(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("&&")(input)?;
+  let (input, c) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, conj(&vec![a, b, c])))
+}
+pub fn parseConj4(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("&&")(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("&&")(input)?;
+  let (input, c) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("&&")(input)?;
+  let (input, d) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, conj(&vec![a, b, c, d])))
 }
 
 pub fn parseStatement(input: &str) -> IResult<&str, Term> {
