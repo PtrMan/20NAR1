@@ -92,7 +92,7 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                                         let resTerm = Term::SetInt(union_);
                                         
                                         println!("TODO - compute tv");
-                                        return Some((Term::Stmt(Copula::IMPL, Box::clone(asubj), Box::new(resTerm)), aTv.clone()));
+                                        return Some((Term::Stmt(Copula::INH, Box::clone(asubj), Box::new(resTerm)), aTv.clone()));
                                     }
                                     
                                 },
@@ -136,10 +136,10 @@ pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                                         union_.extend(asubj.iter().cloned());
                                         union_.extend(bsubj.iter().cloned());
                                         
-                                        let resTerm = Term::SetInt(union_);
+                                        let resTerm = Term::SetExt(union_);
                                         
                                         println!("TODO - compute tv");
-                                        return Some((Term::Stmt(Copula::IMPL, Box::new(resTerm), Box::clone(apred)), aTv.clone()));
+                                        return Some((Term::Stmt(Copula::INH, Box::new(resTerm), Box::clone(apred)), aTv.clone()));
                                     }
                                     
                                 },
