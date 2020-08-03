@@ -3,6 +3,7 @@
 use std::io;
 use Nar::*;
 use NarWorkingCycle::{debugCreditsOfTasks};
+use NarModuleNlp;
 
 pub fn runInteractive(nar:&mut Nar) {
     // TODO< parse commands ! >
@@ -23,6 +24,10 @@ pub fn runInteractive(nar:&mut Nar) {
                     for _i in 0..nCycles {
                         cycle(nar);
                     }
+                }
+                else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
+                    let natural = &input[6..].to_string();
+                    NarModuleNlp::process(&natural);
                 }
                 else if input == "!dt" { // debug tasks
                     debugCreditsOfTasks(&nar.mem);

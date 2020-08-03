@@ -38,6 +38,9 @@ mod Term;
 mod TermApi;
 mod NarInteractive;
 mod Nar;
+
+mod NarModuleNlp;
+
 //mod narPerception; // not include because file has issues
 
 use Nn::{Network, buildNnFromParameters};
