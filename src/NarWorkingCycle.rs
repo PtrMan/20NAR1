@@ -414,9 +414,26 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                     if arr.len() == 2 {
                         let unifyRes = unify(&arr[idx], &b);
                         if unifyRes.is_some() { // vars must unify
-                            let subst = unifySubst(&arr[1-idx], &unifyRes.unwrap()); // substitute vars
+                            let unifyVal = unifyRes.unwrap();
+
+                            let mut conclConj:Vec<Box<Term>> = vec![]; // array of conjunction of result
+                            for idx2 in 0..arr.len() {
+                                if idx2 == idx {
+                                    continue; // skip the unified subterm!
+                                }
+                                let subst = unifySubst(&arr[idx2], &unifyVal); // substitute vars
+                                conclConj.push(Box::new(subst));
+                            }
+                            
+                            let conclTerm = if conclConj.len() == 1 {
+                                Term::Stmt(Copula::IMPL, Box::clone(&conclConj[0]), Box::clone(apred)) // build implication with single term
+                            }
+                            else {
+                                Term::Stmt(Copula::IMPL, Box::new(Term::Conj(conclConj)), Box::clone(apred)) // build implication with conjunction
+                            };
+                            
                             println!("TODO - compute TV correctly!");
-                            return Some((Term::Stmt(Copula::IMPL, Box::new(subst), Box::clone(apred)), aTv.clone()));
+                            return Some((conclTerm, aTv.clone()));
                         }
                     }
                 },
@@ -453,7 +470,7 @@ pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
     }
 }
 
-
+// necessary for symbolic manipulation for example in https://github.com/orgs/NARS-team/teams/all/discussions/71
 // a ==> x?
 // unify x.
 // |-
@@ -499,6 +516,12 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf5(&a, aPunct, &aTv, &b, bPunct, &bTv, 1) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match inf5(&a, aPunct, &aTv, &b, bPunct, &bTv, 2) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match inf5(&a, aPunct, &aTv, &b, bPunct, &bTv, 3) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf6(&a, aPunct, &aTv, &b, bPunct, &bTv) {
