@@ -424,12 +424,14 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                                 let subst = unifySubst(&arr[idx2], &unifyVal); // substitute vars
                                 conclConj.push(Box::new(subst));
                             }
+
+                            let substPred = unifySubst(&apred, &unifyVal); // substitute vars
                             
                             let conclTerm = if conclConj.len() == 1 {
-                                Term::Stmt(Copula::IMPL, Box::clone(&conclConj[0]), Box::clone(apred)) // build implication with single term
+                                Term::Stmt(Copula::IMPL, Box::clone(&conclConj[0]), Box::new(substPred)) // build implication with single term
                             }
                             else {
-                                Term::Stmt(Copula::IMPL, Box::new(Term::Conj(conclConj)), Box::clone(apred)) // build implication with conjunction
+                                Term::Stmt(Copula::IMPL, Box::new(Term::Conj(conclConj)), Box::new(substPred)) // build implication with conjunction
                             };
                             
                             println!("TODO - compute TV correctly!");
