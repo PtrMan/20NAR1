@@ -117,6 +117,32 @@ mod tests {
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
 
+  #[test]
+  pub fn indepVar() {
+    let narsese = "<$a --> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<$a --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn depVar() {
+    let narsese = "<#a --> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<#a --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
 
   #[test]
   pub fn setInt() {
@@ -225,6 +251,17 @@ fn c(input:&str)  -> IResult<&str, Term> {
   Ok((input, Term::SetInt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
 }
 
+fn depVar(input:&str) -> IResult<&str, Term> {
+  let (input, _) = tag("#")(input)?;
+  let (input, name) = alpha2(input)?;
+  Ok((input, Term::DepVar(name.to_string())))
+}
+fn indepVar(input:&str) -> IResult<&str, Term> {
+  let (input, _) = tag("$")(input)?;
+  let (input, name) = alpha2(input)?;
+  Ok((input, Term::IndepVar(name.to_string())))
+}
+
 // /param enStatement enable parsing of statement
 fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
   {
@@ -269,6 +306,26 @@ fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
 
   {
     let res0 = parseStatement(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = depVar(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = indepVar(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
