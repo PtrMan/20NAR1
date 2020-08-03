@@ -16,7 +16,6 @@ pub fn createNar() -> Nar {
 
 pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     println!("[v] input {}", convTermToStr(term));
-    println!("TODO - parse puncation and TV");
 
     let stamp = newStamp(&vec![nar.mem.stampIdCounter]);
     nar.mem.stampIdCounter+=1;
