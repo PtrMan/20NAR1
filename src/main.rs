@@ -37,6 +37,7 @@ mod Tv;
 mod Term;
 mod TermApi;
 mod NarInteractive;
+mod Nar;
 //mod narPerception; // not include because file has issues
 
 use Nn::{Network, buildNnFromParameters};
@@ -54,7 +55,7 @@ pub fn main() {
     let runEnv:String = std::env::args().nth(1).expect("no environment given");
 
     if runEnv == "it" { // run interactive
-        let mut nar = NarInteractive::createNar();
+        let mut nar = Nar::createNar();
         NarInteractive::runInteractive(&mut nar);
     }
     else if runEnv == "env" { // run environment
