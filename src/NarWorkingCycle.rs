@@ -711,7 +711,7 @@ pub struct Task {
 
 pub struct Task2 {
     pub sentence:SentenceDummy,
-    pub handler:Option<Box<dyn QHandler>>, // handler which is called when a better answer is found
+    pub handler:Option< Rc<RefCell< dyn QHandler>> >, // handler which is called when a better answer is found
     pub bestAnswerExp:f64, // expectation of best answer
     pub prio:f64, // priority
 }
@@ -927,9 +927,11 @@ pub fn reasonCycle(mem:&mut Mem2) {
                                     let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
                                     if unifyRes.is_some() { // was answer found?
                                         let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
-            
+                                        
                                         if iQTask.handler.is_some() {
-                                            iQTask.handler.as_ref().unwrap().answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
+                                            let handler1 = iQTask.handler.as_ref().unwrap();
+                                            let mut handler2 = handler1.borrow_mut();
+                                            handler2.answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
                                         }
 
                                         iQTask.bestAnswerExp = calcExp(&retTv(&iConcl)); // update exp of best found answer
@@ -1076,5 +1078,5 @@ pub fn debugCreditsOfTasks(mem: &Mem2) {
 
 // called when answer is found
 pub trait QHandler {
-    fn answer(&self, question:&Term, answer:&SentenceDummy);
+    fn answer(&mut self, question:&Term, answer:&SentenceDummy);
 }
