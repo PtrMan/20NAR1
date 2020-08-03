@@ -21,7 +21,7 @@ use TermApi::*;
 pub fn parseNarseseRetTv(narsese:&mut String, tv:&mut Tv) {
   *tv = Tv{f:1.0,c:0.9}; // set TV to default
   
-  if narsese.chars().nth(narsese.len()-1).unwrap() == '}' {
+  if narsese.len() > 0 && narsese.chars().nth(narsese.len()-1).unwrap() == '}' {
     for revIdx in 1..narsese.len() { // scan for '{'
       let idx = narsese.len() - revIdx; // compute index from back
       
@@ -48,9 +48,13 @@ pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
 
   let mut tv = Tv{f:1.0,c:0.9};
   parseNarseseRetTv(&mut narsese2, &mut tv);
-  println!("{}", &narsese2);
+  //println!("{}", &narsese2);
   narsese2 = narsese2.trim_end().to_string();
-  println!("{}", &narsese2);
+  //println!("{}", &narsese2);
+
+  if narsese2.len() == 0 {
+    return None; // can't parse empty string!
+  }
   
   let punctationChar = narsese2.chars().nth(narsese2.len()-1).unwrap();
   let narseseInner = narsese2[..narsese2.len()-1].to_string();
