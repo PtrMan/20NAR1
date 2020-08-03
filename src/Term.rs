@@ -14,6 +14,7 @@ pub enum Term {
     Seq(Vec<Box<Term>>), // sequence
     SetInt(Vec<Box<Term>>),
     SetExt(Vec<Box<Term>>),
+    QVar(String), // ?
     DepVar(String), // #
     IndepVar(String), // $
     Conj(Vec<Box<Term>>), // &&
@@ -47,6 +48,9 @@ impl Clone for Term {
                     arr.push(i.clone());
                 }
                 Term::SetExt(arr)
+            },
+            Term::QVar(name) => {
+                Term::QVar(name.clone())
             },
             Term::DepVar(name) => {
                 Term::DepVar(name.clone())
@@ -143,6 +147,9 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
+        Term::QVar(_) => {
+            1
+        },
         Term::DepVar(_) => {
             1
         },
@@ -195,6 +202,9 @@ pub fn convTermToStr(t:&Term) -> String {
                 inner = format!("{} {}", inner, convTermToStr(&set[i]));
             }
             format!("{{{}}}", inner)
+        },
+        Term::QVar(name) => {
+            format!("?{}", name)
         },
         Term::DepVar(name) => {
             format!("#{}", name)
@@ -273,6 +283,12 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
                     }
                     else {false}
                 },
+                _ => false
+            }
+        },
+        Term::QVar(namea) => {
+            match b {
+                Term::QVar(nameb) => namea == nameb,
                 _ => false
             }
         },

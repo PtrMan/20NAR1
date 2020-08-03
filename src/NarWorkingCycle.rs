@@ -193,8 +193,25 @@ pub struct Asgnment { // structure to store assignment of var
 
 fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
     match a2 {
+        Term::QVar(_namea) => {
+            match b2 {
+                Term::QVar(_nameb) => false, // can't unify var with var
+                Term::DepVar(_nameb) => false, // can't unify var with var
+                Term::IndepVar(_nameb) => false, // can't unify var with var
+                _ => {
+                    if checkAssigned(&a2, &assignments) {
+                        return checkSameVal(&a2, &b2, &assignments);
+                    }
+                    else {
+                        assignments.push(Asgnment{var:a2.clone(),val:b2.clone(),}); // add assignment
+                        true
+                    }
+                }
+            }
+        },
         Term::DepVar(_namea) => {
             match b2 {
+                Term::QVar(_nameb) => false, // can't unify var with var
                 Term::DepVar(_nameb) => false, // can't unify var with var
                 Term::IndepVar(_nameb) => false, // can't unify var with var
                 _ => {
@@ -210,6 +227,7 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
         },
         Term::IndepVar(_namea) => {
             match b2 {
+                Term::QVar(_nameb) => false, // can't unify var with var
                 Term::DepVar(_nameb) => false, // can't unify var with var
                 Term::IndepVar(_nameb) => false, // can't unify var with var
                 _ => {
@@ -338,6 +356,16 @@ pub fn unify(a: &Term, b: &Term) -> Option<Vec<Asgnment>> {
 // substitute variables with values
 pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
     match t {
+        Term::QVar(_name) => {
+            // search for variable
+            for iasgn in subst {
+                if checkEqTerm(&t, &iasgn.var) {
+                    return iasgn.val.clone();
+                }
+            }
+            (*t).clone()
+        },
+
         Term::DepVar(_name) => {
             // search for variable
             for iasgn in subst {
