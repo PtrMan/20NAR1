@@ -117,6 +117,20 @@ mod tests {
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
 
+
+  #[test]
+  pub fn numeric() {
+    let narsese = "<0 --> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<0 --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
   #[test]
   pub fn indepVar() {
     let narsese = "<$a --> b>.".to_string();
@@ -165,6 +179,19 @@ mod tests {
     
     let (term, tv, punct) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<{a} --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn setExtProd() {
+    let narsese = "<{(a*c)} --> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<{( a * c )} --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
@@ -257,10 +284,10 @@ fn alpha2(input: &str) -> IResult<&str, &str> {
 
 fn a(input:&str)  -> IResult<&str, Term> {
   let (input, _) = tag("{")(input)?;
-  let (input, termContent) = alpha2(input)?; // many_m_n!(1, 3, tag("a"))(input)?;
+  let (input, termContent) = parseSubjOrPred(input, true)?; // many_m_n!(1, 3, tag("a"))(input)?;
   let (input, _) = tag("}")(input)?;
 
-  Ok((input, Term::SetExt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
+  Ok((input, Term::SetExt(vec![Box::new(termContent)])))  // return {termContent}
 }
 
 fn b(input:&str)  -> IResult<&str, Term> {
@@ -271,10 +298,10 @@ fn b(input:&str)  -> IResult<&str, Term> {
 
 fn c(input:&str)  -> IResult<&str, Term> {
   let (input, _) = tag("[")(input)?;
-  let (input, termContent) = alpha2(input)?;
+  let (input, termContent) = parseSubjOrPred(input, true)?;
   let (input, _) = tag("]")(input)?;
 
-  Ok((input, Term::SetInt(vec![Box::new(Term::Name(termContent.to_string()))])))  // return {termContent}
+  Ok((input, Term::SetInt(vec![Box::new(termContent)])))  // return {termContent}
 }
 
 fn depVar(input:&str) -> IResult<&str, Term> {
