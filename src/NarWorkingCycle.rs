@@ -402,7 +402,7 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
 // unify a.
 // |-
 // b ==> x.
-pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv, idx:usize) -> Option<(Term,Tv)> {
+pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv, conjIdx:usize) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -411,14 +411,14 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
         Term::Stmt(Copula::IMPL, aconj, apred) => {
             match &**aconj {
                 Term::Conj(arr) => {
-                    if arr.len() == 2 {
-                        let unifyRes = unify(&arr[idx], &b);
+                    if conjIdx < arr.len() { // index in conj must be in bounds
+                        let unifyRes = unify(&arr[conjIdx], &b);
                         if unifyRes.is_some() { // vars must unify
                             let unifyVal = unifyRes.unwrap();
 
                             let mut conclConj:Vec<Box<Term>> = vec![]; // array of conjunction of result
                             for idx2 in 0..arr.len() {
-                                if idx2 == idx {
+                                if idx2 == conjIdx {
                                     continue; // skip the unified subterm!
                                 }
                                 let subst = unifySubst(&arr[idx2], &unifyVal); // substitute vars
