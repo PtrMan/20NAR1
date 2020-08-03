@@ -8,16 +8,42 @@ use std::rc::Rc;
 use Nar::*;
 use Term::*;
 use TermApi::*;
-use NarWorkingCycle::{Task2};
+use NarWorkingCycle::{Task2, debugCreditsOfTasks, QHandler};
 use Tv::*;
 use NarStamp::newStamp;
 use NarSentence::{SentenceDummy, EnumPunctation, Evidence};
 
-pub fn process(natural:&String) {
+pub fn process(natural:&String)->Option<SentenceDummy> {
     let mut workerNar = createNar();
 
-    println!("TODO - convert natural into tokens");
-    println!("TODO - convert tokens to inheritance representation and feed into NAR!");
+
+    let tokens: Vec<&str> = natural.split_whitespace().collect(); // split into tokens
+
+    // convert tokens to inheritance representation and feed into NAR
+    {
+        let mut idx:usize = 0;
+        while idx < tokens.len() {
+            let idxAsStr = format!("{}", idx);
+            
+            if (tokens[idx] == "a" || tokens[idx] == "an") && idx+1 < tokens.len() {
+                let token2nd = tokens[idx+1];
+                let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name(token2nd.to_string()), &Term::Name(idxAsStr)))]), &Term::Name("a2".to_string()));
+                inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+
+                idx+=2;
+            }
+            else if tokens[idx] == "is" {
+                let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name("is".to_string()), &Term::Name(idxAsStr)))]), &Term::Name("rel2".to_string()));
+                inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+
+                idx+=1;
+            }
+            else {
+                println!("INFO - skipped token!");
+                idx+=1;
+            }
+        }
+    }
 
     // relation positive
     //ex:  a dog is a animal
@@ -25,6 +51,9 @@ pub fn process(natural:&String) {
     inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> isRel>>. {1.0 0.998}".to_string());
 
     // ask question directly
+    let mut answerHandler:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandlerRef = Rc::new(RefCell::new(answerHandler));
+    let rc2 = Rc::clone(&answerHandlerRef);
     {
         let sentence = SentenceDummy {
             term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("isRel".to_string())) ),
@@ -35,10 +64,9 @@ pub fn process(natural:&String) {
             expDt:None
         };
 
-        println!("TODO - add handler");
         workerNar.mem.questionTasks.push(Box::new(Task2 {
             sentence:sentence,
-            handler:None,
+            handler:Some(answerHandlerRef),
             bestAnswerExp:0.0, // because has no answer yet
             prio:1.0,
         }));
@@ -48,6 +76,20 @@ pub fn process(natural:&String) {
         cycle(&mut workerNar);
     }
 
+    // for debugging
+    debugCreditsOfTasks(&workerNar.mem);
 
-    println!("TODO - process answer to question <?0 --> isRel>?");
+
+    let res = rc2.borrow_mut().answer.clone();
+    res // return answer of question
+}
+
+struct NlpAnswerHandler {
+    answer: Option<SentenceDummy>, // holds the answer if it was found
+}
+
+impl QHandler for NlpAnswerHandler {
+    fn answer(&mut self, question:&Term, answer:&SentenceDummy) {
+        self.answer = Some(answer.clone());
+    }
 }
