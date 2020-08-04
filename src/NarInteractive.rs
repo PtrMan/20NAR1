@@ -82,8 +82,6 @@ pub fn runInteractive(nar:&mut Nar) {
                                         return;
                                     }
                                 }
-                                
-                                println!("TODO - process result term further");
                             },
                             _ => {
                                 // term doesn't fit expected structure!
