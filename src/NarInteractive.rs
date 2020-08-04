@@ -6,7 +6,6 @@ use NarWorkingCycle::{debugCreditsOfTasks};
 use NarModuleNlp;
 
 pub fn runInteractive(nar:&mut Nar) {
-    // TODO< parse commands ! >
     loop {
         let mut input2 = String::new();
         match io::stdin().read_line(&mut input2) {
@@ -31,6 +30,9 @@ pub fn runInteractive(nar:&mut Nar) {
                 }
                 else if input == "!dt" { // debug tasks
                     debugCreditsOfTasks(&nar.mem);
+                }
+                else if input == "!QQ" { // quit
+                    break;
                 }
                 else {
                     inputN(nar, &input);
