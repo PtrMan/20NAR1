@@ -38,6 +38,12 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
 
                 idx+=1;
             }
+            else if tokens[idx] == "?" { // we need special handling for special characters
+                let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name("QUESTION".to_string()), &Term::Name(idxAsStr)))]), &Term::Name("sign2".to_string()));
+                inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+
+                idx+=1;
+            }
             else {
                 println!("INFO - skipped token!");
                 idx+=1;
@@ -49,6 +55,22 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     //ex:  a dog is a animal
     //ex:  an dog is an animal
     inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> isRel>>. {1.0 0.998}".to_string());
+
+    // relation negative
+    //ex:  a dog isn't a animal
+    //ex:  an dog isn't an animal
+    println!("TODO - implement parsing of negation!");
+    println!("TODO - add this negation rule");
+    //inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(isn_t*2)} --> rel2>&&<{($2*3)} --> a2>) ==> (--,<{($1*$2)} --> isRel>)>. {1.0 0.998}");
+
+
+
+
+    // query for a relation
+    // ex:    is a dog a animal ?
+    inputN(&mut workerNar, &"<(<{(is*0)} --> rel2>&&<{($1*1)} --> a2>&&<{($2*3)} --> a2>&&<{(QUESTION*5)} --> sign2>) ==> <{($1*$2)} --> isQueryRel>>. {1.0 0.998}".to_string());
+
+
 
     // ask question directly
     let mut answerHandler:NlpAnswerHandler = NlpAnswerHandler{answer:None};
