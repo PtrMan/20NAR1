@@ -4,6 +4,10 @@ use std::io;
 use Nar::*;
 use NarWorkingCycle::{debugCreditsOfTasks};
 use NarModuleNlp;
+use Term::*;
+use TermApi::*;
+use NarSentence::{SentenceDummy, EnumPunctation};
+use Tv::{Tv};
 
 pub fn runInteractive(nar:&mut Nar) {
     loop {
@@ -26,7 +30,67 @@ pub fn runInteractive(nar:&mut Nar) {
                 }
                 else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
                     let natural = &input[6..].to_string();
-                    NarModuleNlp::process(&natural);
+                    let resTermOpt:Option<SentenceDummy> = NarModuleNlp::process(&natural);
+                    if resTermOpt.is_some() {
+                        let resTerm:&Term = &(*resTermOpt.unwrap().term);
+                        match resTerm {
+                            Term::Stmt(Copula::INH, subj, pred) => { // is relationship
+                                let prod0;
+                                let prod1;
+                                
+                                match &**subj {
+                                    Term::SetExt(set) => {
+                                        if let [set0] = &set[..1] { 
+                                            match &**set0 {
+                                                Term::Prod(arr) if arr.len() == 2 => {
+                                                    prod0 = *arr[0].clone();
+                                                    prod1 = *arr[1].clone();
+                                                },
+                                                _ => {
+                                                    // term doesn't fit expected structure!
+                                                    println!("W term from NLP isn't recognized 2!");
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                        else {
+                                            // term doesn't fit expected structure!
+                                            println!("W term from NLP isn't recognized 3!");
+                                            return;
+                                        }
+                                    },
+                                    _ => {
+                                        // term doesn't fit expected structure!
+                                        println!("W term from NLP isn't recognized 1!");
+                                        return;
+                                    }
+                                }
+                                
+                                match &**pred {
+                                    Term::Name(name) if name == "isRel" => {
+                                        // translate to inheritance
+                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9});
+                                    },
+                                    Term::Name(name) if name == "isQueryRel" => {
+                                        // translate to inheritance question
+                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::QUESTION, &Tv{f:1.0,c:0.9});
+                                    },
+                                    
+                                    _ => {
+                                        // term doesn't fit expected structure!
+                                        println!("W term from NLP isn't recognized!");
+                                        return;
+                                    }
+                                }
+                                
+                                println!("TODO - process result term further");
+                            },
+                            _ => {
+                                // term doesn't fit expected structure!
+                                println!("W term from NLP isn't recognized!");
+                            }
+                        }
+                    }
                 }
                 else if input == "!dt" { // debug tasks
                     debugCreditsOfTasks(&nar.mem);
