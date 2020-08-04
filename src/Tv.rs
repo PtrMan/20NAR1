@@ -13,3 +13,7 @@ pub fn ded(a:&Tv,b:&Tv)->Tv {
     let c = a.c*b.c*f;
     Tv{f:f,c:c}
 }
+
+pub fn convToStr(tv:&Tv) -> String {
+    format!("{{{} {}}}", tv.f,tv.c)
+}

@@ -901,11 +901,11 @@ pub fn reasonCycle(mem:&mut Mem2) {
             // debug premsises
             {
                 {
-                    let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence);
+                    let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
                     println!("DBG  primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
                 }
                 {
-                    let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence);
+                    let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence, false);
                     println!("DBG  secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
                 }
             }
@@ -937,7 +937,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                                         iQTask.bestAnswerExp = calcExp(&retTv(&iConcl)); // update exp of best found answer
 
                                         // print question and answer
-                                        let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence) + " " + &convSentenceTermPunctToStr(&iConcl);
+                                        let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence, true) + " " + &convSentenceTermPunctToStr(&iConcl, true);
                                         println!("{}", msg);
                                     }
                                 }
@@ -1051,7 +1051,7 @@ pub fn debugCreditsOfTasks(mem: &Mem2) {
     // debug credit of tasks
     {
         for iTask in &mem.judgementTasks {
-            let taskSentenceAsStr = convSentenceTermPunctToStr(&iTask.borrow().sentence);
+            let taskSentenceAsStr = convSentenceTermPunctToStr(&iTask.borrow().sentence, true);
             
             let mut taskAsStr = taskSentenceAsStr.clone();
 

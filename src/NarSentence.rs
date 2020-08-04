@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use Term::Term;
-use Tv::*;
+use Tv;
 use Term::convTermToStr;
 use NarStamp::*;
 
@@ -17,7 +17,7 @@ pub enum EnumPunctation {
 #[derive(Clone)]
 pub enum Evidence {
     CNT{pos:i64,cnt:i64}, // count based evidence
-    TV(Tv),
+    TV(Tv::Tv),
 }
 
 #[derive(Clone)]
@@ -33,7 +33,7 @@ pub struct SentenceDummy {
 }
 
 // create new eternal sentence
-pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv,stamp:Stamp)->SentenceDummy {
+pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:Stamp)->SentenceDummy {
     SentenceDummy {
         term:Rc::new(term.clone()),
         t:None, // time of occurence 
@@ -44,10 +44,10 @@ pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv,stamp:Stamp
     }
 }
 
-pub fn retTv(s:&SentenceDummy)->Tv {
+pub fn retTv(s:&SentenceDummy)->Tv::Tv {
     match &s.evi {
         Evidence::TV(tv) => {tv.clone()},
-        Evidence::CNT{pos,cnt} => {Tv{f:retFreq(&s.evi),c:retConf(&s.evi)}} // need to compute evidence
+        Evidence::CNT{pos,cnt} => {Tv::Tv{f:retFreq(&s.evi),c:retConf(&s.evi)}} // need to compute evidence
     }
 }
 
@@ -67,11 +67,15 @@ pub fn retConf(evidence:&Evidence)->f64 {
 }
 
 // convert only term and punctation to string
-pub fn convSentenceTermPunctToStr(s:&SentenceDummy) -> String {
+pub fn convSentenceTermPunctToStr(s:&SentenceDummy, enTv:bool) -> String {
     let punct = match s.punct{
         EnumPunctation::QUESTION=>"?",
         EnumPunctation::JUGEMENT=>".",
         EnumPunctation::GOAL=>"!",
-    };    
-    convTermToStr(&s.term) + punct
+    };
+    let mut res = convTermToStr(&s.term) + punct;
+    if enTv && s.punct != EnumPunctation::QUESTION {
+        res = res + " " + &Tv::convToStr(&retTv(&s));
+    }
+    res
 }
