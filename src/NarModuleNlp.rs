@@ -73,9 +73,9 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
 
 
     // ask question directly
-    let mut answerHandler:NlpAnswerHandler = NlpAnswerHandler{answer:None};
-    let answerHandlerRef = Rc::new(RefCell::new(answerHandler));
-    let rc2 = Rc::clone(&answerHandlerRef);
+    let mut answerHandler0:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandlerRef0 = Rc::new(RefCell::new(answerHandler0));
+    let rc0 = Rc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
             term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("isRel".to_string())) ),
@@ -88,7 +88,28 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
 
         workerNar.mem.questionTasks.push(Box::new(Task2 {
             sentence:sentence,
-            handler:Some(answerHandlerRef),
+            handler:Some(answerHandlerRef0),
+            bestAnswerExp:0.0, // because has no answer yet
+            prio:1.0,
+        }));
+    }
+
+    let mut answerHandler1:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandlerRef1 = Rc::new(RefCell::new(answerHandler1));
+    let rc1 = Rc::clone(&answerHandlerRef1);
+    {
+        let sentence = SentenceDummy {
+            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("isQueryRel".to_string())) ),
+            t:None, // time of occurence 
+            punct:EnumPunctation::QUESTION,
+            stamp:newStamp(&vec![999]),
+            evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+            expDt:None
+        };
+
+        workerNar.mem.questionTasks.push(Box::new(Task2 {
+            sentence:sentence,
+            handler:Some(answerHandlerRef1),
             bestAnswerExp:0.0, // because has no answer yet
             prio:1.0,
         }));
@@ -101,9 +122,16 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     // for debugging
     debugCreditsOfTasks(&workerNar.mem);
 
-
-    let res = rc2.borrow_mut().answer.clone();
-    res // return answer of question
+    // return answer of question
+    let res0 = rc0.borrow_mut().answer.clone();
+    if res0.is_some() {
+        return res0;
+    }
+    let res1 = rc1.borrow_mut().answer.clone();
+    if res1.is_some() {
+        return res1;
+    }
+    None
 }
 
 struct NlpAnswerHandler {
