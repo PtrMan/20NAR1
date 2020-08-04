@@ -44,12 +44,18 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
 
                 idx+=1;
             }
-            else {
-                println!("INFO - skipped token!");
+            else { // raw token
+                let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name(tokens[idx].to_string().clone()), &Term::Name(idxAsStr)))]), &Term::Name("TOKEN".to_string()));
+                inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+
                 idx+=1;
             }
         }
     }
+
+    // instance relation positive
+    //ex:  tom is a cat
+    inputN(&mut workerNar, &"<(<{($1*0)} --> TOKEN>&&<{(is*1)} --> rel2>&&<{($2*2)} --> a2>) ==> <{({$1}*$2)} --> isRel>>. {1.0 0.998}".to_string());
 
     // relation positive
     //ex:  a dog is a animal
