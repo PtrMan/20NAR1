@@ -1010,6 +1010,29 @@ pub fn reasonCycle(mem:&mut Mem2) {
         }
     }
 
+    // keep judgement tasks by term under AIKR
+    {
+        //if cycleCounter % 111 == 0
+        {
+            mem.judgementTasksByTerm = HashMap::new(); // flush, because we will repopulate
+
+            // repopulate judgementTasksByTerm
+            // IMPL< we had to split it because mem was accessed twice! >
+            let mut termAndTask = vec![];
+            for iJudgementTask in &mem.judgementTasks {
+                let termRc:&Rc<Term> = &iJudgementTask.borrow_mut().sentence.term;
+                let term:Term = (**termRc).clone();
+
+                termAndTask.push((term, Rc::clone(iJudgementTask)));
+            }
+
+            for (term, task) in &termAndTask { // iterate over prepared tuples
+                // populate hashmap lookup
+                populateTaskByTermLookup(mem, &term, &task);
+            }
+        }
+    }
+
 
 }
 
