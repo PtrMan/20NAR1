@@ -19,6 +19,8 @@ pub enum Term {
     IndepVar(String), // $
     Conj(Vec<Box<Term>>), // &&
     Prod(Vec<Box<Term>>), // product
+
+    IntInt(Vec<Box<Term>>), // | intensional intersection
 }
 
 impl Clone for Term {
@@ -72,6 +74,13 @@ impl Clone for Term {
                 }
                 Term::Prod(arr)
             },
+            Term::IntInt(set) => {
+                let mut arr = vec![];
+                for i in set {
+                    arr.push(i.clone());
+                }
+                Term::IntInt(arr)
+            }
         }
     }
 }
@@ -110,6 +119,11 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
                 retSubterms2(&i, res);
             }
         },
+        Term::IntInt(set) => {
+            for i in set {
+                retSubterms2(&i, res);
+            }
+        }
         _=>{}, // no special handling necessary for "terminal" ones
     }
 }
@@ -170,6 +184,13 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
+        Term::IntInt(set) => {
+            let mut c = 0;
+            for i in set {
+                c+=calcComplexity(i);
+            }
+            c
+        }
     }
 }
 
@@ -223,6 +244,13 @@ pub fn convTermToStr(t:&Term) -> String {
             let mut inner = convTermToStr(&elements[0]);
             for i in 1..elements.len() {
                 inner = format!("{} * {}", inner, convTermToStr(&elements[i]));
+            }
+            format!("( {} )", inner)
+        },
+        Term::IntInt(elements) => {
+            let mut inner = convTermToStr(&elements[0]);
+            for i in 1..elements.len() {
+                inner = format!("{} | {}", inner, convTermToStr(&elements[i]));
             }
             format!("( {} )", inner)
         },
@@ -324,6 +352,20 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
                     if elementsa.len() == elementsb.len() {
                         for idx in 0..elementsa.len() {
                             if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::IntInt(seta) => {
+            match b {
+                Term::IntInt(setb) => {
+                    if seta.len() == setb.len() {
+                        for idx in 0..seta.len() {
+                            if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
                         }
                         true
                     }
