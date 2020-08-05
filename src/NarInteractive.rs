@@ -67,11 +67,15 @@ pub fn runInteractive(nar:&mut Nar) {
                                 }
                                 
                                 match &**pred {
-                                    Term::Name(name) if name == "isRel" => {
+                                    Term::Name(name) if name == "relIs" => {
                                         // translate to inheritance
                                         inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9});
                                     },
-                                    Term::Name(name) if name == "isQueryRel" => {
+                                    Term::Name(name) if name == "relIs2" => {
+                                        // translate to inheritance
+                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9});
+                                    },
+                                    Term::Name(name) if name == "relIsQuery" => {
                                         // translate to inheritance question
                                         inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::QUESTION, &Tv{f:1.0,c:0.9});
                                     },

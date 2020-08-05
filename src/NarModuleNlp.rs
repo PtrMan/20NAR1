@@ -75,12 +75,42 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
 
     // instance relation positive
     //ex:  tom is a cat
-    inputN(&mut workerNar, &"<(<{($1*0)} --> TOKEN>&&<{(is*1)} --> rel2>&&<{($2*2)} --> a2>) ==> <{({$1}*$2)} --> isRel>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($1*0)} --> TOKEN>&&<{(is*1)} --> rel2>&&<{($2*2)} --> a2>) ==> <{({$1}*$2)} --> relIs>>. {1.0 0.998}".to_string());
 
     // relation positive
     //ex:  a dog is a animal
     //ex:  an dog is an animal
-    inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> isRel>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> relIs>>. {1.0 0.998}".to_string());
+
+
+
+
+
+    // ex: tom is fat
+    //<{($0*0)} --> TOKEN>
+    //<{1} --> TOKENis>
+    //<{($1*2)} --> TOKEN>
+    //==>
+    //<{($0*$1)} --> relIs>
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> TOKEN>) ==> <{($0*$1)} --> relIs>>. {1.0 0.998}".to_string());
+
+
+    
+    // ex: tom is fat and sick
+    //<{($0*0)} --> TOKEN>
+    //<{1} --> TOKENis>
+    //<{($1*2)} --> AT2>
+    //==>
+    //<{($0*$1)} --> relIs2>
+    // disabled because the task with this rule is spammed out by other tasks before it can be used!
+    println!("TODO - fix concept and term selection issue because this task is spammed out!");
+    ///inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+
+
+
+
+
+
 
 
 
@@ -96,7 +126,7 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
 
     // query for a relation
     // ex:    is a dog a animal ?
-    inputN(&mut workerNar, &"<(<{(is*0)} --> rel2>&&<{($1*1)} --> a2>&&<{($2*3)} --> a2>&&<{(QUESTION*5)} --> sign2>) ==> <{($1*$2)} --> isQueryRel>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{(is*0)} --> rel2>&&<{($1*1)} --> a2>&&<{($2*3)} --> a2>&&<{(QUESTION*5)} --> sign2>) ==> <{($1*$2)} --> relIsQuery>>. {1.0 0.998}".to_string());
 
 
 
@@ -106,7 +136,7 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     let rc0 = Rc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("isRel".to_string())) ),
+            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
@@ -127,7 +157,7 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     let rc1 = Rc::clone(&answerHandlerRef1);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("isQueryRel".to_string())) ),
+            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIsQuery".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
@@ -143,6 +173,27 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
         }));
     }
 
+    let mut answerHandler2:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandlerRef2 = Rc::new(RefCell::new(answerHandler2));
+    let rc2 = Rc::clone(&answerHandlerRef2);
+    {
+        let sentence = SentenceDummy {
+            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs2".to_string())) ),
+            t:None, // time of occurence 
+            punct:EnumPunctation::QUESTION,
+            stamp:newStamp(&vec![999]),
+            evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+            expDt:None
+        };
+
+        workerNar.mem.questionTasks.push(Box::new(Task2 {
+            sentence:sentence,
+            handler:Some(answerHandlerRef2),
+            bestAnswerExp:0.0, // because has no answer yet
+            prio:1.0,
+        }));
+    }
+
     for iCycle_ in 0..300 { // give worker NAR time to reason
         cycle(&mut workerNar);
     }
@@ -151,6 +202,11 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     debugCreditsOfTasks(&workerNar.mem);
 
     // return answer of question
+    
+    let res2 = rc2.borrow_mut().answer.clone(); // first because it has a higher "priority" to answer
+    if res2.is_some() {
+        return res2;
+    }
     let res0 = rc0.borrow_mut().answer.clone();
     if res0.is_some() {
         return res0;
@@ -159,6 +215,7 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     if res1.is_some() {
         return res1;
     }
+
     None
 }
 
