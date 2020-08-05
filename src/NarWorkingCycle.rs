@@ -1014,10 +1014,12 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     }
 
+    let intervalCheckTasks = 111; // cycle counter to check for AIKR of tasks - should be prime
+    let maxJudgementTasks = 30; // maximal number of judgement tasks
+
     // keep working tasks of judgements under AIKR
     {
-        let maxJudgementTasks = 30; // maximal number of judgement tasks
-        //if mem.judgementTasks.len() > maxJudgementTasks && cycleCounter % 111 == 0 //// commented for testing
+        if mem.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
         {
             mem.judgementTasks.sort_by(|a, b| b.borrow().credit.partial_cmp(&a.borrow().credit).unwrap());
             mem.judgementTasks = mem.judgementTasks[0..maxJudgementTasks.min(mem.judgementTasks.len())].to_vec(); // limit to keep under AIKR
@@ -1026,8 +1028,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     // keep judgement tasks by term under AIKR
     {
-        //if cycleCounter % 111 == 0
-        {
+        if mem.cycleCounter % intervalCheckTasks == 0 {
             mem.judgementTasksByTerm = HashMap::new(); // flush, because we will repopulate
 
             // repopulate judgementTasksByTerm
