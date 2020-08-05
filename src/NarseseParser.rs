@@ -92,7 +92,7 @@ mod tests {
   use Term::convTermToStr;
 
   #[test]
-  pub fn withTv() {
+  pub fn inhWithTv() {
     let narsese = "<a --> b>. {0.4 0.8}".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
@@ -105,13 +105,39 @@ mod tests {
   }
 
   #[test]
-  pub fn withoutTv() {
+  pub fn inhWithoutTv() {
     let narsese = "<a --> b>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
     let (term, tv, punct) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<a --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn predImpl() {
+    let narsese = "<a =/> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<a =/> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn equiv() {
+    let narsese = "<a <=> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<a <=> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
@@ -474,6 +500,10 @@ fn copImpl(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" ==> ")(input)?;
   Ok((input, Copula::IMPL))
 }
+fn copPredImpl(input:&str)  -> IResult<&str, Copula> {
+  let (input, _) = tag(" =/> ")(input)?;
+  Ok((input, Copula::PREDIMPL))
+}
 fn copEquiv(input:&str)  -> IResult<&str, Copula> {
   let (input, _) = tag(" <=> ")(input)?;
   Ok((input, Copula::EQUIV))
@@ -500,6 +530,15 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   }
   {
     let res0 = copImpl(input);
+    match res0 {
+      Ok(X) => {
+        return res0;
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+  {
+    let res0 = copPredImpl(input);
     match res0 {
       Ok(X) => {
         return res0;
