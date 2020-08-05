@@ -426,9 +426,10 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
     }
 }
 
+// see https://cis.temple.edu/~pwang/Writing/NAL-Specification.pdf?page=50
 // (a && b) ==> x.
 // unify a.
-// |-
+// |- ded
 // b ==> x.
 pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv, conjIdx:usize) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -462,8 +463,7 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
                                 Term::Stmt(Copula::IMPL, Box::new(Term::Conj(conclConj)), Box::new(substPred)) // build implication with conjunction
                             };
                             
-                            println!("TODO - compute TV correctly!");
-                            return Some((conclTerm, aTv.clone()));
+                            return Some((conclTerm, ded(&aTv,&bTv)));
                         }
                     }
                 },
