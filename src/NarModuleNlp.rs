@@ -33,7 +33,21 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
                 idx+=2;
             }
             else if tokens[idx] == "is" {
-                let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name("is".to_string()), &Term::Name(idxAsStr)))]), &Term::Name("rel2".to_string()));
+                {
+                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name("is".to_string()), &Term::Name(idxAsStr.clone())))]), &Term::Name("rel2".to_string()));
+                    inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+                }
+                
+                // new form
+                {
+                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKENis".to_string()));
+                    inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+                }
+
+                idx+=1;
+            }
+            else if tokens[idx] == "and" {
+                let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKENand".to_string()));
                 inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
 
                 idx+=1;
@@ -53,6 +67,12 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
         }
     }
 
+
+    // combine tokens for "and"
+    // ex: b and c
+    inputN(&mut workerNar, &"<(<{3} --> TOKENand>&&<{($0*2)} --> TOKEN>&&<{($1*4)} --> TOKEN>) ==> <{(($0|$1)*2)} --> AT2>>. {1.0 0.998}".to_string());
+
+
     // instance relation positive
     //ex:  tom is a cat
     inputN(&mut workerNar, &"<(<{($1*0)} --> TOKEN>&&<{(is*1)} --> rel2>&&<{($2*2)} --> a2>) ==> <{({$1}*$2)} --> isRel>>. {1.0 0.998}".to_string());
@@ -61,6 +81,8 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     //ex:  a dog is a animal
     //ex:  an dog is an animal
     inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> isRel>>. {1.0 0.998}".to_string());
+
+
 
     // relation negative
     //ex:  a dog isn't a animal
@@ -121,7 +143,7 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
         }));
     }
 
-    for iCycle_ in 0..200 { // give worker NAR time to reason
+    for iCycle_ in 0..300 { // give worker NAR time to reason
         cycle(&mut workerNar);
     }
 

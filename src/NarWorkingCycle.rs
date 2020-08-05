@@ -115,6 +115,8 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
 
 // {a} --> x.  {b} --> x.  |- {a b} --> x.
 pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+    return None; // is disabled because it violates AIKR to some degree!
+    /*
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -157,6 +159,7 @@ pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
         _ => {},
     }
     None
+    //*/
 }
 
 // a ==> x.  x ==> b.  |- a ==> b.
@@ -1002,7 +1005,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     // keep working tasks of judgements under AIKR
     {
-        let maxJudgementTasks = 10; // maximal number of judgement tasks
+        let maxJudgementTasks = 30; // maximal number of judgement tasks
         //if mem.judgementTasks.len() > maxJudgementTasks && cycleCounter % 111 == 0 //// commented for testing
         {
             mem.judgementTasks.sort_by(|a, b| b.borrow().credit.partial_cmp(&a.borrow().credit).unwrap());
