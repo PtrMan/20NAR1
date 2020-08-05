@@ -606,41 +606,7 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct:Enum
 
 
 
-// test
-//    <( <a --> b> && <c --> d> ) ==> x>
-//    <a --> b>
-//    concl:
-//    <<c --> d> ==> x>
-pub fn testManual0() {
-    let a0 = Term::Name("a".to_string());
-    let b0 = Term::Name("b".to_string());
-    let inh0 = Term::Stmt(Copula::INH, Box::new(a0), Box::new(b0));
-    
-    let c0 = Term::Name("c".to_string());
-    let d0 = Term::Name("d".to_string());
-    let inh1 = Term::Stmt(Copula::INH, Box::new(c0), Box::new(d0));
-    
-    let conj0 = Term::Conj(vec![Box::new(inh0), Box::new(inh1)]);
-    
-    let x0 = Term::Name("x".to_string());
-    let impl0 = Term::Stmt(Copula::IMPL, Box::new(conj0), Box::new(x0));
-    
-    
-    let a1 = Term::Name("a".to_string());
-    let b1 = Term::Name("b".to_string());
-    let inh1 = Term::Stmt(Copula::INH, Box::new(a1), Box::new(b1));
-    
-    println!("{}", &convTermToStr(&impl0));
-    println!("{}", &convTermToStr(&inh1));
-    println!("concl:");
-    
-    let mut wereRulesApplied = false;
-    let infConcl = infBinary(&impl0, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &inh1, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &mut wereRulesApplied);
-    for iInfConcl in infConcl {
-        let (conclTerm, _conclTv) = iInfConcl;
-        println!("{}", &convTermToStr(&conclTerm));
-    }
-}
+
 
 
 
@@ -654,7 +620,7 @@ mod tests {
     //    <a --> b>
     //    concl:
     //    <<a --> b> ==> <c --> d>>
-    pub fn testManual1() {
+    pub fn impl_a() {
         let a0 = Term::Name("a".to_string());
         let b0 = Term::Name("b".to_string());
         let inh0 = Term::Stmt(Copula::INH, Box::new(a0), Box::new(b0));
@@ -687,6 +653,51 @@ mod tests {
             }
         }
         
+        assert_eq!(success, true);
+    }
+
+    #[test]
+    // test
+    //    <( <a --> b> && <c --> d> ) ==> x>
+    //    <a --> b>
+    //    concl:
+    //    <<c --> d> ==> x>
+    pub fn implConj2_a() {
+        let a0 = Term::Name("a".to_string());
+        let b0 = Term::Name("b".to_string());
+        let inh0 = Term::Stmt(Copula::INH, Box::new(a0), Box::new(b0));
+        
+        let c0 = Term::Name("c".to_string());
+        let d0 = Term::Name("d".to_string());
+        let inh1 = Term::Stmt(Copula::INH, Box::new(c0), Box::new(d0));
+        
+        let conj0 = Term::Conj(vec![Box::new(inh0), Box::new(inh1)]);
+        
+        let x0 = Term::Name("x".to_string());
+        let impl0 = Term::Stmt(Copula::IMPL, Box::new(conj0), Box::new(x0));
+        
+        
+        let a1 = Term::Name("a".to_string());
+        let b1 = Term::Name("b".to_string());
+        let inh1 = Term::Stmt(Copula::INH, Box::new(a1), Box::new(b1));
+        
+        println!("{}", &convTermToStr(&impl0));
+        println!("{}", &convTermToStr(&inh1));
+        println!("concl:");
+
+        let mut success = false;
+        
+        let mut wereRulesApplied = false;
+        let infConcl = infBinary(&impl0, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &inh1, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9}, &mut wereRulesApplied);
+        for iInfConcl in infConcl {
+            let (conclTerm, _conclTv) = iInfConcl;
+            let conclTermStr = convTermToStr(&conclTerm);
+            println!("{}", &conclTermStr);
+            if conclTermStr == "<<c --> d> ==> x>" {
+                success=true;
+            }
+        }
+
         assert_eq!(success, true);
     }
 }
