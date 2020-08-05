@@ -789,6 +789,21 @@ pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>) -> Option<usize> {
 }
 
 
+// stores missing entries of mem.judgementTasksByTerm by subterm of term
+//
+// IMPL< is actually a helper function for memAddTask, still exposed as public for code reuse >
+pub fn populateTaskByTermLookup(mem:&mut Mem2, term:&Term, task:&Rc<RefCell<Task>>) {
+    for iSubTerm in &retSubterms(&term) {
+        if mem.judgementTasksByTerm.contains_key(iSubTerm) {
+            let mut v = mem.judgementTasksByTerm.get(iSubTerm).unwrap().clone();
+            v.push(Rc::clone(&task));
+            mem.judgementTasksByTerm.insert(iSubTerm.clone(), v);
+        }
+        else {
+            mem.judgementTasksByTerm.insert(iSubTerm.clone(), vec![Rc::clone(&task)]);
+        }
+    }
+}
 
 // /param calcCredit compute the credit?
 pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
@@ -815,20 +830,11 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             }
 
             let x:RefCell<Task> = RefCell::new(task);
-            let y = Rc::new(x);
-            mem.judgementTasks.push(Rc::clone(&y));
+            let taskRc = Rc::new(x);
+            mem.judgementTasks.push(Rc::clone(&taskRc));
             
             // populate hashmap lookup
-            for iSubTerm in &retSubterms(&sentence.term) {
-                if mem.judgementTasksByTerm.contains_key(iSubTerm) {
-                    let mut v = mem.judgementTasksByTerm.get(iSubTerm).unwrap().clone();
-                    v.push(Rc::clone(&y));
-                    mem.judgementTasksByTerm.insert(iSubTerm.clone(), v);
-                }
-                else {
-                    mem.judgementTasksByTerm.insert(iSubTerm.clone(), vec![Rc::clone(&y)]);
-                }
-            }
+            populateTaskByTermLookup(mem, &sentence.term, &taskRc);
         },
         EnumPunctation::QUESTION => {
             println!("TODO - check if we should check if it already exist in the tasks");
