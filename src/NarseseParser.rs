@@ -222,6 +222,19 @@ mod tests {
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
+
+  #[test]
+  pub fn intint2() {
+    let narsese = "<(a|c) --> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a | c ) --> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
   
 
   #[test]
@@ -367,6 +380,16 @@ fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
   }
 
   {
+    let res0 = parseIntInt2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
     let res0 = parseConj2(input);
     match res0 {
       Ok(term) => {
@@ -487,6 +510,16 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   
   return copEquiv(input);
 }
+
+pub fn parseIntInt2(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let (input, _) = tag("|")(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, Term::IntInt([&a,&b].iter().map(|v| Box::new((*v).clone())).collect())))
+}
+
 
 // parses product with two components
 pub fn parseProd2(input: &str) -> IResult<&str, Term> {
