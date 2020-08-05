@@ -159,7 +159,7 @@ pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
         _ => {},
     }
     None
-    //*/
+    */
 }
 
 // a ==> x.  x ==> b.  |- a ==> b.
