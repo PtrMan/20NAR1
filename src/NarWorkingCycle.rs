@@ -979,16 +979,28 @@ pub fn reasonCycle(mem:&mut Mem2) {
                     match Arc::get_mut(arcConcept) {
                         Some(concept) => {
                             println!("sample concept TODODEBUGHERE<debug name of concept>");
-                            
-                            // sample belief from concept
-                            let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-                            let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                            let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx];
 
-                            // do inference and add conclusions to array
-                            let mut wereRulesApplied = false;
-                            let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, selBelief, &mut wereRulesApplied);
-                            concl.append(&mut concl2);
+                            let processAllBeliefs = true; // does the deriver process all beliefs? or does it just sample one belief
+                            
+                            if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
+                                for iBelief in &concept.beliefs {
+                                    // do inference and add conclusions to array
+                                    let mut wereRulesApplied = false;
+                                    let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, iBelief, &mut wereRulesApplied);
+                                    concl.append(&mut concl2);
+                                }
+                            }
+                            else { // code for sampling, is faster
+                                // sample belief from concept
+                                let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
+                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx];
+
+                                // do inference and add conclusions to array
+                                let mut wereRulesApplied = false;
+                                let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, selBelief, &mut wereRulesApplied);
+                                concl.append(&mut concl2);
+                            }
                         }
                         None => {
                             println!("INTERNAL ERROR - couldn't aquire arc!");

@@ -103,8 +103,8 @@ pub fn process(natural:&String)->Option<SentenceDummy> {
     //==>
     //<{($0*$1)} --> relIs2>
     // disabled because the task with this rule is spammed out by other tasks before it can be used!
-    println!("TODO - fix concept and term selection issue because this task is spammed out!");
-    ///inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+    println!("TODO - fix concept and term selection issue because this task is spammed out, the right tasks aren't selected all the time!");
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
 
 
 
