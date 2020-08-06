@@ -785,6 +785,22 @@ pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Rc<RefCell<Task>>>)->usize {
     arr.len()-1 // sel last
 }
 
+// helper to select random belief by AV
+pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<SentenceDummy>>)->usize {
+    let sum:f64 = arr.iter().map(|iv| retTv(&*iv).c).sum();
+    let mut acc = 0.0;
+    let mut idx = 0;
+    for iv in arr {
+        acc += retTv(&*iv).c;
+        if acc >= selVal*sum {
+            return idx;
+        }
+        idx+=1;
+    }
+    
+    arr.len()-1 // sel last
+}
+
 // helper to select task with highest prio
 pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>) -> Option<usize> {
     if arr.len() == 0 {
@@ -906,7 +922,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
         divCreditByComplexity(&mut *mem.judgementTasks[iIdx].borrow_mut());
     }
     
-
+    let mut concl: Vec<SentenceDummy> = vec![];
 
     if mem.judgementTasks.len() > 0 { // one working cycle - select for processing
         let selVal:f64 = mem.rng.gen_range(0.0,1.0);
@@ -939,7 +955,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
             let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
             let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
 
-            // debug premsises
+            // debug premises
             {
                 {
                     let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
@@ -953,46 +969,8 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
             // do inference with premises
             let mut wereRulesApplied = false;
-            let concl: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
-
-            // put conclusions back into memory!
-            {
-                println!("TODO TODO TODO - put conclusions back into memory the right way");
-                
-                // Q&A - answer questions
-                {
-                    for iConcl in &concl {
-                        if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
-                            for iQTask in &mut mem.questionTasks {
-                                if calcExp(&retTv(iConcl)) > iQTask.bestAnswerExp { // is the answer potentially better?
-                                    let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
-                                    if unifyRes.is_some() { // was answer found?
-                                        let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
-                                        
-                                        if iQTask.handler.is_some() {
-                                            let handler1 = iQTask.handler.as_ref().unwrap();
-                                            let mut handler2 = handler1.borrow_mut();
-                                            handler2.answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
-                                        }
-
-                                        iQTask.bestAnswerExp = calcExp(&retTv(&iConcl)); // update exp of best found answer
-
-                                        // print question and answer
-                                        let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence, true) + " " + &convSentenceTermPunctToStr(&iConcl, true);
-                                        println!("{}", msg);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
- 
-                for iConcl in &concl {
-                    // TODO< check if task exists already, don't add if it exists >
-                    memAddTask(mem, iConcl, true);
-                }
-            }
+            let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
+            concl.append(&mut concl2); // TODO OPT< just assign this one >
         }
 
         { // attention mechanism which selects the secondary task from concepts
@@ -1000,7 +978,17 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 Some(arcConcept) => {
                     match Arc::get_mut(arcConcept) {
                         Some(concept) => {
-                            println!("TODO< do stuff with beliefs inside concept!!! >!!!");
+                            println!("sample concept TODODEBUGHERE<debug name of concept>");
+                            
+                            // sample belief from concept
+                            let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+                            let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
+                            let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx];
+
+                            // do inference and add conclusions to array
+                            let mut wereRulesApplied = false;
+                            let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, selBelief, &mut wereRulesApplied);
+                            concl.append(&mut concl2);
                         }
                         None => {
                             println!("INTERNAL ERROR - couldn't aquire arc!");
@@ -1010,8 +998,46 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 None => {} // concept doesn't exist, ignore
             }
         }
+    }
 
 
+    // put conclusions back into memory!
+    {
+        println!("TODO TODO TODO - put conclusions back into memory the right way");
+        
+        // Q&A - answer questions
+        {
+            for iConcl in &concl {
+                if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
+                    for iQTask in &mut mem.questionTasks {
+                        if calcExp(&retTv(iConcl)) > iQTask.bestAnswerExp { // is the answer potentially better?
+                            let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
+                            if unifyRes.is_some() { // was answer found?
+                                let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
+                                
+                                if iQTask.handler.is_some() {
+                                    let handler1 = iQTask.handler.as_ref().unwrap();
+                                    let mut handler2 = handler1.borrow_mut();
+                                    handler2.answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
+                                }
+
+                                iQTask.bestAnswerExp = calcExp(&retTv(&iConcl)); // update exp of best found answer
+
+                                // print question and answer
+                                let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence, true) + " " + &convSentenceTermPunctToStr(&iConcl, true);
+                                println!("{}", msg);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+
+        for iConcl in &concl {
+            // TODO< check if task exists already, don't add if it exists >
+            memAddTask(mem, iConcl, true);
+        }
     }
 
     let intervalCheckTasks = 111; // cycle counter to check for AIKR of tasks - should be prime
