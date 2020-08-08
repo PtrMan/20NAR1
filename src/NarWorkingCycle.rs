@@ -15,6 +15,7 @@ use std::sync::Arc;
 use Term::Term;
 use Term::Copula;
 use Term::retSubterms;
+use Term::retUniqueSubterms;
 use Term::calcComplexity;
 use Term::convTermToStr;
 use Term::checkEqTerm;
@@ -742,6 +743,7 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
 pub struct Task {
     pub sentence:SentenceDummy,
     pub credit:f64,
+    pub id:i64, // unique id to quickly find unique tasks
 }
 
 pub struct Task2 {
@@ -761,6 +763,7 @@ pub struct Mem2 {
 
     pub mem: Rc<RefCell<NarMem::Mem>>,
     pub stampIdCounter: i64, // counter for stamp id
+    pub taskIdCounter: i64, // counter for id of task, mainly used for fast checking if two tasks are the same!
 
     pub cycleCounter: i64, // counter for done reasoning cycles
 
@@ -853,7 +856,9 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             let mut task = Task {
                 sentence:sentence.clone(),
                 credit:1.0,
+                id:mem.taskIdCounter
             };
+            mem.taskIdCounter+=1;
 
             if calcCredit {
                 divCreditByComplexity(&mut task); // punish more complicated terms
@@ -933,44 +938,152 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
         {
             // attention mechanism which select the secondary task from the table 
-            // TODO< selection by mass is unfair, because we select the same task multiple times.
-            //       we should add each task only once here, this can be realized by giving each task
-            //       a unique id and by storing the task in a hashmap to guarantue that each task is taken just once
-            //     >
-            println!("TODO - select secondary task canditate just once!");
             
             let mut secondaryElligable:Vec<Rc<RefCell<Task>>> = vec![]; // tasks which are eligable to get selected as the secondary
             
-            for iSubTerm in &retSubterms(&selPrimaryTask.borrow().sentence.term.clone()) {
+            for iSubTerm in &retUniqueSubterms(&selPrimaryTask.borrow().sentence.term.clone()) {
                 if mem.judgementTasksByTerm.contains_key(iSubTerm) {
                     let itJudgementTasksByTerm:Vec<Rc<RefCell<Task>>> = mem.judgementTasksByTerm.get(iSubTerm).unwrap().to_vec();
                     for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
-                        secondaryElligable.push(Rc::clone(&it));
+                        
+                        // code to figure out if task already exists in secondaryElligable
+                        let mut existsById = false;
+                        {
+                            for iSec in &secondaryElligable {
+                                if iSec.borrow().id == it.borrow().id {
+                                    existsById = true;
+                                    break; // OPT
+                                }
+                            }
+                        }
+                        
+                        if !existsById {
+                            secondaryElligable.push(Rc::clone(&it));
+                        }
                     }
                 }
             }
 
-            // sample from secondaryElligable by priority
-            let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-            let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
-            let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
+            { // filter secondary elligable 
+                /*
+        the selection of secondary premise should consider the structure of the primary premise.
+        Motivation for this is a higher efficiency of the deriver by prefering to select premises which can lead to conclusions.
+        
+        cases
+        a) primary is not <=> or ==>
+           consider secondary only if
+           a.1) secondary is of form &&==> or &&<=> and sub-term of && unifies with term of primary
+                reason: deriver should prefer to unify terms to "cut down" the conj
+                ex:
+                   primary  : <a --> b>
+                   secondary: (<$0 --> b>&&<z --> Z>) ==> <Z --> B>
+           a.2) secondary is of form ==> or <=> without && and subject unfies with term of primary
+                ex:
+                   primary  : <a --> b>
+                   secondary: <$0 --> b> ==> <Z --> B>
+           a.3) secondary is not of form <=> or ==>
+                reason: non-NAL-5&6 derivation!
 
-            // debug premises
-            {
-                {
-                    let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
-                    println!("DBG  primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
+        b) primary is <=> or ==>
+           consider secondary!
+                */
+
+                // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
+                let mut enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
+
+                if enFunctionalityNal5PremiseFiler1 {
+
+                    let mut secondaryElligableFiltered = vec![];
+
+                    println!("TRACE  primary term = {}", convTermToStr(&selPrimaryTask.borrow().sentence.term));
+    
+                    for iSecondaryElligable in &secondaryElligable {
+                        println!("TRACE   consider secondary term = {}", convTermToStr(&iSecondaryElligable.borrow().sentence.term));
+                        
+                        match *selPrimaryTask.borrow().sentence.term { // is primary <=> or ==>
+                            Term::Stmt(cop,_,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
+                                secondaryElligableFiltered.push(Rc::clone(iSecondaryElligable)); // consider
+                                println!("TRACE      ...   eligable, reason: primary is ==> or <=> !");
+                                continue;
+                            },
+                            _ => {}
+                        }
+    
+                        // else special handling
+                        match (*iSecondaryElligable.borrow().sentence.term).clone() {
+                            Term::Stmt(cop,secondarySubj,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
+                                match *secondarySubj {
+                                    Term::Conj(conjterms) => {
+                                        // we need to check if conjterm unifies with primary
+                                        let mut anyUnify = false;
+                                        for iConjTerm in &conjterms {
+                                            if unify(&selPrimaryTask.borrow().sentence.term.clone(), &iConjTerm).is_some() {
+                                                anyUnify = true;
+                                                break;
+                                            }
+                                        }
+    
+                                        if anyUnify {
+                                            secondaryElligableFiltered.push(Rc::clone(iSecondaryElligable)); // consider
+                                            println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
+                                            continue;
+                                        }
+                                    },
+                                    _ => {
+                                        // we need to check if secondarySubj unfies with primary
+                                        if unify(&selPrimaryTask.borrow().sentence.term.clone(), &secondarySubj).is_some() {
+                                            secondaryElligableFiltered.push(Rc::clone(iSecondaryElligable)); // consider
+                                            println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
+                                            continue;
+                                        }
+                                    }
+                                }
+                            },
+                            _ => {
+                                secondaryElligableFiltered.push(Rc::clone(iSecondaryElligable)); // consider
+                                println!("TRACE      ...   eligable, reason: non-NAL-5&6 derivation!");
+                            }
+                        }
+                    }
+                    secondaryElligable = secondaryElligableFiltered;
+
+
+
+
                 }
-                {
-                    let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence, false);
-                    println!("DBG  secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
-                }
+                
             }
 
-            // do inference with premises
-            let mut wereRulesApplied = false;
-            let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
-            concl.append(&mut concl2); // TODO OPT< just assign this one >
+            if secondaryElligable.len() > 0 { // must contain any premise to get selected
+                println!("TRACE secondary eligable:");
+                for iSecondaryElligable in &secondaryElligable {
+                    println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.borrow().sentence, true));
+                }
+                
+                // sample from secondaryElligable by priority
+                let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+                let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
+                let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
+
+                // debug premises
+                {
+                    println!("TRACE do inference...");
+
+                    {
+                        let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
+                        println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
+                    }
+                    {
+                        let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence, false);
+                        println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
+                    }
+                }
+
+                // do inference with premises
+                let mut wereRulesApplied = false;
+                let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
+                concl.append(&mut concl2); // TODO OPT< just assign this one >
+            }
         }
 
         { // attention mechanism which selects the secondary task from concepts
@@ -1094,7 +1207,9 @@ pub fn createMem2()->Mem2 {
         concepts:HashMap::new(),
     };
     
-    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), stampIdCounter:0, cycleCounter:0, }
+    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), stampIdCounter:0, taskIdCounter:1000, // high number to easy debugging to prevent confusion
+        cycleCounter:0,
+    }
 }
 
 // not working prototype of attention mechanism based on credits

@@ -134,6 +134,25 @@ pub fn retSubterms(t:&Term) -> Vec<Term> {
     res
 }
 
+pub fn retUniqueSubterms(t:&Term)->Vec<Term> {
+    // slow version with checking array, hashmap may be faster in some cases(?)
+    let mut res:Vec<Term> = vec![];
+    for iTerm in &retSubterms(t) {
+        let mut inRes = false;
+        for iTerm2 in &res {
+            if checkEqTerm(&iTerm, &iTerm2) {
+                inRes = true;
+                break;
+            }
+        }
+        if !inRes {
+            res.push(iTerm.clone());
+        }
+    };
+    res    
+}
+
+
 pub fn calcComplexity(t:&Term) -> u64 {
     match t {
         Term::Stmt(_, subj, pred) => {
