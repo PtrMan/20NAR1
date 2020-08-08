@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use Term::Term;
 use Term::retSubterms;
 
+use NarSentence::EnumPunctation;
 use NarSentence::SentenceDummy;
 
 // memory system
@@ -22,6 +23,10 @@ pub struct Mem {
 }
 
 pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
+    if s.punct != EnumPunctation::JUGEMENT {
+        return; // ignore everything else than JUGEMENT
+    }
+    
     for iTerm in retSubterms(&*s.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
         match mem.concepts.get_mut(&iTerm.clone()) {
             Some(arcConcept) => {
