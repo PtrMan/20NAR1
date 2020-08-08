@@ -989,6 +989,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 */
 
                 // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
+                // NOTE< 09:00 08.08.2020 : is disabled because it is not necessary with ALANN's method to select all candidates >
                 let mut enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
 
                 if enFunctionalityNal5PremiseFiler1 {
@@ -1055,34 +1056,51 @@ pub fn reasonCycle(mem:&mut Mem2) {
             }
 
             if secondaryElligable.len() > 0 { // must contain any premise to get selected
-                println!("TRACE secondary eligable:");
-                for iSecondaryElligable in &secondaryElligable {
-                    println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.borrow().sentence, true));
+                let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
+                if dbgSecondaryElligable {
+                    println!("TRACE secondary eligable:");
+                    for iSecondaryElligable in &secondaryElligable {
+                        println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.borrow().sentence, true));
+                    }
                 }
                 
-                // sample from secondaryElligable by priority
-                let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-                let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
-                let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
+                let enInferenceSampleSecondaryByCredit = false; // do we sample secondary premise randomly by credit?
+                let enInferenceSecondaryAll = true; // do we select and process all secondary premises (like in ALANN)
 
-                // debug premises
-                {
-                    println!("TRACE do inference...");
+                if enInferenceSampleSecondaryByCredit { // sample secondary premise randomly by credit?
+                    // sample from secondaryElligable by priority
+                    let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+                    let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
+                    let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
 
+                    // debug premises
                     {
-                        let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
-                        println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
+                        println!("TRACE do inference...");
+
+                        {
+                            let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
+                            println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
+                        }
+                        {
+                            let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence, false);
+                            println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
+                        }
                     }
-                    {
-                        let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence, false);
-                        println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
-                    }
+
+                    // do inference with premises
+                    let mut wereRulesApplied = false;
+                    let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
+                    concl.append(&mut concl2);
                 }
 
-                // do inference with premises
-                let mut wereRulesApplied = false;
-                let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &secondarySelTask.borrow().sentence, &mut wereRulesApplied);
-                concl.append(&mut concl2); // TODO OPT< just assign this one >
+                if enInferenceSecondaryAll {
+                    for iSecondaryTask in &secondaryElligable {
+                        // do inference and add conclusions to array
+                        let mut wereRulesApplied = false;
+                        let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &iSecondaryTask.borrow().sentence, &mut wereRulesApplied);
+                        concl.append(&mut concl2);
+                    }
+                }
             }
         }
 
@@ -1093,8 +1111,9 @@ pub fn reasonCycle(mem:&mut Mem2) {
                         Some(concept) => {
                             println!("sample concept TODODEBUGHERE<debug name of concept>");
 
-                            let processAllBeliefs = true; // does the deriver process all beliefs? or does it just sample one belief
-                            
+                            let processAllBeliefs:bool = true; // does the deriver process all beliefs?
+                            let processSampledBelief:bool = false; // does it just sample one belief?
+
                             if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
                                 for iBelief in &concept.beliefs {
                                     // do inference and add conclusions to array
@@ -1103,7 +1122,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                                     concl.append(&mut concl2);
                                 }
                             }
-                            else { // code for sampling, is faster
+                            if processSampledBelief { // code for sampling, is faster
                                 // sample belief from concept
                                 let selVal:f64 = mem.rng.gen_range(0.0,1.0);
                                 let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
