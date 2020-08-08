@@ -10,6 +10,9 @@ use NarSentence::{SentenceDummy, EnumPunctation};
 use Tv::{Tv};
 
 pub fn runInteractive(nar:&mut Nar) {
+    let mut repeatLastInput = true; // repeat command by just pressing enter with empty input?
+
+    let mut lastInput = "".to_string(); // used to repeat command by just pressing enter with empty input
     loop {
         let mut input2 = String::new();
         match io::stdin().read_line(&mut input2) {
@@ -17,8 +20,22 @@ pub fn runInteractive(nar:&mut Nar) {
                 let mut input = input2.clone();
                 trimNewline(&mut input);
                 
+                if repeatLastInput {
+                    if input == "" {
+                        input = lastInput.clone();
+                    }
+                    else {
+                        lastInput = input.clone(); // store for last input
+                    }
+                }
+
                 println!("{}", input);
-                if input.len() >= 2 && &input[..2] == "!s" {
+
+                // TODO< trim comment by // away   >
+                if input.len() >= 2 && &input[..2] == "//" { // is commented line?
+                    // ignore
+                }
+                else if input.len() >= 2 && &input[..2] == "!s" {
                     let mut nCycles = 1;
                     if input.len() > 2 { // parse number of cycles
                         // TODO< check if it was parsed fine! >
