@@ -788,6 +788,21 @@ pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Rc<RefCell<Task>>>)->usize {
     arr.len()-1 // sel last
 }
 
+pub fn task2SelByCreditRandom(selVal:f64, arr: &Vec<Box<Task2>>)->usize {
+    let sum:f64 = arr.iter().map(|iv| (*iv).prio).sum();
+    let mut acc = 0.0;
+    let mut idx = 0;
+    for iv in arr {
+        acc += (*iv).prio;
+        if acc >= selVal*sum {
+            return idx;
+        }
+        idx+=1;
+    }
+    
+    arr.len()-1 // sel last
+}
+
 // helper to select random belief by AV
 pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<SentenceDummy>>)->usize {
     let sum:f64 = arr.iter().map(|iv| retTv(&*iv).c).sum();
@@ -893,6 +908,30 @@ pub fn divCreditByComplexity(task:&mut Task) {
     task.credit /= calcComplexity(&task.sentence.term) as f64;
 }
 
+// tries to find a better answer for a question task
+// /param qTask the question task to find a answer to
+// /param concl candidate answer to get evaluated
+pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy) {
+    if calcExp(&retTv(concl)) > qTask.bestAnswerExp { // is the answer potentially better?
+        let unifyRes: Option<Vec<Asgnment>> = unify(&qTask.sentence.term, &concl.term); // try unify question with answer
+        if unifyRes.is_some() { // was answer found?
+            let unifiedRes: Term = unifySubst(&qTask.sentence.term, &unifyRes.unwrap());
+            
+            if qTask.handler.is_some() {
+                let handler1 = qTask.handler.as_ref().unwrap();
+                let mut handler2 = handler1.borrow_mut();
+                handler2.answer(&qTask.sentence.term, &concl); // call callback because we found a answer
+            }
+
+            qTask.bestAnswerExp = calcExp(&retTv(&concl)); // update exp of best found answer
+
+            // print question and answer
+            let msg = "TRACE answer: ".to_owned() + &convSentenceTermPunctToStr(&qTask.sentence, true) + " " + &convSentenceTermPunctToStr(&concl, true);
+            println!("{}", msg);
+        }
+    }
+}
+
 // performs one reasoning cycle
 // /param cycleCounter counter of done cycles of reasoner
 pub fn reasonCycle(mem:&mut Mem2) {
@@ -925,6 +964,38 @@ pub fn reasonCycle(mem:&mut Mem2) {
     // let them pay for their complexity
     for iIdx in 0..mem.judgementTasks.len() {
         divCreditByComplexity(&mut *mem.judgementTasks[iIdx].borrow_mut());
+    }
+
+    // sample question to answer
+    {
+        if mem.questionTasks.len() > 0 {
+            let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+            let qIdx = task2SelByCreditRandom(selVal, &mem.questionTasks);
+            let mut selTask = &mut mem.questionTasks[qIdx];
+
+            // * enumerate subterms
+            for iSubTerm in &retUniqueSubterms(&(*selTask).sentence.term.clone()) {
+
+                // * retrieve concept by subterm
+                match mem.mem.borrow_mut().concepts.get_mut(&iSubTerm) {
+                    Some(arcConcept) => {
+                        match Arc::get_mut(arcConcept) {
+                            Some(concept) => {
+                                // try to answer question with all beliefs which may be relevant
+                                for iBelief in &concept.beliefs {
+                                    qaTryAnswer(&mut selTask, &iBelief);
+                                }
+                            }
+                            None => {
+                                println!("INTERNAL ERROR - couldn't aquire arc!");
+                            }
+                        }
+                    },
+                    None => {} // concept doesn't exist, ignore
+                }
+
+            }
+        }
     }
     
     let mut concl: Vec<SentenceDummy> = vec![];
@@ -1153,25 +1224,8 @@ pub fn reasonCycle(mem:&mut Mem2) {
         {
             for iConcl in &concl {
                 if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
-                    for iQTask in &mut mem.questionTasks {
-                        if calcExp(&retTv(iConcl)) > iQTask.bestAnswerExp { // is the answer potentially better?
-                            let unifyRes: Option<Vec<Asgnment>> = unify(&iQTask.sentence.term, &iConcl.term); // try unify question with answer
-                            if unifyRes.is_some() { // was answer found?
-                                let unifiedRes: Term = unifySubst(&iQTask.sentence.term, &unifyRes.unwrap());
-                                
-                                if iQTask.handler.is_some() {
-                                    let handler1 = iQTask.handler.as_ref().unwrap();
-                                    let mut handler2 = handler1.borrow_mut();
-                                    handler2.answer(&iQTask.sentence.term, &iConcl); // call callback because we found a answer
-                                }
-
-                                iQTask.bestAnswerExp = calcExp(&retTv(&iConcl)); // update exp of best found answer
-
-                                // print question and answer
-                                let msg = "answer: ".to_owned() + &convSentenceTermPunctToStr(&iQTask.sentence, true) + " " + &convSentenceTermPunctToStr(&iConcl, true);
-                                println!("{}", msg);
-                            }
-                        }
+                    for mut iQTask in &mut mem.questionTasks {
+                        qaTryAnswer(&mut iQTask, &iConcl);
                     }
                 }
             }
