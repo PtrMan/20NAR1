@@ -47,7 +47,13 @@ pub fn runInteractive(nar:&mut Nar) {
                 }
                 else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
                     let natural = &input[6..].to_string();
-                    let resTermOpt:Option<SentenceDummy> = NarModuleNlp::process(&natural);
+                    let mut isQuestion = false;
+                    let resTermOpt:Option<SentenceDummy> = NarModuleNlp::process(&natural, &mut isQuestion);
+                    let punct = match isQuestion { // compute punctuation of narsese if it is a question or not
+                        true => EnumPunctation::QUESTION,
+                        false => EnumPunctation::JUGEMENT
+                    };
+
                     if resTermOpt.is_some() {
                         let resTerm:&Term = &(*resTermOpt.unwrap().term);
                         match resTerm {
@@ -86,11 +92,11 @@ pub fn runInteractive(nar:&mut Nar) {
                                 match &**pred {
                                     Term::Name(name) if name == "relIs" => {
                                         // translate to inheritance
-                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9});
+                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
                                     },
                                     Term::Name(name) if name == "relIs2" => {
                                         // translate to inheritance
-                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.9});
+                                        inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
                                     },
                                     Term::Name(name) if name == "relIsQuery" => {
                                         // translate to inheritance question

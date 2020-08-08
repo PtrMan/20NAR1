@@ -13,11 +13,17 @@ use Tv::*;
 use NarStamp::newStamp;
 use NarSentence::{SentenceDummy, EnumPunctation, Evidence};
 
-pub fn process(natural:&String)->Option<SentenceDummy> {
+pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
+    *isQuestion = false;
+
+    let mut tokens: Vec<&str> = natural.split_whitespace().collect(); // split into tokens
+
+    if tokens.len() > 0 && tokens[tokens.len()-1] == "?" { // it is a question if it ends with a question-mark
+        *isQuestion = true;
+        tokens = tokens[..tokens.len()-1].to_vec();// cut question mark away
+    }
+
     let mut workerNar = createNar();
-
-
-    let tokens: Vec<&str> = natural.split_whitespace().collect(); // split into tokens
 
     // convert tokens to inheritance representation and feed into NAR
     {
