@@ -31,12 +31,38 @@ use Tv::*;
 use NarStamp::*;
 use NarStamp;
 
-// a --> b  b --> a
+/* commented because not needed
+// a --> b |- b --> a
 pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
     match a {
         Term::Stmt(Copula::INH, asubj, apred) => {
             println!("TODO - compute tv");
             return Some((Term::Stmt(Copula::INH, Box::clone(apred), Box::clone(asubj)), aTv.clone()));
+        },
+        _ => {},
+    }
+    None
+}
+*/
+
+// structural
+// a --> (X | Y)
+// |-
+// a --> X
+// a --> Y
+// ...
+pub fn infStruct1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
+    match a {
+        Term::Stmt(Copula::INH, subj, pred) => {
+            match &**pred {
+                Term::IntInt(arr) => {
+                    if idx < arr.len() {
+                        let concl = Term::Stmt(Copula::INH, Box::clone(subj), Box::clone(&arr[idx]));
+                        return Some((concl,aTv.clone()));
+                    }
+                },
+                _ => {}
+            }
         },
         _ => {},
     }
@@ -598,6 +624,20 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct:Enum
     res
 }
 
+pub fn infSinglePremise(a: &Term, aPunct:EnumPunctation, aTv:&Tv) -> Vec<(Term,Tv)> {
+    let mut res = vec![];
+    
+    match infStruct1(&a, &aTv, 0) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStruct1(&a, &aTv, 1) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStruct1(&a, &aTv, 2) {
+        Some(x) => { res.push(x); } _ => {}
+    }    
+    res
+}
 
 
 
@@ -735,9 +775,26 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
     concl
 }
 
+pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
+    let mut concl = vec![];
 
+    let infConcl = infSinglePremise(&pa.term, pa.punct, &retTv(pa));
+    for iInfConcl in infConcl {
+        let (term, tv) = iInfConcl;
+        
+        println!("TODO - infSinglePremise must compute the punctation!");
+        concl.push(SentenceDummy{
+            term:Rc::new(term.clone()),
+            evi:Evidence::TV(tv.clone()),
+            stamp:pa.stamp.clone(),
+            t:None, // time of occurence 
+            punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
+            expDt:None
+        });
+    }
 
-
+    concl
+}
 
 
 pub struct Task {
@@ -862,7 +919,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
         EnumPunctation::JUGEMENT => {
             if true { // check if we should check if it already exist in the tasks
                 for ijt in &mem.judgementTasks { // ijt:iteration-judgement-task
-                    if checkSame(&sentence.stamp, &ijt.borrow().sentence.stamp) {
+                    if checkEqTerm(&sentence.term, &ijt.borrow().sentence.term) && checkSame(&sentence.stamp, &ijt.borrow().sentence.stamp) {
                         return; // don't add if it exists already! because we would skew the fairness if we would add it
                     }
                 }
@@ -1006,6 +1063,11 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
         let selPrimaryTask = &mem.judgementTasks[selIdx];
         let selPrimaryTaskTerm = selPrimaryTask.borrow().sentence.term.clone();
+
+        { // single premise derivation
+            let mut concl2: Vec<SentenceDummy> = infSinglePremise2(&selPrimaryTask.borrow().sentence);
+            concl.append(&mut concl2);
+        }
 
         {
             // attention mechanism which select the secondary task from the table 
