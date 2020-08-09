@@ -77,6 +77,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     // combine tokens for "and"
     // ex: b and c
     inputN(&mut workerNar, &"<(<{3} --> TOKENand>&&<{($0*2)} --> TOKEN>&&<{($1*4)} --> TOKEN>) ==> <{(($0|$1)*2)} --> AT2>>. {1.0 0.998}".to_string());
+    // for x y z is b and c
+    inputN(&mut workerNar, &"<(<{5} --> TOKENand>&&<{($0*4)} --> TOKEN>&&<{($1*6)} --> TOKEN>) ==> <{(($0|$1)*4)} --> AT2>>. {1.0 0.998}".to_string());
 
     // for beginning of phrase
     // ex "x and y ..."
@@ -113,14 +115,14 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($0*$1)} --> relIs>
     inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> TOKEN>) ==> <{($0*$1)} --> relIs>>. {1.0 0.998}".to_string());
 
-    // commented because it doesn't work! (bugs + attention problem)
+    // commented because it doesn't work!
     // ex: tom and tim is fat and lazy
     //<{($0*2)} --> AT2>
     //<{3} --> TOKENis>
     //<{($1*4)} --> AT2>
     //==>
     //<{($0*$1)} --> relIs>
-    //inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
 
 
 
