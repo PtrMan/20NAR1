@@ -801,6 +801,17 @@ pub struct Task {
     pub sentence:SentenceDummy,
     pub credit:f64,
     pub id:i64, // unique id to quickly find unique tasks
+    pub derivTime:i64, // time when this task was put into the working table
+}
+
+// compute "real" credit of task by insertion based time decay
+pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
+    let decayFactor:f64 = 0.0; // how fast does it decay?
+    
+    let dt:i64 = cycleCounter - task.derivTime;
+    let decayFactor:f64 = (-decayFactor * (dt as f64)).exp();
+
+    task.credit*decayFactor // multiply because we want to decay the actual "base credit"
 }
 
 pub struct Task2 {
@@ -830,12 +841,12 @@ pub struct Mem2 {
 
 
 // helper to select random task by credit
-pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Rc<RefCell<Task>>>)->usize {
-    let sum:f64 = arr.iter().map(|iv| iv.borrow().credit).sum();
+pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Rc<RefCell<Task>>>, cycleCounter:i64)->usize {
+    let sum:f64 = arr.iter().map(|iv| taskCalcCredit(&iv.borrow(), cycleCounter)).sum();
     let mut acc = 0.0;
     let mut idx = 0;
     for iv in arr {
-        acc += iv.borrow().credit;
+        acc += taskCalcCredit(&iv.borrow(), cycleCounter);
         if acc >= selVal*sum {
             return idx;
         }
@@ -877,7 +888,7 @@ pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<SentenceDummy>>)->usize {
 }
 
 // helper to select task with highest prio
-pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>) -> Option<usize> {
+pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>, cycleCounter:i64) -> Option<usize> {
     if arr.len() == 0 {
         return None;
     }
@@ -885,7 +896,7 @@ pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>) -> Option<usize> {
     let mut res = Rc::clone(&arr[0]);
     for idx in 1..arr.len() {
         let sel = &arr[idx];
-        if sel.borrow().credit > res.borrow().credit {
+        if taskCalcCredit(&sel.borrow(), cycleCounter) > taskCalcCredit(&res.borrow(), cycleCounter) {
             res = Rc::clone(&sel);
             idxRes = idx;
         }
@@ -928,7 +939,8 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             let mut task = Task {
                 sentence:sentence.clone(),
                 credit:1.0,
-                id:mem.taskIdCounter
+                id:mem.taskIdCounter,
+                derivTime:mem.cycleCounter
             };
             mem.taskIdCounter+=1;
 
@@ -1059,7 +1071,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     if mem.judgementTasks.len() > 0 { // one working cycle - select for processing
         let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-        let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks);
+        let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks, mem.cycleCounter);
 
         let selPrimaryTask = &mem.judgementTasks[selIdx];
         let selPrimaryTaskTerm = selPrimaryTask.borrow().sentence.term.clone();
@@ -1203,7 +1215,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 if enInferenceSampleSecondaryByCredit { // sample secondary premise randomly by credit?
                     // sample from secondaryElligable by priority
                     let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-                    let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable);
+                    let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable, mem.cycleCounter);
                     let secondarySelTask: &Rc<RefCell<Task>> = &secondaryElligable[secondarySelTaskIdx];
 
                     // debug premises
@@ -1212,11 +1224,11 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
                         {
                             let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.borrow().sentence, false);
-                            println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, selPrimaryTask.borrow().credit);    
+                            println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, taskCalcCredit(&selPrimaryTask.borrow(), mem.cycleCounter));    
                         }
                         {
                             let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.borrow().sentence, false);
-                            println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, secondarySelTask.borrow().credit);
+                            println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, taskCalcCredit(&secondarySelTask.borrow(), mem.cycleCounter));
                         }
                     }
 
@@ -1307,7 +1319,11 @@ pub fn reasonCycle(mem:&mut Mem2) {
     {
         if mem.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
         {
-            mem.judgementTasks.sort_by(|a, b| b.borrow().credit.partial_cmp(&a.borrow().credit).unwrap());
+            let memCycleCounter:i64 = mem.cycleCounter;
+            mem.judgementTasks.sort_by(|a, b| 
+                taskCalcCredit(&b.borrow(), memCycleCounter).partial_cmp(
+                    &taskCalcCredit(&a.borrow(), memCycleCounter)
+                ).unwrap());
             mem.judgementTasks = mem.judgementTasks[0..maxJudgementTasks.min(mem.judgementTasks.len())].to_vec(); // limit to keep under AIKR
         }
     }
@@ -1413,7 +1429,7 @@ pub fn debugCreditsOfTasks(mem: &Mem2) {
                 taskAsStr = format!("{} {}", taskAsStr, NarStamp::convToStr(&iTask.borrow().sentence.stamp));
             }
 
-            println!("task  {}  credit={}", taskAsStr, iTask.borrow().credit);
+            println!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.borrow(), mem.cycleCounter));
         }
     }
 }
