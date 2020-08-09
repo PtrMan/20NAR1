@@ -78,6 +78,10 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     // ex: b and c
     inputN(&mut workerNar, &"<(<{3} --> TOKENand>&&<{($0*2)} --> TOKEN>&&<{($1*4)} --> TOKEN>) ==> <{(($0|$1)*2)} --> AT2>>. {1.0 0.998}".to_string());
 
+    // for beginning of phrase
+    // ex "x and y ..."
+    inputN(&mut workerNar, &"<(<{1} --> TOKENand>&&<{($0*0)} --> TOKEN>&&<{($1*2)} --> TOKEN>) ==> <{(($0|$1)*2)} --> AT2>>. {1.0 0.998}".to_string());
+
 
     // instance relation positive
     //ex:  tom is a cat
@@ -99,6 +103,25 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //==>
     //<{($0*$1)} --> relIs>
     inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> TOKEN>) ==> <{($0*$1)} --> relIs>>. {1.0 0.998}".to_string());
+
+
+    // ex: tom and tim is fat
+    //<{($0*2)} --> AT2>
+    //<{3} --> TOKENis>
+    //<{($1*4)} --> TOKEN>
+    //==>
+    //<{($0*$1)} --> relIs>
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> TOKEN>) ==> <{($0*$1)} --> relIs>>. {1.0 0.998}".to_string());
+
+    // commented because it doesn't work! (bugs + attention problem)
+    // ex: tom and tim is fat and lazy
+    //<{($0*2)} --> AT2>
+    //<{3} --> TOKENis>
+    //<{($1*4)} --> AT2>
+    //==>
+    //<{($0*$1)} --> relIs>
+    //inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+
 
 
     
