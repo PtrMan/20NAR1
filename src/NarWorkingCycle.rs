@@ -51,7 +51,7 @@ pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
 // a --> X
 // a --> Y
 // ...
-pub fn infStruct1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
+pub fn infStructPred1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
     match a {
         Term::Stmt(Copula::INH, subj, pred) => {
             match &**pred {
@@ -69,6 +69,29 @@ pub fn infStruct1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
     None
 }
 
+// structural
+// (X | Y) --> a
+// |-
+// X --> a
+// Y --> a
+// ...
+pub fn infStructSubj1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
+    match a {
+        Term::Stmt(Copula::INH, subj, pred) => {
+            match &**subj {
+                Term::IntInt(arr) => {
+                    if idx < arr.len() {
+                        let concl = Term::Stmt(Copula::INH, Box::clone(&arr[idx]), Box::clone(pred));
+                        return Some((concl,aTv.clone()));
+                    }
+                },
+                _ => {}
+            }
+        },
+        _ => {},
+    }
+    None
+}
 
 // a --> x.  x --> b.  |- a --> b.
 pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
@@ -627,15 +650,25 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct:Enum
 pub fn infSinglePremise(a: &Term, aPunct:EnumPunctation, aTv:&Tv) -> Vec<(Term,Tv)> {
     let mut res = vec![];
     
-    match infStruct1(&a, &aTv, 0) {
+    match infStructSubj1(&a, &aTv, 0) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStruct1(&a, &aTv, 1) {
+    match infStructSubj1(&a, &aTv, 1) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStruct1(&a, &aTv, 2) {
+    match infStructSubj1(&a, &aTv, 2) {
         Some(x) => { res.push(x); } _ => {}
-    }    
+    }
+
+    match infStructPred1(&a, &aTv, 0) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructPred1(&a, &aTv, 1) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructPred1(&a, &aTv, 2) {
+        Some(x) => { res.push(x); } _ => {}
+    }
     res
 }
 
