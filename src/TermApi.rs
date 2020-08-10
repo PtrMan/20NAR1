@@ -4,6 +4,10 @@ use Term::*;
 pub fn p2(a:&Term,b:&Term)->Term {
   Term::Prod(vec![Box::new(a.clone()), Box::new(b.clone())])
 }
+// sseehh API - create product
+pub fn p3(a:&Term,b:&Term,c:&Term)->Term {
+  Term::Prod(vec![Box::new(a.clone()), Box::new(b.clone()), Box::new(c.clone())])
+}
 
 // sseehh API - create statement
 pub fn s(copula:Copula, subj:&Term,pred:&Term)->Term {
