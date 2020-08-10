@@ -38,15 +38,15 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
                 idx+=2;
             }
-            else if tokens[idx] == "is" {
+            else if tokens[idx] == "is" || tokens[idx] == "can" {
                 {
-                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name("is".to_string()), &Term::Name(idxAsStr.clone())))]), &Term::Name("rel2".to_string()));
+                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name(tokens[idx].to_string()), &Term::Name(idxAsStr.clone())))]), &Term::Name("rel2".to_string()));
                     inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
                 }
                 
                 // new form
                 {
-                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKENis".to_string()));
+                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKEN".to_string() + tokens[idx]));
                     inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
                 }
 
@@ -100,29 +100,29 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
     // ex: tom is fat
     //<{($0*0)} --> TOKEN>
-    //<{1} --> TOKENis>
+    //<{($rel*1)} --> rel2>
     //<{($1*2)} --> TOKEN>
     //==>
-    //<{($0*$1)} --> relIs>
-    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> TOKEN>) ==> <{($0*$1)} --> relIs>>. {1.0 0.998}".to_string());
+    //<{($0*$1*$rel)} --> relGENERIC>
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{($rel*1)} --> rel2>&&<{($1*2)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
     // ex: tom and tim is fat
     //<{($0*2)} --> AT2>
-    //<{3} --> TOKENis>
+    //<{($rel*3)} --> rel2>
     //<{($1*4)} --> TOKEN>
     //==>
-    //<{($0*$1)} --> relIs>
-    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> TOKEN>) ==> <{($0*$1)} --> relIs>>. {1.0 0.998}".to_string());
+    //<{($0*$1*$rel)} --> relGENERIC>
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
     // commented because it doesn't work!
     // ex: tom and tim is fat and lazy
     //<{($0*2)} --> AT2>
-    //<{3} --> TOKENis>
+    //<{($rel*3)} --> rel2>
     //<{($1*4)} --> AT2>
     //==>
-    //<{($0*$1)} --> relIs>
-    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+    //<{($0*$1*$rel)} --> relGENERIC>
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> AT2>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
 
@@ -133,8 +133,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*2)} --> AT2>
     //==>
     //<{($0*$1)} --> relIs2>
-    // disabled because the task with this rule is spammed out by other tasks before it can be used!
-    println!("TODO - fix concept and term selection issue because this task is spammed out, the right tasks aren't selected all the time!");
+    println!("TODO - rewrite to new generic rel form");
     inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
 
 
@@ -167,7 +166,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let rc0 = Rc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs".to_string())) ),
+            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relGENERIC".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),

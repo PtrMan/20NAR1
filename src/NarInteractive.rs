@@ -60,6 +60,7 @@ pub fn runInteractive(nar:&mut Nar) {
                             Term::Stmt(Copula::INH, subj, pred) => { // is relationship
                                 let prod0;
                                 let prod1;
+                                let mut prod2:Option<Term> = None;
                                 
                                 match &**subj {
                                     Term::SetExt(set) => {
@@ -68,6 +69,11 @@ pub fn runInteractive(nar:&mut Nar) {
                                                 Term::Prod(arr) if arr.len() == 2 => {
                                                     prod0 = *arr[0].clone();
                                                     prod1 = *arr[1].clone();
+                                                },
+                                                Term::Prod(arr) if arr.len() == 3 => {
+                                                    prod0 = *arr[0].clone();
+                                                    prod1 = *arr[1].clone();
+                                                    prod2 = Some(*arr[2].clone());
                                                 },
                                                 _ => {
                                                     // term doesn't fit expected structure!
@@ -88,7 +94,7 @@ pub fn runInteractive(nar:&mut Nar) {
                                         return;
                                     }
                                 }
-                                
+
                                 match &**pred {
                                     Term::Name(name) if name == "relIs" => {
                                         // translate to inheritance
@@ -98,6 +104,20 @@ pub fn runInteractive(nar:&mut Nar) {
                                         // translate to inheritance
                                         inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
                                     },
+                                    Term::Name(name) if name == "relGENERIC" => {
+                                        match prod2.unwrap() {
+                                            Term::Name(name) if name == "is" => { // we ave special case for is relation, translate to inheritance
+                                                // translate to inheritance
+                                                inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
+                                            },
+                                            _ => {
+                                                // pass on to NAR
+                                                inputT(nar, &resTerm.clone(), punct, &Tv{f:1.0,c:0.9});
+                                            }
+                                        }
+                                    },
+                                    
+                                    
                                     Term::Name(name) if name == "relIsQuery" => {
                                         // translate to inheritance question
                                         inputT(nar, &s(Copula::INH, &prod0, &prod1), EnumPunctation::QUESTION, &Tv{f:1.0,c:0.9});
