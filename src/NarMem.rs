@@ -5,7 +5,10 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 use Term::Term;
+use Term::checkEqTerm;
 use Term::retSubterms;
+
+use NarStamp;
 
 use NarSentence::EnumPunctation;
 use NarSentence::SentenceDummy;
@@ -32,13 +35,21 @@ pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
             Some(arcConcept) => {
                 match Arc::get_mut(arcConcept) {
                     Some(concept) => {
-                        println!("TODO - add belief only if it doesn't already exist!");
+                        let mut exists = false;
+                        for iBelief in &concept.beliefs {
+                            if checkEqTerm(&iBelief.term, &s.term) && NarStamp::checkOverlap(&iBelief.stamp, &s.stamp) {
+                                exists = true;
+                                break; // OPT
+                            }
+                        }
+                        
+                        if !exists { // add belief only if it doesn't already exist!
+                            concept.beliefs.push(Arc::new((*s).clone())); // add belief
 
-                        concept.beliefs.push(Arc::new((*s).clone())); // add belief
+                            println!("TODO - order by importance");
 
-                        // TODO< order by importance >
-
-                        concept.beliefs = concept.beliefs[..concept.beliefs.len().min(20)].to_vec(); // keep under AIKR
+                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(20)].to_vec(); // keep under AIKR
+                        }
                     }
                     None => {
                         println!("INTERNAL ERROR - couldn't aquire arc!");
