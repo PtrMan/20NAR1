@@ -250,6 +250,19 @@ mod tests {
   }
 
   #[test]
+  pub fn prod3() {
+    let narsese = "<(a*c*z) --> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a * c * z ) --> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
   pub fn intint2() {
     let narsese = "<(a|c) --> x>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
@@ -397,6 +410,16 @@ fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
 
   {
     let res0 = parseProd2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = parseProd3(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -602,6 +625,18 @@ pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag(")")(input)?;
   Ok((input, p2(&a, &b)))
 }
+
+pub fn parseProd3(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("*")(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag("*")(input)?;
+  let (input, c) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, p3(&a, &b, &c)))
+}
+
 
 
 // parses product with two components
