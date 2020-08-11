@@ -87,12 +87,14 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
     // instance relation positive
     //ex:  tom is a cat
-    inputN(&mut workerNar, &"<(<{($1*0)} --> TOKEN>&&<{(is*1)} --> rel2>&&<{($2*2)} --> a2>) ==> <{({$1}*$2)} --> relIs>>. {1.0 0.998}".to_string());
+    //commented because we need to overhaul "a cat"
+    //inputN(&mut workerNar, &"<(<{($1*0)} --> TOKEN>&&<{(is*1)} --> rel2>&&<{($2*2)} --> a2>) ==> <{({$1}*$2)} --> relIs>>. {1.0 0.998}".to_string());
 
     // relation positive
     //ex:  a dog is a animal
     //ex:  an dog is an animal
-    inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> relIs>>. {1.0 0.998}".to_string());
+    //commented because we need to overhaul "a cat"
+    //inputN(&mut workerNar, &"<(<{($1*0)} --> a2>&&<{(is*2)} --> rel2>&&<{($2*3)} --> a2>) ==> <{($1*$2)} --> relIs>>. {1.0 0.998}".to_string());
 
 
 
@@ -104,7 +106,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*2)} --> TOKEN>
     //==>
     //<{($0*$1*$rel)} --> relGENERIC>
-    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{($rel*1)} --> rel2>&&<{($1*2)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{($rel*1)} --> rel2>&&<{($1*2)} --> TOKEN>) ==> <{({$0}*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
     // ex: tom and tim is fat
@@ -113,16 +115,15 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*4)} --> TOKEN>
     //==>
     //<{($0*$1*$rel)} --> relGENERIC>
-    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> TOKEN>) ==> <{({$0}*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
-    // commented because it doesn't work!
     // ex: tom and tim is fat and lazy
     //<{($0*2)} --> AT2>
     //<{($rel*3)} --> rel2>
     //<{($1*4)} --> AT2>
     //==>
     //<{($0*$1*$rel)} --> relGENERIC>
-    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> AT2>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> AT2>) ==> <{({$0}*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
 
@@ -134,7 +135,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //==>
     //<{($0*$1)} --> relIs2>
     println!("TODO - rewrite to new generic rel form");
-    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{($0*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{({$0}*$1)} --> relIs2>>. {1.0 0.998}".to_string());
 
 
 
