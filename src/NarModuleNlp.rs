@@ -39,15 +39,13 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
                 idx+=2;
             }
             else if tokens[idx] == "is" || tokens[idx] == "can" {
-                {
-                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name(tokens[idx].to_string()), &Term::Name(idxAsStr.clone())))]), &Term::Name("rel2".to_string()));
-                    inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
-                }
-                
-                // new form
-                {
+                if tokens[idx] == "is" {
                     let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKEN".to_string() + tokens[idx]));
                     inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
+                }
+                else {
+                    let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(p2(&Term::Name(tokens[idx].to_string()), &Term::Name(idxAsStr.clone())))]), &Term::Name("rel2".to_string()));
+                    inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});    
                 }
 
                 idx+=1;
@@ -106,7 +104,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*2)} --> TOKEN>
     //==>
     //<{($0*$1*$rel)} --> relGENERIC>
-    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{($rel*1)} --> rel2>&&<{($1*2)} --> TOKEN>) ==> <{({$0}*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> TOKEN>) ==> <{({$0}*$1*is)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{($rel*1)} --> rel2>&&<{($1*2)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
     // ex: tom and tim is fat
@@ -115,7 +114,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*4)} --> TOKEN>
     //==>
     //<{($0*$1*$rel)} --> relGENERIC>
-    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> TOKEN>) ==> <{({$0}*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> TOKEN>) ==> <{({$0}*$1*is)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
     // ex: tom and tim is fat and lazy
     //<{($0*2)} --> AT2>
@@ -123,7 +123,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*4)} --> AT2>
     //==>
     //<{($0*$1*$rel)} --> relGENERIC>
-    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> AT2>) ==> <{({$0}*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{3} --> TOKENis>&&<{($1*4)} --> AT2>) ==> <{($0*$1*is)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*2)} --> AT2>&&<{($rel*3)} --> rel2>&&<{($1*4)} --> AT2>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
 
@@ -134,8 +135,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     //<{($1*2)} --> AT2>
     //==>
     //<{($0*$1)} --> relIs2>
-    println!("TODO - rewrite to new generic rel form");
-    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{({$0}*$1)} --> relIs2>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{1} --> TOKENis>&&<{($1*2)} --> AT2>) ==> <{({$0}*$1*is)} --> relGENERIC>>. {1.0 0.998}".to_string());
+    inputN(&mut workerNar, &"<(<{($0*0)} --> TOKEN>&&<{($rel*1)} --> rel2>&&<{($1*2)} --> AT2>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
 
 
 
