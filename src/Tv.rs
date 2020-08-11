@@ -14,6 +14,25 @@ pub fn ded(a:&Tv,b:&Tv)->Tv {
     Tv{f:f,c:c}
 }
 
+pub fn rev(a:&Tv,b:&Tv)->Tv {
+    let w1:f64 = c2w(a.c);
+    let w2:f64 = c2w(b.c);
+    let w:f64 = w1 + w2;
+    let f:f64 = (w1 * a.f + w2 * b.f) / w;
+    let c:f64 = w2c(w);
+    Tv{f:f,c:c}
+}
+
+pub fn w2c(w:f64) -> f64 {
+    let h=1.0;
+    w / (w + h)
+}
+
+pub fn c2w(c:f64) -> f64 {
+    let h=1.0;
+    h * c / (1.0 - c)
+}
+
 pub fn convToStr(tv:&Tv) -> String {
     format!("{{{} {}}}", tv.f,tv.c)
 }

@@ -956,6 +956,62 @@ pub fn populateTaskByTermLookup(mem:&mut Mem2, term:&Term, task:&Rc<RefCell<Task
 
 // /param calcCredit compute the credit?
 pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
+    // try to revise
+    let mut wasRevised = false;
+    match sentence.punct {
+        EnumPunctation::JUGEMENT => {
+            
+            for iTerm in retSubterms(&*sentence.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
+                match ((*mem.mem).borrow_mut()).concepts.get_mut(&iTerm.clone()) {
+                    Some(arcConcept) => {
+                        match Arc::get_mut(arcConcept) {
+                            Some(concept) => {
+                                let mut delBeliefIdx:Option<usize> = None;
+                                
+                                for iBeliefIdx in 0..concept.beliefs.len() {
+                                    let iBelief = &concept.beliefs[iBeliefIdx];
+                                    if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
+                                        let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
+                                        let tvA:Tv = retTv(&concept.beliefs[iBeliefIdx]);
+                                        let tvB:Tv = retTv(&sentence);
+                                        let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
+                                        
+                                        delBeliefIdx = Some(iBeliefIdx);
+                                        concept.beliefs.push(Arc::new(SentenceDummy {
+                                            term:iBelief.term.clone(),
+                                            t:iBelief.t,
+                                            punct:iBelief.punct,
+                                            stamp:stamp,
+                                            expDt:iBelief.expDt, // exponential time delta, used for =/>
+                                            evi:evi,
+                                        })); // add revised belief!
+
+                                        wasRevised = true;
+                                        break; // breaking here is fine, because belief should be just once in table!
+                                    }
+                                }
+
+                                if delBeliefIdx.is_some() {
+                                    concept.beliefs.remove(delBeliefIdx.unwrap());
+                                }
+                            }
+                            None => {
+                                println!("INTERNAL ERROR - couldn't aquire arc!");
+                            }
+                        }
+                    },
+                    None => {}
+                }
+            }
+        },
+        _ => {}
+    }
+
+    if wasRevised {
+        return;
+    }
+    // we are here if it can't revise
+    
     NarMem::storeInConcepts(&mut mem.mem.borrow_mut(), sentence); // store sentence in memory, adressed by concepts
     
 
