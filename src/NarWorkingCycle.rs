@@ -93,6 +93,54 @@ pub fn infStructSubj1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
     None
 }
 
+/*
+// structural
+// (X * Y) --> rel
+// |-
+// <X --> (rel /1 Y)>.
+// <Y --> (rel /2 X)>.
+pub fn infStructProd0(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
+    match a {
+        Term::Stmt(Copula::INH, prod, pred) => {
+            match prod {
+                Term::Prod(arr) => {
+                    if let &[prod0, prod1] = &arr[..2] {
+                        let concl = Term::Stmt(Copula::INH, Box::clone(prod0), Box::new(&Term::Img(Box::clone(pred), 0 Box::clone(prod1))));
+                        return Some((concl,aTv.clone()));
+                    }
+                },
+                {} => {}
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+// structural
+// (X * Y) --> rel
+// |-
+// <X --> (rel /1 Y)>.
+// <Y --> (rel /2 X)>.
+pub fn infStructProd1(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
+    match a {
+        Term::Stmt(Copula::INH, prod, pred) => {
+            match prod {
+                Term::Prod(arr) => {
+                    if let &[prod0, prod1] = &arr[..2] {
+                        let concl = Term::Stmt(Copula::INH, Box::clone(prod1), Box::new(&Term::Img(Box::clone(pred), 0 Box::clone(prod0))));
+                        return Some((concl,aTv.clone()));
+                    }
+                },
+                {} => {}
+            }
+        },
+        _ => {},
+    }
+    None
+}
+ */
+
 // a --> x.  x --> b.  |- a --> b.
 pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -380,6 +428,22 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
                 _ => false
             }
         },
+        Term::Img(rela,idxa,elementsa) => {
+            match b2 {
+                Term::Img(relb,idxb,elementsb) if idxa==idxb => {
+                    if !unify2(&rela, &relb, assignments) {return false};
+                    
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !unify2(&elementsa[idx], &elementsb[idx], assignments) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
         Term::IntInt(seta) => {
             match b2 {
                 Term::IntInt(setb) => {
@@ -489,6 +553,15 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
                 arr.push(Box::new(unifySubst(i, subst)));
             }
             Term::Prod(arr)
+        },
+        Term::Img(rel,idx,subterms) => {
+            let rel2 = unifySubst(rel, subst);
+
+            let mut arr = vec![];
+            for i in subterms {
+                arr.push(Box::new(unifySubst(i, subst)));
+            }
+            Term::Img(Box::new(rel2),*idx,arr)
         },
         Term::IntInt(subterms) => {
             let mut arr = vec![];

@@ -19,7 +19,7 @@ pub enum Term {
     IndepVar(String), // $
     Conj(Vec<Box<Term>>), // &&
     Prod(Vec<Box<Term>>), // product
-
+    Img(Box<Term>, usize, Vec<Box<Term>>),// image (rel /idx+1 others)
     IntInt(Vec<Box<Term>>), // | intensional intersection
 }
 
@@ -74,6 +74,13 @@ impl Clone for Term {
                 }
                 Term::Prod(arr)
             },
+            Term::Img(rel,idx,others) => {
+                let mut arr = vec![];
+                for i in others {
+                    arr.push(i.clone());
+                }
+                Term::Img(rel.clone(),*idx,arr)
+            },
             Term::IntInt(set) => {
                 let mut arr = vec![];
                 for i in set {
@@ -118,6 +125,12 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
             for i in elements {
                 retSubterms2(&i, res);
             }
+        },
+        Term::Img(rel,idx,elements) => {
+            for i in elements {
+                retSubterms2(&i, res);
+            }
+            retSubterms2(&rel, res);
         },
         Term::IntInt(set) => {
             for i in set {
@@ -203,6 +216,14 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
+        Term::Img(rel,idx,elements) => {
+            let mut c = 0;
+            for i in elements {
+                c+=calcComplexity(i);
+            }
+            c+=calcComplexity(rel);
+            c
+        },
         Term::IntInt(set) => {
             let mut c = 0;
             for i in set {
@@ -265,6 +286,13 @@ pub fn convTermToStr(t:&Term) -> String {
                 inner = format!("{} * {}", inner, convTermToStr(&elements[i]));
             }
             format!("( {} )", inner)
+        },
+        Term::Img(rel,idx,elements) => {
+            let mut inner = convTermToStr(&elements[0]);
+            for i in 1..elements.len() {
+                inner = format!("{} {}", inner, convTermToStr(&elements[i]));
+            }
+            format!("( {} /{} {} )", convTermToStr(&rel), idx+1, inner)
         },
         Term::IntInt(elements) => {
             let mut inner = convTermToStr(&elements[0]);
@@ -368,6 +396,22 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
         Term::Prod(elementsa) => {
             match b {
                 Term::Prod(elementsb) => {
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::Img(rela,idxa,elementsa) => {
+            match b {
+                Term::Img(relb,idxb,elementsb) if idxa==idxb => {
+                    if !checkEqTerm(&rela, &relb) {return false};
+
                     if elementsa.len() == elementsb.len() {
                         for idx in 0..elementsa.len() {
                             if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
