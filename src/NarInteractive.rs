@@ -105,14 +105,18 @@ pub fn runInteractive(nar:&mut Nar) {
                                         inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
                                     },
                                     Term::Name(name) if name == "relGENERIC" => {
-                                        match prod2.unwrap() {
+                                        let a = prod2.unwrap();
+                                        let prod222 = a.clone();
+                                        let prod223 = a.clone();
+                                        match prod222 {
                                             Term::Name(name) if name == "is" => { // we ave special case for is relation, translate to inheritance
                                                 // translate to inheritance
                                                 inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
                                             },
                                             _ => {
                                                 // pass on to NAR
-                                                inputT(nar, &resTerm.clone(), punct, &Tv{f:1.0,c:0.9});
+                                                inputT(nar, &resTerm.clone(), punct, &Tv{f:1.0,c:0.9}); // as raw relation
+                                                inputT(nar, &s(Copula::INH, &p2(&prod0, &prod1), &prod223), punct, &Tv{f:1.0,c:0.9}); // pass as inheritance
                                             }
                                         }
                                     },
