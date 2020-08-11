@@ -93,7 +93,7 @@ pub fn infStructSubj1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
     None
 }
 
-/*
+
 // structural
 // (X * Y) --> rel
 // |-
@@ -102,14 +102,15 @@ pub fn infStructSubj1(a: &Term, aTv: &Tv, idx:usize) -> Option<(Term, Tv)> {
 pub fn infStructProd0(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
     match a {
         Term::Stmt(Copula::INH, prod, pred) => {
-            match prod {
+            match &**prod {
                 Term::Prod(arr) => {
-                    if let &[prod0, prod1] = &arr[..2] {
-                        let concl = Term::Stmt(Copula::INH, Box::clone(prod0), Box::new(&Term::Img(Box::clone(pred), 0 Box::clone(prod1))));
-                        return Some((concl,aTv.clone()));
-                    }
+                    let prod0 = &arr[0];
+                    let prod1 = &arr[1];
+
+                    let concl = Term::Stmt(Copula::INH, Box::clone(&prod0), Box::new(Term::Img(Box::clone(pred), 0, vec![Box::clone(&prod1)])));
+                    return Some((concl,aTv.clone()));
                 },
-                {} => {}
+                _ => {}
             }
         },
         _ => {},
@@ -125,21 +126,23 @@ pub fn infStructProd0(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
 pub fn infStructProd1(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
     match a {
         Term::Stmt(Copula::INH, prod, pred) => {
-            match prod {
+            match &**prod {
                 Term::Prod(arr) => {
-                    if let &[prod0, prod1] = &arr[..2] {
-                        let concl = Term::Stmt(Copula::INH, Box::clone(prod1), Box::new(&Term::Img(Box::clone(pred), 0 Box::clone(prod0))));
+                    if arr.len() == 2 {
+                        let prod0 = &arr[0];
+                        let prod1 = &arr[1];
+                        let concl = Term::Stmt(Copula::INH, Box::clone(&prod1), Box::new(Term::Img(Box::clone(pred), 1, vec![Box::clone(&prod0)])));
                         return Some((concl,aTv.clone()));
                     }
                 },
-                {} => {}
+                _ => {}
             }
         },
         _ => {},
     }
     None
 }
- */
+
 
 // a --> x.  x --> b.  |- a --> b.
 pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
@@ -742,6 +745,14 @@ pub fn infSinglePremise(a: &Term, aPunct:EnumPunctation, aTv:&Tv) -> Vec<(Term,T
     match infStructPred1(&a, &aTv, 2) {
         Some(x) => { res.push(x); } _ => {}
     }
+
+    match infStructProd0(&a, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructProd1(&a, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+
     res
 }
 
