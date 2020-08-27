@@ -143,6 +143,54 @@ pub fn infStructProd1(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
     None
 }
 
+// structural
+// <X --> (rel /1 Y)>.
+// |-
+// (X * Y) --> rel
+pub fn infStructImg0(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
+    match a {
+        Term::Stmt(Copula::INH, subj, pred) => {
+            match &**pred {
+                Term::Img(predImg,0,arr) => {
+                    if arr.len() == 1 {
+                        let arr0 = &arr[0];
+                        let concl = Term::Stmt(Copula::INH, Box::new(Term::Prod(vec![Box::clone(&subj), Box::clone(&arr0)])), Box::clone(&predImg));
+                        return Some((concl,aTv.clone()));
+                    }
+                },
+                _ => {}
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
+// structural
+// <Y --> (rel /2 X)>.
+// |-
+// (X * Y) --> rel
+pub fn infStructImg1(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
+    match a {
+        Term::Stmt(Copula::INH, subj, pred) => {
+            match &**pred {
+                Term::Img(predImg,1,arr) => {
+                    if arr.len() == 1 {
+                        let arr0 = &arr[0];
+                        let concl = Term::Stmt(Copula::INH, Box::new(Term::Prod(vec![Box::clone(&arr0), Box::clone(&subj)])), Box::clone(&predImg));
+                        return Some((concl,aTv.clone()));
+                    }
+                },
+                _ => {}
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
 
 // a --> x.  x --> b.  |- a --> b.
 pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
@@ -802,6 +850,12 @@ pub fn infSinglePremise(a: &Term, aPunct:EnumPunctation, aTv:&Tv) -> Vec<(Term,T
         Some(x) => { res.push(x); } _ => {}
     }
     match infStructProd1(&a, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructImg0(&a, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructImg1(&a, &aTv) {
         Some(x) => { res.push(x); } _ => {}
     }
 
