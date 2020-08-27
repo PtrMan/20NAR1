@@ -167,6 +167,52 @@ pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
 }
 
 
+// a --> x.  a --> y.  |- x <-> y.
+pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+    if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
+        return None;
+    }
+    
+    match a {
+        Term::Stmt(Copula::INH, asubj, apred) => {
+            match b {
+                Term::Stmt(Copula::INH, bsubj, bpred) => {
+                    if !checkEqTerm(&apred, &bpred) && checkEqTerm(&asubj, &bsubj) {
+                        return Some(( Term::Stmt(Copula::SIM, Box::clone(apred), Box::clone(bpred)), comp(&aTv,&bTv) )); // a.subj --> b.pred
+                    }
+                },
+                _ => {},
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
+// x --> a.  y --> a.  |- x <-> y.
+pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+    if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
+        return None;
+    }
+    
+    match a {
+        Term::Stmt(Copula::INH, asubj, apred) => {
+            match b {
+                Term::Stmt(Copula::INH, bsubj, bpred) => {
+                    if !checkEqTerm(&asubj, &bsubj) && checkEqTerm(&apred, &bpred) {
+                        return Some(( Term::Stmt(Copula::SIM, Box::clone(asubj), Box::clone(bsubj)), comp(&aTv,&bTv) )); // a.subj --> b.pred
+                    }
+                },
+                _ => {},
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
 // x --> [a].  x --> [b].  |- x --> [a b].
 pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -708,6 +754,12 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf7(&a, aPunct, &aTv, &b, bPunct, &bTv) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infCompPred(&a, aPunct, &aTv, &b, bPunct, &bTv) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infCompSubj(&a, aPunct, &aTv, &b, bPunct, &bTv) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     

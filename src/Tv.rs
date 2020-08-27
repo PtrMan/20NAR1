@@ -23,6 +23,13 @@ pub fn rev(a:&Tv,b:&Tv)->Tv {
     Tv{f:f,c:c}
 }
 
+pub fn comp(a:&Tv,b:&Tv)->Tv {
+    let f0 = or(a.f, b.f);
+    let f = if (f0 == 0.0) {0.0} else { (a.f*b.f) / f0 };
+    let c = w2c(f0 * a.c * b.c);
+    Tv{f:f,c:c}
+}
+
 pub fn w2c(w:f64) -> f64 {
     let h=1.0;
     w / (w + h)
@@ -31,6 +38,10 @@ pub fn w2c(w:f64) -> f64 {
 pub fn c2w(c:f64) -> f64 {
     let h=1.0;
     h * c / (1.0 - c)
+}
+
+pub fn or(a:f64,b:f64) -> f64 {
+    1.0 - (1.0 - a) * (1.0 - b)
 }
 
 pub fn convToStr(tv:&Tv) -> String {
