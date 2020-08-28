@@ -144,6 +144,10 @@ pub fn runInteractive(nar:&mut Nar) {
                 else if input == "!dt" { // debug tasks
                     debugCreditsOfTasks(&nar.mem);
                 }
+                else if input == "!dmd" { // debug memory declarative
+                    // TODO< put into function and call it here >
+                    println!("concept count = {}", nar.mem.mem.borrow().concepts.len());
+                }
                 else if input == "!QQ" { // quit
                     break;
                 }
