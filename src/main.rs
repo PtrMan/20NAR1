@@ -15,7 +15,7 @@ use rand::distributions::{Normal, Distribution};
 //use rand_distr::Normal;
 
 mod Reasoner0Entry;
-use Reasoner0Entry::{reasoner0Entry};
+use crate::Reasoner0Entry::{reasoner0Entry};
 mod map2d;
 mod ad;
 mod mlutils;
@@ -44,7 +44,7 @@ mod NarModuleNlp;
 
 //mod narPerception; // not include because file has issues
 
-use Nn::{Network, buildNnFromParameters};
+use crate::Nn::{Network, buildNnFromParameters};
 
 pub fn main() {
     //expGa0();return;

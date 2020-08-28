@@ -4,14 +4,14 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use Term::Term;
-use Term::checkEqTerm;
-use Term::retSubterms;
+use crate::Term::Term;
+use crate::Term::checkEqTerm;
+use crate::Term::retSubterms;
 
-use NarStamp;
+use crate::NarStamp;
 
-use NarSentence::EnumPunctation;
-use NarSentence::SentenceDummy;
+use crate::NarSentence::EnumPunctation;
+use crate::NarSentence::SentenceDummy;
 
 // memory system
 pub struct Concept {

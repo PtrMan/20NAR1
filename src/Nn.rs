@@ -1,7 +1,7 @@
 // neuronal network defintion and helpers
 // Network and building of network can be used with our without backprop for training
 
-use ad;
+use crate::ad;
 
 // network used to solve a problem
 pub struct Network {

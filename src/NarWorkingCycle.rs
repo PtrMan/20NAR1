@@ -12,24 +12,24 @@ use rand::rngs::ThreadRng;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use Term::Term;
-use Term::Copula;
-use Term::retSubterms;
-use Term::retUniqueSubterms;
-use Term::calcComplexity;
-use Term::convTermToStr;
-use Term::checkEqTerm;
+use crate::Term::Term;
+use crate::Term::Copula;
+use crate::Term::retSubterms;
+use crate::Term::retUniqueSubterms;
+use crate::Term::calcComplexity;
+use crate::Term::convTermToStr;
+use crate::Term::checkEqTerm;
 
-use NarSentence::EnumPunctation;
-use NarSentence::SentenceDummy;
-use NarSentence::convSentenceTermPunctToStr;
-use NarSentence::retTv;
-use NarSentence::Evidence;
+use crate::NarSentence::EnumPunctation;
+use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::convSentenceTermPunctToStr;
+use crate::NarSentence::retTv;
+use crate::NarSentence::Evidence;
 
-use NarMem;
-use Tv::*;
-use NarStamp::*;
-use NarStamp;
+use crate::NarMem;
+use crate::Tv::*;
+use crate::NarStamp::*;
+use crate::NarStamp;
 
 /* commented because not needed
 // a --> b |- b --> a
@@ -262,7 +262,7 @@ pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:En
 
 
 // x --> [a].  x --> [b].  |- x --> [a b].
-pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, _bTv:&Tv) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -309,7 +309,7 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
 
 
 // {a} --> x.  {b} --> x.  |- {a b} --> x.
-pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Tv, _b: &Term, _punctB:EnumPunctation, _bTv:&Tv) -> Option<(Term,Tv)> {
     return None; // is disabled because it violates AIKR to some degree!
     /*
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -358,7 +358,7 @@ pub fn inf4(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
 }
 
 // a ==> x.  x ==> b.  |- a ==> b.
-pub fn inf1(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+pub fn inf1(a: &Term, punctA:EnumPunctation, _aTv:&Tv, b: &Term, punctB:EnumPunctation, _bTv:&Tv) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -725,7 +725,7 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
 // unify a.
 // |-
 // x.
-pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term,Tv)> {
+pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, _bTv:&Tv) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -749,7 +749,7 @@ pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunct
 // unify x.
 // |-
 // a ==> x.
-pub fn inf7(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, bTv:&Tv) -> Option<(Term, Tv)> {
+pub fn inf7(a: &Term, punctA:EnumPunctation, aTv:&Tv, b: &Term, punctB:EnumPunctation, _bTv:&Tv) -> Option<(Term, Tv)> {
     if punctA != EnumPunctation::QUESTION || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -823,7 +823,7 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Tv, b: &Term, bPunct:Enum
     res
 }
 
-pub fn infSinglePremise(a: &Term, aPunct:EnumPunctation, aTv:&Tv) -> Vec<(Term,Tv)> {
+pub fn infSinglePremise(a: &Term, _aPunct:EnumPunctation, aTv:&Tv) -> Vec<(Term,Tv)> {
     let mut res = vec![];
     
     match infStructSubj1(&a, &aTv, 0) {
@@ -1263,7 +1263,7 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy) {
     if calcExp(&retTv(concl)) > qTask.bestAnswerExp { // is the answer potentially better?
         let unifyRes: Option<Vec<Asgnment>> = unify(&qTask.sentence.term, &concl.term); // try unify question with answer
         if unifyRes.is_some() { // was answer found?
-            let unifiedRes: Term = unifySubst(&qTask.sentence.term, &unifyRes.unwrap());
+            let _unifiedRes: Term = unifySubst(&qTask.sentence.term, &unifyRes.unwrap());
             
             if qTask.handler.is_some() {
                 let handler1 = qTask.handler.as_ref().unwrap();
@@ -1414,7 +1414,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
                 // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
                 // NOTE< 09:00 08.08.2020 : is disabled because it is not necessary with ALANN's method to select all candidates >
-                let mut enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
+                let enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
 
                 if enFunctionalityNal5PremiseFiler1 {
 

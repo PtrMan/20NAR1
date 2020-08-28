@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-use ::mlutils;
-use ::map2d;
-use ::map2d::{Map2d,writeAt,readAt,map2dDrawCircle};
-use ::Misc::{flattenVec2Map, Vec2};
+use crate::mlutils;
+use crate::map2d;
+use crate::map2d::{Map2d,writeAt,readAt,map2dDrawCircle};
+use crate::Misc::{flattenVec2Map, Vec2};
 
 // TODO< draw a object in motion and display result maxima classifications >
 

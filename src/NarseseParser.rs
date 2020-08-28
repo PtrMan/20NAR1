@@ -11,10 +11,10 @@ use nom::{
 //use nom::named;
 //use nom::many_m_n;
 
-use Term::*;
-use NarSentence::EnumPunctation;
-use Tv::Tv;
-use TermApi::*;
+use crate::Term::*;
+use crate::NarSentence::EnumPunctation;
+use crate::Tv::Tv;
+use crate::TermApi::*;
 
 // finds out if narsese has tv and returns TV if TV exists
 // cuts away narsese of TV if TV is detected
@@ -73,7 +73,7 @@ pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
   let parsed:IResult<&str, Term> = parseEntry(&narseseInner);
 
   match parsed {
-    Ok((str2, term)) => {
+    Ok((_str2, term)) => {
       Some((term, tv, punctation))
     },
     Err(_) => {
@@ -89,7 +89,7 @@ pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use Term::convTermToStr;
+  use crate::Term::convTermToStr;
 
   #[test]
   pub fn inhWithTv() {
@@ -387,7 +387,7 @@ fn indepVar(input:&str) -> IResult<&str, Term> {
 }
 
 // /param enStatement enable parsing of statement
-fn parseSubjOrPred(input: &str, enStatement:bool) -> IResult<&str, Term> {
+fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
   {
     let res0 = a(input);
     match res0 {
@@ -536,7 +536,7 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   {
     let res0 = copInh(input);
     match res0 {
-      Ok(X) => {
+      Ok(_X) => {
         return res0;
       },
       Err(_) => {}, // try other choice
@@ -545,7 +545,7 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   {
     let res0 = copSim(input);
     match res0 {
-      Ok(X) => {
+      Ok(_X) => {
         return res0;
       },
       Err(_) => {}, // try other choice
@@ -554,7 +554,7 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   {
     let res0 = copImpl(input);
     match res0 {
-      Ok(X) => {
+      Ok(_X) => {
         return res0;
       },
       Err(_) => {}, // try other choice
@@ -563,7 +563,7 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   {
     let res0 = copPredImpl(input);
     match res0 {
-      Ok(X) => {
+      Ok(_X) => {
         return res0;
       },
       Err(_) => {}, // try other choice

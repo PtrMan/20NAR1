@@ -1,9 +1,9 @@
-use Tv::*;
-use Term::*;
-use NarseseParser::parseNarsese;
-use NarSentence::*;
-use NarStamp::*;
-use NarWorkingCycle::*;
+use crate::Tv::*;
+use crate::Term::*;
+use crate::NarseseParser::parseNarsese;
+use crate::NarSentence::*;
+use crate::NarStamp::*;
+use crate::NarWorkingCycle::*;
 
 pub struct Nar {
     pub mem:Mem2, // actual (declarative) memory

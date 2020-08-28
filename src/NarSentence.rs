@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
-use Term::Term;
-use Tv;
-use Term::convTermToStr;
-use NarStamp::*;
+use crate::Term::Term;
+use crate::Tv;
+use crate::Term::convTermToStr;
+use crate::NarStamp::*;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum EnumPunctation {
@@ -47,7 +47,7 @@ pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:S
 pub fn retTv(s:&SentenceDummy)->Tv::Tv {
     match &s.evi {
         Evidence::TV(tv) => {tv.clone()},
-        Evidence::CNT{pos,cnt} => {Tv::Tv{f:retFreq(&s.evi),c:retConf(&s.evi)}} // need to compute evidence
+        Evidence::CNT{pos: _,cnt: _} => {Tv::Tv{f:retFreq(&s.evi),c:retConf(&s.evi)}} // need to compute evidence
     }
 }
 

@@ -5,8 +5,8 @@
 use rand::Rng;
 use rand::rngs::ThreadRng;
 
-use ad;
-use Nn::{Network, buildNnFromParameters};
+use crate::ad;
+use crate::Nn::{Network, buildNnFromParameters};
 
 // prototyping for training
 pub fn testTrainingNn0() {

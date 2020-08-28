@@ -1,8 +1,8 @@
 // classifier
 
-use ::map2d::{Map2d};
-use ::mlutils;
-use ::Misc::{flattenMap};
+use crate::map2d::{Map2d};
+use crate::mlutils;
+use crate::Misc::{flattenMap};
 
 pub struct Classifier {
     pub categories:Vec<Category>,

@@ -1,4 +1,4 @@
-use Term::*;
+use crate::Term::*;
 
 // sseehh API - create product
 pub fn p2(a:&Term,b:&Term)->Term {

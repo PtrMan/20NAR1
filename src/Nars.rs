@@ -2,11 +2,11 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use NarStamp::*;
-use NarSentence::*;
-use Tv::*;
-use Term::*;
-use TermApi::*;
+use crate::NarStamp::*;
+use crate::NarSentence::*;
+use crate::Tv::*;
+use crate::Term::*;
+use crate::TermApi::*;
 
 // DONE< check for events which were anticipated and remove anticipations! >
 // DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
@@ -140,7 +140,7 @@ pub fn narStep0(nar:&mut Nar) {
     let cfgPerceptionSamplesPerStep = 4; // how ofter should event-FIFO get sampled for perception in cycle?
     
     if nar.trace.len() >= 3 { // add evidence
-        for sampleIt in 0..cfgPerceptionSamplesPerStep {
+        for _sampleIt in 0..cfgPerceptionSamplesPerStep {
             // filter middle by ops and select random first event before that!
             let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar.trace);
             if idxsOfOps.len() > 0 { // there must be at least one op to sample
@@ -264,7 +264,7 @@ pub fn narStep1(nar:&mut Nar) {
     
     
     match &pickedAction {
-        Some(act) => {},
+        Some(_act) => {},
         None => {
             // TODO< search with highest exp and exec only if above descision threshold! >
             
@@ -326,7 +326,7 @@ pub fn narStep1(nar:&mut Nar) {
     }
     
     match &pickedAction {
-        Some(act) => {},
+        Some(_act) => {},
         None => {
             // TODO< better distribution >
             let p = nar.rng.gen_range(0, 18);
@@ -378,7 +378,7 @@ pub fn retPred(term:&Term) -> Term {
 
 pub fn retSeqOp(term:&Term) -> Term {
     match term {
-        Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+        Term::Stmt(Copula::PREDIMPL, subj, _pred) => {
             match &**subj {
                 Term::Seq(seq) => {
                     *seq[1].clone()
@@ -392,7 +392,7 @@ pub fn retSeqOp(term:&Term) -> Term {
 
 pub fn retSeqCond(term:&Term) -> Term {
     match term {
-        Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+        Term::Stmt(Copula::PREDIMPL, subj, _pred) => {
             match &**subj {
                 Term::Seq(seq) => {
                     *seq[0].clone()

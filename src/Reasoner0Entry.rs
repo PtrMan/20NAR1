@@ -5,12 +5,12 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use ::Term::*;
-use ::Term::convTermToStr;
-use ::NarSentence::*;
-use ::Nars;
-use ::AeraishPerceptionComp;
-use ::AeraishPerceptionComp::{PerceptItem};
+use crate::Term::*;
+use crate::Term::convTermToStr;
+use crate::NarSentence::*;
+use crate::Nars;
+use crate::AeraishPerceptionComp;
+use crate::AeraishPerceptionComp::{PerceptItem};
 
 pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time

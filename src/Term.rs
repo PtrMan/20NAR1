@@ -126,7 +126,7 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
                 retSubterms2(&i, res);
             }
         },
-        Term::Img(rel,idx,elements) => {
+        Term::Img(rel,_idx,elements) => {
             for i in elements {
                 retSubterms2(&i, res);
             }
@@ -216,7 +216,7 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
-        Term::Img(rel,idx,elements) => {
+        Term::Img(rel,_idx,elements) => {
             let mut c = 0;
             for i in elements {
                 c+=calcComplexity(i);

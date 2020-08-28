@@ -1,16 +1,16 @@
 // interactive NAR
 
 use std::io;
-use Nar::*;
-use NarWorkingCycle::{debugCreditsOfTasks};
-use NarModuleNlp;
-use Term::*;
-use TermApi::*;
-use NarSentence::{SentenceDummy, EnumPunctation};
-use Tv::{Tv};
+use crate::Nar::*;
+use crate::NarWorkingCycle::{debugCreditsOfTasks};
+use crate::NarModuleNlp;
+use crate::Term::*;
+use crate::TermApi::*;
+use crate::NarSentence::{SentenceDummy, EnumPunctation};
+use crate::Tv::{Tv};
 
 pub fn runInteractive(nar:&mut Nar) {
-    let mut repeatLastInput = true; // repeat command by just pressing enter with empty input?
+    let repeatLastInput = true; // repeat command by just pressing enter with empty input?
 
     let mut lastInput = "".to_string(); // used to repeat command by just pressing enter with empty input
     loop {

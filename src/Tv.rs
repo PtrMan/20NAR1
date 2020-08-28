@@ -25,7 +25,7 @@ pub fn rev(a:&Tv,b:&Tv)->Tv {
 
 pub fn comp(a:&Tv,b:&Tv)->Tv {
     let f0 = or(a.f, b.f);
-    let f = if (f0 == 0.0) {0.0} else { (a.f*b.f) / f0 };
+    let f = if f0 == 0.0 {0.0} else { (a.f*b.f) / f0 };
     let c = w2c(f0 * a.c * b.c);
     Tv{f:f,c:c}
 }

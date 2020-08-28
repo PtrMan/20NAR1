@@ -5,13 +5,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use Nar::*;
-use Term::*;
-use TermApi::*;
-use NarWorkingCycle::{Task2, debugCreditsOfTasks, QHandler};
-use Tv::*;
-use NarStamp::newStamp;
-use NarSentence::{SentenceDummy, EnumPunctation, Evidence};
+use crate::Nar::*;
+use crate::Term::*;
+use crate::TermApi::*;
+use crate::NarWorkingCycle::{Task2, debugCreditsOfTasks, QHandler};
+use crate::Tv::*;
+use crate::NarStamp::newStamp;
+use crate::NarSentence::{SentenceDummy, EnumPunctation, Evidence};
 
 pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     *isQuestion = false;
@@ -163,7 +163,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
 
     // ask question directly
-    let mut answerHandler0:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandler0:NlpAnswerHandler = NlpAnswerHandler{answer:None};
     let answerHandlerRef0 = Rc::new(RefCell::new(answerHandler0));
     let rc0 = Rc::clone(&answerHandlerRef0);
     {
@@ -184,7 +184,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
         }));
     }
 
-    let mut answerHandler1:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandler1:NlpAnswerHandler = NlpAnswerHandler{answer:None};
     let answerHandlerRef1 = Rc::new(RefCell::new(answerHandler1));
     let rc1 = Rc::clone(&answerHandlerRef1);
     {
@@ -205,7 +205,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
         }));
     }
 
-    let mut answerHandler2:NlpAnswerHandler = NlpAnswerHandler{answer:None};
+    let answerHandler2:NlpAnswerHandler = NlpAnswerHandler{answer:None};
     let answerHandlerRef2 = Rc::new(RefCell::new(answerHandler2));
     let rc2 = Rc::clone(&answerHandlerRef2);
     {
@@ -226,7 +226,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
         }));
     }
 
-    for iCycle_ in 0..300 { // give worker NAR time to reason
+    for _iCycle_ in 0..300 { // give worker NAR time to reason
         cycle(&mut workerNar);
     }
 
@@ -256,7 +256,7 @@ struct NlpAnswerHandler {
 }
 
 impl QHandler for NlpAnswerHandler {
-    fn answer(&mut self, question:&Term, answer:&SentenceDummy) {
+    fn answer(&mut self, _question:&Term, answer:&SentenceDummy) {
         self.answer = Some(answer.clone());
     }
 }

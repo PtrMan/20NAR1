@@ -2,6 +2,7 @@
 name = "nar20_1"
 version = "0.0.1"
 authors = ["x"]
+edition = "2018"
 
 [dependencies]
 rand = "0.7.3"

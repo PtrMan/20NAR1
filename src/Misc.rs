@@ -1,4 +1,4 @@
-use ::map2d::{Map2d,readAt};
+use crate::map2d::{Map2d,readAt};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Vec2{
