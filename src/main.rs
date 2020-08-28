@@ -40,7 +40,7 @@ mod NarInteractive;
 mod Nar;
 
 mod NarModuleNlp;
-//mod NarServer;
+mod NarServer;
 
 //mod narPerception; // not include because file has issues
 
@@ -67,7 +67,7 @@ pub fn main() {
         reasoner0Entry();
     }
     else if runEnv == "srv" { // run server
-        //NarServer::run();
+        NarServer::run();
     }
 }
 
