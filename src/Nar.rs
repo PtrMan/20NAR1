@@ -7,18 +7,25 @@ use crate::NarWorkingCycle::*;
 
 pub struct Nar {
     pub mem:Mem2, // actual (declarative) memory
+
+    pub cfgVerbosityInput:i32, // verbosity of input
 }
 
 pub fn createNar() -> Nar {
-    Nar{mem:createMem2()}
+    Nar{
+        mem:createMem2(),
+        cfgVerbosityInput:1, // enable verbose input by default
+    }
 }
 
 pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
-    println!("[v] input {}", convTermToStr(term));
-
     let stamp = newStamp(&vec![nar.mem.stampIdCounter]);
     nar.mem.stampIdCounter+=1;
     let sentence = newEternalSentenceByTv(&term,punct,&tv,stamp);
+
+    if nar.cfgVerbosityInput >= 1 {
+        println!("[v] input {}", convSentenceTermPunctToStr(&sentence, true));
+    }
 
     memAddTask(&mut nar.mem, &sentence, true);
 }
