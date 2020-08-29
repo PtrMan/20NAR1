@@ -42,6 +42,7 @@ mod Nar;
 mod NarModuleNlp;
 mod NarServer;
 mod NarInputFacade;
+mod NarUtilReadn;
 
 //mod narPerception; // not include because file has issues
 
@@ -61,6 +62,14 @@ pub fn main() {
 
     if runEnv == "it" { // run interactive
         let mut nar = Nar::createNar();
+
+        for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
+            let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
+            
+            use crate::NarUtilReadn;
+            NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
+        }
+
         NarInteractive::runInteractive(&mut nar);
     }
     else if runEnv == "env" { // run environment
