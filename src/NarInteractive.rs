@@ -111,7 +111,8 @@ pub fn runInteractive(nar:&mut Nar) {
                                         match prod222 {
                                             Term::Name(name) if name == "is" => { // we ave special case for is relation, translate to inheritance
                                                 // translate to inheritance
-                                                inputT(nar, &s(Copula::INH, &prod0, &prod1), punct, &Tv{f:1.0,c:0.9});
+                                                // subj is always a SetInt
+                                                inputT(nar, &s(Copula::INH, &prod0, &Term::SetInt(vec![Box::new(prod1)])), punct, &Tv{f:1.0,c:0.9});
                                             },
                                             _ => {
                                                 // pass on to NAR

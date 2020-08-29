@@ -169,7 +169,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     {
         let sentence = SentenceDummy {
             term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relGENERIC".to_string())) ),
-            t:None, // time of occurence 
+            t:None, // time of occurence
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
             evi:None,
