@@ -1,0 +1,4 @@
+// check if NLP "in" relation is working
+
+!.nlp cat in box
+//expectTv <( cat * box ) --> in>. {1 0.9}
