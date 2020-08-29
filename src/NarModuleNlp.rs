@@ -38,7 +38,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
                 idx+=2;
             }
-            else if tokens[idx] == "is" || tokens[idx] == "can" {
+            else if tokens[idx] == "is" || tokens[idx] == "can" || tokens[idx] == "in" {
                 if tokens[idx] == "is" {
                     let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKEN".to_string() + tokens[idx]));
                     inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
