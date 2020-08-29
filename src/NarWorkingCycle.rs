@@ -719,12 +719,12 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
 }
 
 
-
+// see https://cis.temple.edu/~pwang/Writing/NAL-Specification.pdf?page=42
 // a ==> x.
 // unify a.
-// |-
+// |- ded
 // x.
-pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, _bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -734,8 +734,7 @@ pub fn inf6(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
             let unifyRes = unify(asubj, &b);
             if unifyRes.is_some() { // vars must unify
                 let subst = unifySubst(&apred, &unifyRes.unwrap()); // substitute vars
-                println!("TODO - compute TV correctly!");
-                return Some((subst,aTv.as_ref().unwrap().clone()));
+                return Some((subst,ded(&aTv.as_ref().unwrap(), &bTv.as_ref().unwrap())));
             };
             None
         },
@@ -797,7 +796,7 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term
     match inf5(&a, aPunct, &aTv, &b, bPunct, &bTv, 3) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
-    match inf6(&a, aPunct, &aTv, &b, bPunct, &bTv) {
+    match infImplDed(&a, aPunct, &aTv, &b, bPunct, &bTv) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf7(&a, aPunct, &aTv, &b, bPunct, &bTv) {
