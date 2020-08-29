@@ -1542,7 +1542,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 Some(arcConcept) => {
                     match Arc::get_mut(arcConcept) {
                         Some(concept) => {
-                            println!("sample concept TODODEBUGHERE<debug name of concept>");
+                            println!("sample concept {}", convTermToStr(&*concept.name));
 
                             let processAllBeliefs:bool = true; // does the deriver process all beliefs?
                             let processSampledBelief:bool = false; // does it just sample one belief?
