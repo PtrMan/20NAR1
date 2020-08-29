@@ -399,6 +399,16 @@ fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
   }
 
   {
+    let res0 = parseIntInt2(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
     let res0 = c(input);
     match res0 {
       Ok(term) => {
