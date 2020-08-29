@@ -96,6 +96,16 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
 
 
+    
+    // ex: a frog can jump
+    //<{($0*0)} --> a2>
+    //<{($rel*2)} --> rel2>
+    //<{($1*3)} --> TOKEN>
+    //==>
+    //<{($0*$1*$rel)} --> relGENERIC>
+    inputN(&mut workerNar, &"<(<{($0*0)} --> a2>&&<{($rel*2)} --> rel2>&&<{($1*3)} --> TOKEN>) ==> <{($0*$1*$rel)} --> relGENERIC>>. {1.0 0.998}".to_string());
+
+
 
 
     // ex: tom is fat
