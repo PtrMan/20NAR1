@@ -1028,7 +1028,7 @@ pub struct Task {
 
 // compute "real" credit of task by insertion based time decay
 pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
-    let decayFactor:f64 = 0.0; // how fast does it decay?
+    let decayFactor:f64 = 0.001; // how fast does it decay?
     
     let dt:i64 = cycleCounter - task.derivTime;
     let decayFactor:f64 = (-decayFactor * (dt as f64)).exp();
