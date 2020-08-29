@@ -41,6 +41,7 @@ mod Nar;
 
 mod NarModuleNlp;
 mod NarServer;
+mod NarInputFacade;
 
 //mod narPerception; // not include because file has issues
 
