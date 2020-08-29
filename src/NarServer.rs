@@ -12,6 +12,7 @@ use std::sync::mpsc::Sender;
 use std::thread;
 
 use crate::Nar::*;
+use crate::NarInputFacade;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -51,7 +52,8 @@ pub fn run() {
 
         while true {
             let received:String = rx.recv().unwrap();
-            inputN(&mut nar, &received);
+            let mut quit = false;
+            NarInputFacade::input(&mut nar, &received, &mut quit);
         }
     });
     
