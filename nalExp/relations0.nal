@@ -1,0 +1,10 @@
+// relations for testing NAR
+
+<(a*c) --> x>.
+<(b*c) --> x>.
+<(d*a) --> x>.
+<(d*c) --> x>.
+
+!.nlp tom is fat
+!.nlp tim is expensive
+!.nlp tim is fat
