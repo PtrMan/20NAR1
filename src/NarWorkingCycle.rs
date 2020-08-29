@@ -1580,8 +1580,6 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     // put conclusions back into memory!
     {
-        println!("TODO TODO TODO - put conclusions back into memory the right way");
-        
         // Q&A - answer questions
         {
             for iConcl in &concl {
