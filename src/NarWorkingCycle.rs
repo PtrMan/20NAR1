@@ -193,7 +193,7 @@ pub fn infStructImg1(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
 
 
 // a --> x.  x --> b.  |- a --> b.
-pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -203,7 +203,7 @@ pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
             match b {
                 Term::Stmt(Copula::INH, bsubj, bpred) => {
                     if !checkEqTerm(&asubj, &bpred) && checkEqTerm(&apred, &bsubj) {
-                        return Some(( Term::Stmt(Copula::INH, Box::clone(asubj), Box::clone(bpred)), ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()) )); // a.subj --> b.pred
+                        return Some(( Term::Stmt(Copula::INH, Box::clone(asubj), Box::clone(bpred)), ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT)); // a.subj --> b.pred
                     }
                 },
                 _ => {},
@@ -216,7 +216,7 @@ pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
 
 
 // a --> x.  a --> y.  |- x <-> y.
-pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -226,7 +226,7 @@ pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
             match b {
                 Term::Stmt(Copula::INH, bsubj, bpred) => {
                     if !checkEqTerm(&apred, &bpred) && checkEqTerm(&asubj, &bsubj) {
-                        return Some(( Term::Stmt(Copula::SIM, Box::clone(apred), Box::clone(bpred)), comp(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()) )); // a.subj --> b.pred
+                        return Some(( Term::Stmt(Copula::SIM, Box::clone(apred), Box::clone(bpred)), comp(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT)); // a.subj --> b.pred
                     }
                 },
                 _ => {},
@@ -239,7 +239,7 @@ pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
 
 
 // x --> a.  y --> a.  |- x <-> y.
-pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -249,7 +249,7 @@ pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
             match b {
                 Term::Stmt(Copula::INH, bsubj, bpred) => {
                     if !checkEqTerm(&asubj, &bsubj) && checkEqTerm(&apred, &bpred) {
-                        return Some(( Term::Stmt(Copula::SIM, Box::clone(asubj), Box::clone(bsubj)), comp(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()) )); // a.subj --> b.pred
+                        return Some(( Term::Stmt(Copula::SIM, Box::clone(asubj), Box::clone(bsubj)), comp(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT)); // a.subj --> b.pred
                     }
                 },
                 _ => {},
@@ -262,7 +262,7 @@ pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
 
 
 // x --> [a].  x --> [b].  |- x --> [a b].
-pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -287,7 +287,7 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
                                         let resTerm = Term::SetInt(union_);
                                         
                                         println!("TODO - compute tv");
-                                        return Some((Term::Stmt(Copula::INH, Box::clone(asubj), Box::new(resTerm)), aTv.as_ref().unwrap().clone()));
+                                        return Some((Term::Stmt(Copula::INH, Box::clone(asubj), Box::new(resTerm)), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
                                     }
                                     
                                 },
@@ -309,7 +309,7 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
 
 
 // {a} --> x.  {b} --> x.  |- {a b} --> x.
-pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Option<Tv>, _b: &Term, _punctB:EnumPunctation, _bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Option<Tv>, _b: &Term, _punctB:EnumPunctation, _bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     return None; // is disabled because it violates AIKR to some degree!
     /*
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -358,7 +358,7 @@ pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Option<Tv>, _b: &Term, _pun
 }
 
 // a ==> x.  x ==> b.  |- a ==> b.
-pub fn inf1(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn inf1(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -368,7 +368,7 @@ pub fn inf1(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
             match b {
                 Term::Stmt(Copula::IMPL, bsubj, bpred) => {
                     if checkEqTerm(&apred, &bsubj) && !checkEqTerm(&asubj, &bpred) {
-                        return Some((Term::Stmt(Copula::IMPL, Box::clone(asubj), Box::clone(bpred)), ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap())));
+                        return Some((Term::Stmt(Copula::IMPL, Box::clone(asubj), Box::clone(bpred)), ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
                     }
                 },
                 _ => {},
@@ -674,7 +674,7 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
 // unify a.
 // |- ded
 // b ==> x.
-pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>, conjIdx:usize) -> Option<(Term,Tv)> {
+pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>, conjIdx:usize) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -706,7 +706,7 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
                                 Term::Stmt(Copula::IMPL, Box::new(Term::Conj(conclConj)), Box::new(substPred)) // build implication with conjunction
                             };
                             
-                            return Some((conclTerm, ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap())));
+                            return Some((conclTerm, ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
                         }
                     }
                 },
@@ -724,7 +724,7 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
 // unify a.
 // |- ded
 // x.
-pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv)> {
+pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -734,7 +734,7 @@ pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, pu
             let unifyRes = unify(asubj, &b);
             if unifyRes.is_some() { // vars must unify
                 let subst = unifySubst(&apred, &unifyRes.unwrap()); // substitute vars
-                return Some((subst,ded(&aTv.as_ref().unwrap(), &bTv.as_ref().unwrap())));
+                return Some((subst,ded(&aTv.as_ref().unwrap(), &bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
             };
             None
         },
@@ -747,7 +747,7 @@ pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, pu
 // unify x.
 // |-
 // a ==> x.
-pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term, Tv)> {
+pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punctA != EnumPunctation::QUESTION || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -758,7 +758,7 @@ pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:
             if unifyRes.is_some() { // vars must unify
                 let subst = unifySubst(&a, &unifyRes.unwrap()); // substitute vars
                 println!("TODO - compute TV correctly!");
-                return Some((subst,bTv.as_ref().unwrap().clone()));
+                return Some((subst,bTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
             };
             None
         },
@@ -769,7 +769,7 @@ pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:
 
 
 // do binary inference
-pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv)> {
+pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
     
     match inf0(&a, aPunct, &aTv, &b, bPunct, &bTv) {
@@ -813,7 +813,7 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term
 }
 
 // do binary inference
-pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv)> {
+pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
     *wereRulesApplied = false; // because no rules were applied yet
     res.extend(infBinaryInner(&a, aPunct, &aTv, &b, bPunct, &bTv, wereRulesApplied).iter().cloned());
@@ -907,7 +907,7 @@ mod tests {
         let mut wereRulesApplied = false;
         let infConcl = infBinary(&impl0, EnumPunctation::QUESTION, &None, &inh2, EnumPunctation::JUGEMENT, &Some(Tv{f:1.0,c:0.9}), &mut wereRulesApplied);
         for iInfConcl in infConcl {
-            let (conclTerm, _conclTv) = iInfConcl;
+            let (conclTerm, _conclTv, _punct) = iInfConcl;
             let conclTermStr = convTermToStr(&conclTerm);
             println!("{}", &conclTermStr);
             if conclTermStr == "<<a --> b> ==> <c --> d>>" {
@@ -952,7 +952,7 @@ mod tests {
         let mut wereRulesApplied = false;
         let infConcl = infBinary(&impl0, EnumPunctation::JUGEMENT, &Some(Tv{f:1.0,c:0.9}), &inh1, EnumPunctation::JUGEMENT, &Some(Tv{f:1.0,c:0.9}), &mut wereRulesApplied);
         for iInfConcl in infConcl {
-            let (conclTerm, _conclTv) = iInfConcl;
+            let (conclTerm, _conclTv, _punct) = iInfConcl;
             let conclTermStr = convTermToStr(&conclTerm);
             println!("{}", &conclTermStr);
             if conclTermStr == "<<c --> d> ==> x>" {
@@ -976,15 +976,13 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
 
     let infConcl = infBinary(&pa.term, pa.punct, &retTv(&pa), &pb.term, pb.punct, &retTv(&pb), wereRulesApplied);
     for iInfConcl in infConcl {
-        let (term, tv) = iInfConcl;
-        
-        println!("TODO - infBinary must compute the punctation!");
+        let (term, tv, punct) = iInfConcl;
         concl.push(SentenceDummy{
             term:Rc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
             stamp:merge(&pa.stamp, &pb.stamp),
             t:None, // time of occurence 
-            punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
+            punct:punct,
             expDt:None
         });
     }
