@@ -172,7 +172,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
-            evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+            evi:None,
             expDt:None
         };
 
@@ -193,7 +193,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
-            evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+            evi:None,
             expDt:None
         };
 
@@ -214,7 +214,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
-            evi:Evidence::TV(Tv{f:1.0,c:0.9}),
+            evi:None,
             expDt:None
         };
 

@@ -112,9 +112,9 @@ pub fn narStep0(nar:&mut Nar) {
             for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= nar.t) {
                 let mut mutEvi = (*iDeadlineViolated).evi.borrow_mut();
                 
-                match mutEvi.evi {
+                match mutEvi.evi.as_ref().unwrap() {
                     Evidence::CNT{pos,cnt} => {
-                        mutEvi.evi = Evidence::CNT{pos:pos,cnt:cnt+1}; // add negative evidence
+                        mutEvi.evi = Some(Evidence::CNT{pos:*pos,cnt:cnt+1}); // add negative evidence
                     },
                     _ => {panic!("expected CNT!");}
                 }
@@ -222,9 +222,9 @@ pub fn narStep0(nar:&mut Nar) {
                                             checkEqTerm(&retPred(&iEE.term), &e2.name)
                                         {
                                             iEE.stamp = merge(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi)));
-                                            match iEE.evi {
+                                            match iEE.evi.as_ref().unwrap() {
                                                 Evidence::CNT{pos,cnt} => {
-                                                    iEE.evi = Evidence::CNT{pos:pos+1,cnt:cnt+1}; // bump positive counter
+                                                    iEE.evi = Some(Evidence::CNT{pos:pos+1,cnt:cnt+1}); // bump positive counter
                                                 },
                                                 _ => {panic!("expected CNT!");}
                                             }
@@ -245,7 +245,7 @@ pub fn narStep0(nar:&mut Nar) {
                                     stamp:newStamp(&vec!(e0.evi,e1.evi,e2.evi)),
                                     expDt:Some(expDt),
                                     term:Rc::new(s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone())), // (e0 &/ e1) =/> e2
-                                    evi:Evidence::CNT{pos:1,cnt:1}
+                                    evi:Some(Evidence::CNT{pos:1,cnt:1})
                                 })));
                             }
                         }
@@ -290,7 +290,7 @@ pub fn narStep1(nar:&mut Nar) {
                         // TODO< don't hardcode goal!!! >
                         if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && convTermToStr(& retPred(& iEE.term) ) == "0-1-xc" { // does it fullfil goal?
 
-                            let exp = calcExp(&retTv(&iEE));
+                            let exp = calcExp(&retTv(&iEE).unwrap());
                             if exp > pickedExp {
                                 pickedExp = exp;
                                 pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});

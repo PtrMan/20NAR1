@@ -195,7 +195,8 @@ pub fn reasoner0Entry() {
     for iEvi in &nar.evidence {
         let implSeqAsStr = convTermToStr(& (*iEvi).borrow().term);
 
-        let evi:&Evidence = &(*iEvi).borrow().evi;
+        let eviHelper = (*iEvi).borrow();
+        let evi:&Evidence = &eviHelper.evi.as_ref().unwrap();
         let (pos,cnt) = match evi {
             Evidence::CNT{pos,cnt} => {(pos,cnt)},
             _ => {panic!("expected CNT");}
