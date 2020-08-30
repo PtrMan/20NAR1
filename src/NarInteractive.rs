@@ -27,7 +27,11 @@ pub fn runInteractive(nar:&mut Nar) {
                 println!("{}", input);
 
                 let mut quit = false;
-                NarInputFacade::input(nar, &input, &mut quit);
+                let resLines: Vec<String> = NarInputFacade::input(nar, &input, &mut quit);
+                for iLine in &resLines {
+                    println!("{}", iLine);
+                }
+                
                 if quit {
                     break;
                 }

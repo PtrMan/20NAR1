@@ -10,7 +10,10 @@ use crate::NarSentence::{SentenceDummy, EnumPunctation};
 use crate::Tv::{Tv};
 
 // /param quit is used to signal if program has to get terminated
-pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) {
+// returns requested information as strings!
+pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
+    let mut retInfo = Vec::new();
+    
     *quit = false;
     
     let mut input = line.clone();
@@ -63,20 +66,20 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) {
                                     _ => {
                                         // term doesn't fit expected structure!
                                         println!("W term from NLP isn't recognized 2!");
-                                        return;
+                                        return retInfo;
                                     }
                                 }
                             }
                             else {
                                 // term doesn't fit expected structure!
                                 println!("W term from NLP isn't recognized 3!");
-                                return;
+                                return retInfo;
                             }
                         },
                         _ => {
                             // term doesn't fit expected structure!
                             println!("W term from NLP isn't recognized 1!");
-                            return;
+                            return retInfo;
                         }
                     }
 
@@ -116,7 +119,7 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) {
                         _ => {
                             // term doesn't fit expected structure!
                             println!("W term from NLP isn't recognized!");
-                            return;
+                            return retInfo;
                         }
                     }
                 },
@@ -128,11 +131,11 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) {
         }
     }
     else if input == "!dt" { // debug tasks
-        debugCreditsOfTasks(&nar.mem);
+        return debugCreditsOfTasks(&nar.mem);
     }
     else if input == "!dmd" { // debug memory declarative
         // TODO< put into function and call it here >
-        println!("concept count = {}", nar.mem.mem.borrow().concepts.len());
+        return vec![format!("concept count = {}", nar.mem.mem.borrow().concepts.len())];
     }
     else if input == "!QQ" { // quit
         *quit = true;
@@ -140,6 +143,8 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) {
     else {
         inputN(nar, &input);
     }
+
+    retInfo
 }
 
 fn trimNewline(s: &mut String) {

@@ -53,7 +53,11 @@ pub fn run() {
         while true {
             let received:String = rx.recv().unwrap();
             let mut quit = false;
-            NarInputFacade::input(&mut nar, &received, &mut quit);
+            let resLines: Vec<String> = NarInputFacade::input(&mut nar, &received, &mut quit);
+            for iLine in &resLines {
+                // TODO< broadcast to all clients! >
+                println!("{}", iLine);
+            }
         }
     });
     

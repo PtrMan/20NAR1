@@ -1722,10 +1722,14 @@ pub fn expNarsWorkingCycle0() {
 
     reasonCycle(&mut mem);
 
-    debugCreditsOfTasks(&mut mem);
+    for iLine in &debugCreditsOfTasks(&mut mem) {
+        println!("{}", iLine);
+    }
 }
 
-pub fn debugCreditsOfTasks(mem: &Mem2) {
+pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
+    let mut res = Vec::new();
+    
     // debug credit of tasks
     {
         for iTask in &mem.judgementTasks {
@@ -1738,9 +1742,11 @@ pub fn debugCreditsOfTasks(mem: &Mem2) {
                 taskAsStr = format!("{} {}", taskAsStr, NarStamp::convToStr(&iTask.borrow().sentence.stamp));
             }
 
-            println!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.borrow(), mem.cycleCounter));
+            res.push(format!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.borrow(), mem.cycleCounter)));
         }
     }
+
+    res
 }
 
 

@@ -241,7 +241,9 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     }
 
     // for debugging
-    debugCreditsOfTasks(&workerNar.mem);
+    for iLine in &debugCreditsOfTasks(&workerNar.mem) {
+        println!("{}", iLine);
+    }
 
     // return answer of question
     
