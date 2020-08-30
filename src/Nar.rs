@@ -4,8 +4,11 @@ use crate::NarseseParser::parseNarsese;
 use crate::NarSentence::*;
 use crate::NarStamp::*;
 use crate::NarWorkingCycle::*;
+use crate::Nars;
 
 pub struct Nar {
+    pub procNar:Nars::ProcNar, // procedural NAR
+
     pub mem:Mem2, // actual (declarative) memory
 
     pub cfgVerbosityInput:i32, // verbosity of input
@@ -13,6 +16,7 @@ pub struct Nar {
 
 pub fn createNar() -> Nar {
     Nar{
+        procNar:Nars::narInit(),
         mem:createMem2(),
         cfgVerbosityInput:1, // enable verbose input by default
     }
