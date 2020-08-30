@@ -328,6 +328,18 @@ mod tests {
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
   
+  #[test]
+  pub fn seqPredImpl() {
+    let narsese = "<(a&/b) =/> c>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a &/ b ) =/> c>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
 }
 
 
@@ -390,6 +402,16 @@ fn indepVar(input:&str) -> IResult<&str, Term> {
 fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
   {
     let res0 = a(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = parseSeq2(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -581,6 +603,16 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   }
   
   return copEquiv(input);
+}
+
+
+pub fn parseSeq2(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let (input, _) = tag("&/")(input)?;
+  let (input, b) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, Term::Seq([&a,&b].iter().map(|v| Box::new((*v).clone())).collect())))
 }
 
 pub fn parseIntInt2(input: &str) -> IResult<&str, Term> {
