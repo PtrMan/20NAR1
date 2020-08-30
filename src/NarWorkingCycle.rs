@@ -33,7 +33,11 @@ use crate::NarStamp;
 
 /* commented because not needed
 // a --> b |- b --> a
-pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
+pub fn inf2(a: &Term, punct:EnumPunctation, aTv: &Tv) -> Option<(Term, Tv, EnumPunctation)> {
+    //if punctA != EnumPunctation::JUGEMENT {
+    //    return None;
+    //}
+
     match a {
         Term::Stmt(Copula::INH, asubj, apred) => {
             println!("TODO - compute tv");
@@ -51,14 +55,18 @@ pub fn inf2(a: &Term, aTv: &Tv) -> Option<(Term, Tv)> {
 // a --> X.
 // a --> Y.
 // ...
-pub fn infStructPred1(a: &Term, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv)> {
+pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
     match a {
         Term::Stmt(Copula::INH, subj, pred) => {
             match &**pred {
                 Term::IntInt(arr) => {
                     if idx < arr.len() {
                         let concl = Term::Stmt(Copula::INH, Box::clone(subj), Box::clone(&arr[idx]));
-                        return Some((concl,aTv.as_ref().unwrap().clone()));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
                     }
                 },
                 _ => {}
@@ -75,14 +83,18 @@ pub fn infStructPred1(a: &Term, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv
 // X --> a.
 // Y --> a.
 // ...
-pub fn infStructSubj1(a: &Term, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv)> {
+pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
     match a {
         Term::Stmt(Copula::INH, subj, pred) => {
             match &**subj {
                 Term::IntInt(arr) => {
                     if idx < arr.len() {
                         let concl = Term::Stmt(Copula::INH, Box::clone(&arr[idx]), Box::clone(pred));
-                        return Some((concl,aTv.as_ref().unwrap().clone()));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
                     }
                 },
                 _ => {}
@@ -99,7 +111,11 @@ pub fn infStructSubj1(a: &Term, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv
 // |-
 // <X --> (rel /1 Y)>.
 // <Y --> (rel /2 X)>.
-pub fn infStructProd0(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
+pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
     match a {
         Term::Stmt(Copula::INH, prod, pred) => {
             match &**prod {
@@ -108,7 +124,7 @@ pub fn infStructProd0(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
                     let prod1 = &arr[1];
 
                     let concl = Term::Stmt(Copula::INH, Box::clone(&prod0), Box::new(Term::Img(Box::clone(pred), 0, vec![Box::clone(&prod1)])));
-                    return Some((concl,aTv.as_ref().unwrap().clone()));
+                    return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
                 },
                 _ => {}
             }
@@ -123,7 +139,11 @@ pub fn infStructProd0(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
 // |-
 // <X --> (rel /1 Y)>.
 // <Y --> (rel /2 X)>.
-pub fn infStructProd1(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
+pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
     match a {
         Term::Stmt(Copula::INH, prod, pred) => {
             match &**prod {
@@ -132,7 +152,7 @@ pub fn infStructProd1(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
                         let prod0 = &arr[0];
                         let prod1 = &arr[1];
                         let concl = Term::Stmt(Copula::INH, Box::clone(&prod1), Box::new(Term::Img(Box::clone(pred), 1, vec![Box::clone(&prod0)])));
-                        return Some((concl,aTv.as_ref().unwrap().clone()));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
                     }
                 },
                 _ => {}
@@ -144,10 +164,14 @@ pub fn infStructProd1(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
 }
 
 // structural
-// <X --> (rel /1 Y)>.
+// <X --> (rel /1 Y)>.?
 // |-
-// (X * Y) --> rel.
-pub fn infStructImg0(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
+// (X * Y) --> rel.?
+pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT && punct != EnumPunctation::QUESTION {
+        return None;
+    }
+
     match a {
         Term::Stmt(Copula::INH, subj, pred) => {
             match &**pred {
@@ -155,7 +179,7 @@ pub fn infStructImg0(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
                     if arr.len() == 1 {
                         let arr0 = &arr[0];
                         let concl = Term::Stmt(Copula::INH, Box::new(Term::Prod(vec![Box::clone(&subj), Box::clone(&arr0)])), Box::clone(&predImg));
-                        return Some((concl,aTv.as_ref().unwrap().clone()));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
                     }
                 },
                 _ => {}
@@ -168,10 +192,14 @@ pub fn infStructImg0(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
 
 
 // structural
-// <Y --> (rel /2 X)>.
+// <Y --> (rel /2 X)>.?
 // |-
-// (X * Y) --> rel.
-pub fn infStructImg1(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
+// (X * Y) --> rel.?
+pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT && punct != EnumPunctation::QUESTION {
+        return None;
+    }
+
     match a {
         Term::Stmt(Copula::INH, subj, pred) => {
             match &**pred {
@@ -179,7 +207,7 @@ pub fn infStructImg1(a: &Term, aTv: &Option<Tv>) -> Option<(Term, Tv)> {
                     if arr.len() == 1 {
                         let arr0 = &arr[0];
                         let concl = Term::Stmt(Copula::INH, Box::new(Term::Prod(vec![Box::clone(&arr0), Box::clone(&subj)])), Box::clone(&predImg));
-                        return Some((concl,aTv.as_ref().unwrap().clone()));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
                     }
                 },
                 _ => {}
@@ -821,39 +849,39 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPu
     res
 }
 
-pub fn infSinglePremise(a: &Term, _aPunct:EnumPunctation, aTv:&Option<Tv>) -> Vec<(Term,Tv)> {
+pub fn infSinglePremise(a: &Term, punct:EnumPunctation, aTv:&Option<Tv>) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
     
-    match infStructSubj1(&a, &aTv, 0) {
+    match infStructSubj1(&a, punct, &aTv, 0) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStructSubj1(&a, &aTv, 1) {
+    match infStructSubj1(&a, punct, &aTv, 1) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStructSubj1(&a, &aTv, 2) {
-        Some(x) => { res.push(x); } _ => {}
-    }
-
-    match infStructPred1(&a, &aTv, 0) {
-        Some(x) => { res.push(x); } _ => {}
-    }
-    match infStructPred1(&a, &aTv, 1) {
-        Some(x) => { res.push(x); } _ => {}
-    }
-    match infStructPred1(&a, &aTv, 2) {
+    match infStructSubj1(&a, punct, &aTv, 2) {
         Some(x) => { res.push(x); } _ => {}
     }
 
-    match infStructProd0(&a, &aTv) {
+    match infStructPred1(&a, punct, &aTv, 0) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStructProd1(&a, &aTv) {
+    match infStructPred1(&a, punct, &aTv, 1) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStructImg0(&a, &aTv) {
+    match infStructPred1(&a, punct, &aTv, 2) {
         Some(x) => { res.push(x); } _ => {}
     }
-    match infStructImg1(&a, &aTv) {
+
+    match infStructProd0(&a, punct, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructProd1(&a, punct, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructImg0(&a, punct, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructImg1(&a, punct, &aTv) {
         Some(x) => { res.push(x); } _ => {}
     }
 
@@ -999,15 +1027,14 @@ pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
 
     let infConcl = infSinglePremise(&pa.term, pa.punct, &retTv(pa));
     for iInfConcl in infConcl {
-        let (term, tv) = iInfConcl;
+        let (term, tv, punct) = iInfConcl;
         
-        println!("TODO - infSinglePremise must compute the punctation!");
         concl.push(SentenceDummy{
             term:Rc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
             stamp:pa.stamp.clone(),
             t:None, // time of occurence 
-            punct:EnumPunctation::JUGEMENT, // BUG - we need to compute punctation in inference
+            punct:punct,
             expDt:None
         });
     }
