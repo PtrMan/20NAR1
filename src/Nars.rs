@@ -289,16 +289,19 @@ pub fn narStep1(nar:&mut ProcNar) {
                 for perceptIdx in 0..nar.cfgPerceptWindow as usize {
                     if nar.trace.len() > perceptIdx {
 
-                        
-                        // TODO< don't hardcode goal!!! >
-                        if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && convTermToStr(& retPred(& iEE.term) ) == "0-1-xc" { // does it fullfil goal?
+                        // check if it did "hit" goal
+                        for iGoal in &nar.goals {
+                            // OLD code for goal check was convTermToStr(& retPred(& iEE.term) ) == "0-1-xc"
+                            if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && checkEqTerm(&retPred(& iEE.term), &iGoal.term) { // does it fullfil goal?
 
-                            let exp = calcExp(&retTv(&iEE).unwrap());
-                            if exp > pickedExp {
-                                pickedExp = exp;
-                                pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
+                                let exp = calcExp(&retTv(&iEE).unwrap());
+                                if exp > pickedExp {
+                                    pickedExp = exp;
+                                    pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
+                                }
                             }
                         }
+
                     }
                 }
             }
