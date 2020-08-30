@@ -38,6 +38,8 @@ pub struct ProcNar {
 
     pub t:i64, // NAR time
 
+    pub goals: Vec<SentenceDummy>,
+
 
     pub rng: rand::rngs::ThreadRng,
 
@@ -57,6 +59,7 @@ pub fn narInit() -> ProcNar {
         anticipatedEvents: Vec::new(),
         ops: Vec::new(),
         t: 0,
+        goals: Vec::new(),
 
         rng: rand::thread_rng(),
 
