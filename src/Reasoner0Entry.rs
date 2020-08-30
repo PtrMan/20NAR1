@@ -17,7 +17,7 @@ pub fn reasoner0Entry() {
     let maxT:Option<i64> = Some(700);
 
 
-    let mut nar:Nars::Nar = Nars::narInit();
+    let mut nar:Nars::ProcNar = Nars::narInit();
     
     let mut rng = rand::thread_rng();
 

@@ -21,8 +21,8 @@ use crate::TermApi::*;
 
 // DONE< compute anticipation deadline by exponential interval thingy >
 
-// contains all necessary variables of a NAR
-pub struct Nar {
+// contains all necessary variables of a procedural NAR
+pub struct ProcNar {
     pub cfgIntervalExpBase:f64, // base for the exponential intervals
     pub cfgIntervalMax:i64, // maximal interval time
 
@@ -46,8 +46,8 @@ pub struct Nar {
 }
 
 // init and set to default values
-pub fn narInit() -> Nar {
-    let mut nar = Nar {
+pub fn narInit() -> ProcNar {
+    let mut nar = ProcNar {
         cfgIntervalExpBase: 1.5,
         cfgIntervalMax: 40,
         cfgPerceptWindow: 2,
@@ -86,7 +86,7 @@ pub fn narInit() -> Nar {
 }
 
 // does one reasoner step
-pub fn narStep0(nar:&mut Nar) {
+pub fn narStep0(nar:&mut ProcNar) {
     println!("ae# = {}", nar.anticipatedEvents.len()); // debug number of anticipated events
     
     // remove confirmed anticipations
@@ -259,7 +259,7 @@ pub fn narStep0(nar:&mut Nar) {
     
 }
 
-pub fn narStep1(nar:&mut Nar) {    
+pub fn narStep1(nar:&mut ProcNar) {    
     let mut pickedAction:Option<Term> = None;
     
     
