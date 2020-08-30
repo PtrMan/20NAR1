@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::Tv::*;
 use crate::Term::*;
 use crate::NarseseParser::parseNarsese;
@@ -22,7 +25,7 @@ pub fn createNar() -> Nar {
     }
 }
 
-pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
+pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {    
     let stamp = newStamp(&vec![nar.mem.stampIdCounter]);
     nar.mem.stampIdCounter+=1;
     let sentence = newEternalSentenceByTv(&term,punct,&tv,stamp);
@@ -31,7 +34,19 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
         println!("[v] input {}", convSentenceTermPunctToStr(&sentence, true));
     }
 
-    memAddTask(&mut nar.mem, &sentence, true);
+    // compute if the term is a temporal term
+    let isTemporal = match term {
+        Term::Stmt(Copula::PREDIMPL, _, _) => {true},
+        _ => {false}
+    };
+
+    if isTemporal {
+        // add to temporal knowledge
+        nar.procNar.evidence.push(Rc::new(RefCell::new(sentence)));
+    }
+    else {
+        memAddTask(&mut nar.mem, &sentence, true);
+    }
 }
 
 // input narsese
