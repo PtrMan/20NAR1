@@ -45,7 +45,13 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
         nar.procNar.evidence.push(Rc::new(RefCell::new(sentence)));
     }
     else {
-        memAddTask(&mut nar.mem, &sentence, true);
+        if punct == EnumPunctation::GOAL {
+            // add to goals
+            nar.procNar.goals.push(sentence);
+        }
+        else {
+            memAddTask(&mut nar.mem, &sentence, true);
+        }
     }
 }
 
