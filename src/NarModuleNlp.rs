@@ -25,6 +25,16 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
     let mut workerNar = createNar();
 
+    let mut relationWords = Vec::new(); // words which describe relations and thus have a special meaning
+    // TODO< load relation words from file >
+    relationWords.push("is");
+    relationWords.push("can");
+    relationWords.push("in");
+    relationWords.push("of");
+
+    relationWords.push("need");
+
+
     // convert tokens to inheritance representation and feed into NAR
     {
         let mut idx:usize = 0;
@@ -38,7 +48,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
                 idx+=2;
             }
-            else if tokens[idx] == "is" || tokens[idx] == "can" || tokens[idx] == "in" {
+            else if relationWords.contains(&tokens[idx]) {
                 if tokens[idx] == "is" {
                     let term:Term = s(Copula::INH, &Term::SetExt(vec![Box::new(Term::Name(idxAsStr))]), &Term::Name("TOKEN".to_string() + tokens[idx]));
                     inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
