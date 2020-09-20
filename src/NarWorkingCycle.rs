@@ -1661,6 +1661,14 @@ pub fn reasonCycle(mem:&mut Mem2) {
     }
 
 
+    let intervalCheckConcepts = 173;
+    let nConcepts = 10000; // number of concepts
+
+    { // limit number of concepts
+        if mem.cycleCounter % intervalCheckConcepts == 0 {
+            NarMem::limitMemory(&mut mem.mem.borrow_mut(), nConcepts);
+        }
+    }
 }
 
 pub fn createMem2()->Mem2 {
