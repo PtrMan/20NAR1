@@ -21,6 +21,7 @@ pub enum Term {
     Prod(Vec<Box<Term>>), // product
     Img(Box<Term>, usize, Vec<Box<Term>>),// image (rel /idx+1 others)
     IntInt(Vec<Box<Term>>), // | intensional intersection
+    Par(Vec<Box<Term>>), // &| parallel events
 }
 
 impl Clone for Term {
@@ -87,7 +88,14 @@ impl Clone for Term {
                     arr.push(i.clone());
                 }
                 Term::IntInt(arr)
-            }
+            },
+            Term::Par(elements) => {
+                let mut arr = vec![];
+                for i in elements {
+                    arr.push(i.clone());
+                }
+                Term::Par(arr)
+            },
         }
     }
 }
@@ -136,7 +144,12 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
             for i in set {
                 retSubterms2(&i, res);
             }
-        }
+        },
+        Term::Par(elements) => {
+            for i in elements {
+                retSubterms2(&i, res);
+            }
+        },
         _=>{}, // no special handling necessary for "terminal" ones
     }
 }
@@ -230,7 +243,14 @@ pub fn calcComplexity(t:&Term) -> u64 {
                 c+=calcComplexity(i);
             }
             c
-        }
+        },
+        Term::Par(elements) => {
+            let mut c = 0;
+            for i in elements {
+                c+=calcComplexity(i);
+            }
+            c
+        },
     }
 }
 
@@ -301,6 +321,14 @@ pub fn convTermToStr(t:&Term) -> String {
             }
             format!("( {} )", inner)
         },
+        Term::Par(seq) => {
+            let mut inner = convTermToStr(&seq[0]);
+            for i in 1..seq.len() {
+                inner = format!("{} &| {}", inner, convTermToStr(&seq[i]));
+            }
+            format!("( {} )", inner)
+        },
+        
     }
 }
 
@@ -429,6 +457,20 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
                     if seta.len() == setb.len() {
                         for idx in 0..seta.len() {
                             if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::Par(elementsa) => {
+            match b {
+                Term::Par(elementsb) => {
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !checkEqTerm(&elementsa[idx], &elementsb[idx]) {return false};
                         }
                         true
                     }

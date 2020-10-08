@@ -582,6 +582,20 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
                 _ => false
             }
         },
+        Term::Par(elementsa) => {
+            match b2 {
+                Term::Par(elementsb) => {
+                    if elementsa.len() == elementsb.len() {
+                        for idx in 0..elementsa.len() {
+                            if !unify2(&elementsa[idx], &elementsb[idx], assignments) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
     }
 }
 
@@ -693,6 +707,13 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
                 arr.push(Box::new(unifySubst(i, subst)));
             }
             Term::IntInt(arr)
+        },
+        Term::Par(subterms) => {
+            let mut arr = vec![];
+            for i in subterms {
+                arr.push(Box::new(unifySubst(i, subst)));
+            }
+            Term::Par(arr)
         },
     }
 }
