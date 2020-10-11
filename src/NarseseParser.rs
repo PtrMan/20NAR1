@@ -340,6 +340,19 @@ mod tests {
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
+
+
+  // goal without temporal and TV
+  #[test]
+  pub fn goalWithoutTv() {
+    let narsese = "a-c!".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "a-c");
+    assert_eq!(punct, EnumPunctation::GOAL);
+  }
 }
 
 
@@ -348,13 +361,13 @@ fn ok1(input: &str) -> Result<&str, std::num::ParseIntError> {
   Ok(input)
 }
 
-fn is_alphanumeric2(c: char) -> bool {
-  c.is_alphanumeric()
+fn isValidSign(c: char) -> bool {
+  c.is_alphanumeric() || c == '-'
 }
 
 fn alpha2(input: &str) -> IResult<&str, &str> {
   map_res(
-    take_while_m_n(1, 512, is_alphanumeric2),
+    take_while_m_n(1, 512, isValidSign),
     ok1
   )(input)
 }
@@ -734,5 +747,5 @@ pub fn parseStatement(input: &str) -> IResult<&str, Term> {
 }
 
 pub fn parseEntry(input: &str) -> IResult<&str, Term> {
-  parseStatement(input) // must be statement
+  parseSubjOrPred(input, true) // can be statement or single term etc.
 }

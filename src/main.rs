@@ -15,7 +15,9 @@ use rand::distributions::{Normal, Distribution};
 //use rand_distr::Normal;
 
 mod Reasoner0Entry;
-use crate::Reasoner0Entry::{reasoner0Entry};
+//use crate::Reasoner0Entry::{reasoner0Entry}; not used because it is not a real pong environment
+mod Reasoner1Entry;
+use crate::Reasoner1Entry::{reasoner1Entry};
 mod map2d;
 mod ad;
 mod mlutils;
@@ -43,6 +45,7 @@ mod NarModuleNlp;
 mod NarServer;
 mod NarInputFacade;
 mod NarUtilReadn;
+mod NarGoalSystem;
 
 //mod narPerception; // not include because file has issues
 
@@ -72,9 +75,9 @@ pub fn main() {
 
         NarInteractive::runInteractive(&mut nar);
     }
-    else if runEnv == "env" { // run environment
-        // jump to reasoner
-        reasoner0Entry();
+    else if runEnv == "pong3" { // run environment
+        // jump to environment test
+        reasoner1Entry();
     }
     else if runEnv == "srv" { // run server
         NarServer::run();

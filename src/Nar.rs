@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::Tv::*;
 use crate::Term::*;
@@ -8,6 +9,7 @@ use crate::NarSentence::*;
 use crate::NarStamp::*;
 use crate::NarWorkingCycle::*;
 use crate::Nars;
+use crate::NarGoalSystem;
 
 pub struct Nar {
     pub procNar:Nars::ProcNar, // procedural NAR
@@ -47,7 +49,7 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     else {
         if punct == EnumPunctation::GOAL {
             // add to goals
-            nar.procNar.goals.push(sentence);
+            NarGoalSystem::addEntry(&mut nar.procNar.goalSystem, Arc::new(sentence));
         }
         else {
             memAddTask(&mut nar.mem, &sentence, true);
@@ -56,14 +58,17 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
 }
 
 // input narsese
-pub fn inputN(nar:&mut Nar, narsese:&String) {
+// return if narsese was parsed and had no error
+pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
     match parseNarsese(narsese) {
         Some((term, tv, punct)) => {
             inputT(nar, &term, punct, &tv);
+            true
         },
         None => {
             // TODO< handle error correctly by returning a error >
             println!("ERR - couldn't parse!");
+            false
         }
     }
 }

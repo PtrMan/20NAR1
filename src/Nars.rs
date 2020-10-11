@@ -7,6 +7,7 @@ use crate::NarSentence::*;
 use crate::Tv::*;
 use crate::Term::*;
 use crate::TermApi::*;
+use crate::NarGoalSystem;
 
 // DONE< check for events which were anticipated and remove anticipations! >
 // DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
@@ -38,13 +39,13 @@ pub struct ProcNar {
 
     pub t:i64, // NAR time
 
-    pub goals: Vec<SentenceDummy>,
-
 
     pub rng: rand::rngs::ThreadRng,
 
     //table with exponential intervals
     pub expIntervalsTable:Vec<i64>,
+
+    pub goalSystem: NarGoalSystem::GoalSystem,
 }
 
 // init and set to default values
@@ -59,11 +60,12 @@ pub fn narInit() -> ProcNar {
         anticipatedEvents: Vec::new(),
         ops: Vec::new(),
         t: 0,
-        goals: Vec::new(),
 
         rng: rand::thread_rng(),
 
         expIntervalsTable: Vec::new(),
+
+        goalSystem: NarGoalSystem::GoalSystem{entries:Vec::new(), nMaxEntries:20},
     };
 
 
@@ -290,9 +292,9 @@ pub fn narStep1(nar:&mut ProcNar) {
                     if nar.trace.len() > perceptIdx {
 
                         // check if it did "hit" goal
-                        for iGoal in &nar.goals {
+                        for iGoalEntry in &nar.goalSystem.entries {
                             // OLD code for goal check was convTermToStr(& retPred(& iEE.term) ) == "0-1-xc"
-                            if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && checkEqTerm(&retPred(& iEE.term), &iGoal.term) { // does it fullfil goal?
+                            if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && checkEqTerm(&retPred(& iEE.term), &iGoalEntry.sentence.term) { // does it fullfil goal?
 
                                 let exp = calcExp(&retTv(&iEE).unwrap());
                                 if exp > pickedExp {
@@ -363,6 +365,15 @@ pub fn narStep1(nar:&mut ProcNar) {
     // limit trace (AIKR)
     if nar.trace.len() > 20 {
         nar.trace = (&nar.trace[nar.trace.len()-20..]).to_vec();
+    }
+
+
+    // give goal system resources
+    if nar.t % 3 == 0 {
+        let enGoalSystem = false; // DISABLED because we want to test it without deriving goals!
+        if enGoalSystem {
+            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, &nar.evidence, &mut nar.rng);
+        }
     }
     
     nar.t+=1; // increment time of NAR

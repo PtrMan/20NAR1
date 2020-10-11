@@ -5,19 +5,22 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::NarStamp;
+use crate::Tv::*;
 use crate::Term::*;
 use crate::Term::convTermToStr;
 use crate::NarSentence::*;
 use crate::Nars;
+use crate::Nar;
 use crate::AeraishPerceptionComp;
 use crate::AeraishPerceptionComp::{PerceptItem};
 
 pub fn reasoner0Entry() {
     let mut t:i64 = 0; // discrete time
-    let maxT:Option<i64> = Some(700);
+    let maxT:Option<i64> = Some(7000);
 
 
-    let mut nar:Nars::ProcNar = Nars::narInit();
+    let mut nar:Nar::Nar = Nar::createNar();
     
     let mut rng = rand::thread_rng();
 
@@ -31,13 +34,13 @@ pub fn reasoner0Entry() {
     });
     let envPongRc = Rc::new(envPong);
 
-    nar.ops.push(Box::new( OpPong {
+    nar.procNar.ops.push(Box::new( OpPong {
         env: Rc::clone(&envPongRc),
         opDir: 1.0,
         selfName: "^L".to_string(),
     }));
 
-    nar.ops.push(Box::new( OpPong {
+    nar.procNar.ops.push(Box::new( OpPong {
         env: Rc::clone(&envPongRc),
         opDir: -1.0,
         selfName: "^R".to_string(),
@@ -46,6 +49,10 @@ pub fn reasoner0Entry() {
     // current perception of the NAR"channel"
     let mut currentPerceived : Vec< PerceptItem::< ClsnObj > > = Vec::new();
     
+    // add goal
+    Nar::inputN(&mut nar, &"0-1-xc!".to_string());
+    //nar.goals.push(newEternalSentenceByTv(&Term::Name("0-1-xc".to_string()),EnumPunctation::GOAL,&Tv{f:1.0,c:0.98},NarStamp::newStamp(&vec![99999999])));
+
 
     
     loop { // reasoner/modification mainloop
@@ -63,7 +70,7 @@ pub fn reasoner0Entry() {
         let selFocusItem:usize = pickByMass(&[1.0, 0.8], rng.gen_range(0.0, 1.0));
         
         if selFocusItem == 0 { // do we want to spend the time in the NARS reasoning?
-            Nars::narStep0(&mut nar);
+            Nars::narStep0(&mut nar.procNar);
 
             {
                 // build relations between perceived proto-"objects"
@@ -86,37 +93,37 @@ pub fn reasoner0Entry() {
                         
                         if true {
                             if diffX > 1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "r")),evi:nar.t,occT:nar.t});
+                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else if diffX < -1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "l")),evi:nar.t,occT:nar.t});
+                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else {
-                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "c")),evi:nar.t,occT:nar.t});
+                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                         }
 
 
-                        if true { // do we want to handle y events too?
+                        if false { // do we want to handle y events too?
                             if diffY > 1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "r")),evi:nar.t,occT:nar.t});
+                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else if diffY < -1.0 {
-                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "l")),evi:nar.t,occT:nar.t});
+                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else {
-                                nar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "c")),evi:nar.t,occT:nar.t});
+                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                         }
                     }
                 }
             }
     
-            if nar.trace.len() > 0 {
-                println!("{} {}", convTermToStr(&nar.trace[nar.trace.len()-1].name), (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
+            if nar.procNar.trace.len() > 0 {
+                println!("{} {}", convTermToStr(&nar.procNar.trace[nar.procNar.trace.len()-1].name), (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
             }
             
-            Nars::narStep1(&mut nar);
+            Nars::narStep1(&mut nar.procNar);
             
             let mut envPong = (*envPongRc).borrow_mut();
             envPong.batX += envPong.batVelX; //envPongRc.get().batVelX;
@@ -190,19 +197,22 @@ pub fn reasoner0Entry() {
 
     
     // debug all evidence of NAR
-    println!("");
-    println!("EVIDENCE:");
-    for iEvi in &nar.evidence {
-        let implSeqAsStr = convTermToStr(& (*iEvi).borrow().term);
-
-        let eviHelper = (*iEvi).borrow();
-        let evi:&Evidence = &eviHelper.evi.as_ref().unwrap();
-        let (pos,cnt) = match evi {
-            Evidence::CNT{pos,cnt} => {(pos,cnt)},
-            _ => {panic!("expected CNT");}
-        };
-
-        println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt.unwrap(), pos, cnt);
+    let enDbgEvidence:bool = false;
+    if enDbgEvidence {
+        println!("");
+        println!("EVIDENCE:");
+        for iEvi in &nar.procNar.evidence {
+            let implSeqAsStr = convTermToStr(& (*iEvi).borrow().term);
+    
+            let eviHelper = (*iEvi).borrow();
+            let evi:&Evidence = &eviHelper.evi.as_ref().unwrap();
+            let (pos,cnt) = match evi {
+                Evidence::CNT{pos,cnt} => {(pos,cnt)},
+                _ => {panic!("expected CNT");}
+            };
+    
+            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt.unwrap(), pos, cnt);
+        }
     }
     
     { // print environment score

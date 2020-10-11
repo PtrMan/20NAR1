@@ -117,7 +117,7 @@ pub fn simStep(env:&mut EnvState, rng:&mut ThreadRng) {
     if env.ballY >= env.szY-1 {
         env.vY = -1;
     }
-    if (env.t%2) == -1 {
+    if (env.t%2) == 1 {
         env.ballX += env.vX;
     }
     env.ballX += env.vX*env.mulVX;
@@ -125,11 +125,11 @@ pub fn simStep(env:&mut EnvState, rng:&mut ThreadRng) {
     if env.ballY == 0 {
         if (env.ballX-env.batX).abs() <= env.batWidth {
             //reasoner.input("<good-->nar>. :|:");
-            if env.verbosity > 0 {println!("good")};
+            if env.verbosity > 0 {println!("env: good")};
             env.hits+=1;
         }
         else {
-            if env.verbosity > 0 {println!("bad")};
+            if env.verbosity > 0 {println!("env: bad")};
             env.misses+=1;
         }
     }
@@ -137,6 +137,8 @@ pub fn simStep(env:&mut EnvState, rng:&mut ThreadRng) {
         env.ballY = (env.szY/2)+rng.gen_range(0, env.szY/2);
         env.ballX = rng.gen_range(0,env.szX);
         env.vX = if rng.gen_range(0,2) == 0 {1} else {-1};
+
+        println!("env: respawn ball");
     }
     /*
     if(opLeft.triggered) {
@@ -157,8 +159,11 @@ pub fn simStep(env:&mut EnvState, rng:&mut ThreadRng) {
         TerminalOut.out("Exec: op_stop");
         batVX = 0;
     }*/
+
+    //env.batX+=env.batVX; // move bat
+
     let h0 = (env.szX-1+env.batWidth).min(env.batX+env.batVX*env.batWidth/2);
-    env.batX=/*Std.int*/(-env.batWidth*2).max(h0);
+    env.batX=/*Std.int*/(env.batWidth*2).max(h0);
     let mut ratio:f64 = env.hits as f64;
     ratio /= (env.hits + env.misses) as f64;
     if env.verbosity > 0 {println!("PONG  Hits={} misses={} ratio={} time={}", env.hits, env.misses, ratio, env.t)};
