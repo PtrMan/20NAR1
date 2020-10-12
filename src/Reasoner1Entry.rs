@@ -40,13 +40,11 @@ pub fn reasoner1Entry() {
         selfName: "^R".to_string(),
     }));
     
-    // add goal
-    Nar::inputN(&mut nar, &"0-1-xc! :|:".to_string());
-    //nar.goals.push(newEternalSentenceByTv(&Term::Name("0-1-xc".to_string()),EnumPunctation::GOAL,&Tv{f:1.0,c:0.98},NarStamp::newStamp(&vec![99999999])));
-
-
-    
     loop { // reasoner/modification mainloop
+        if t % 10 == 0 {
+            Nar::inputN(&mut nar, &"0-1-xc! :|:".to_string()); // add goal
+        }
+        
         {
             Nars::narStep0(&mut nar.procNar);
 
