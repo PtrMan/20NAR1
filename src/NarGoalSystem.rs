@@ -28,9 +28,12 @@ pub struct GoalSystem {
 pub struct Entry {
     pub sentence: Arc<SentenceDummy>,
     pub utility: f64,
+    pub evidence: Option<Rc<RefCell<SentenceDummy>>>, // evidence which was used to derive this sentence. This is used to create the anticipations
+                                                      // sentence: (a, ^b)!
+                                                      // evidence: (a, ^b) =/> c.  (actual impl seq was this)
 }
 
-pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>) {
+pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>, evidence: Option<Rc<RefCell<SentenceDummy>>>) {
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &goalSystem.entries {
         if 
@@ -42,7 +45,7 @@ pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>) {
         }
     }
 
-    goalSystem.entries.push(Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0})));
+    goalSystem.entries.push(Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence})));
 }
 
 // called when it has to stay under AIKR
@@ -185,17 +188,17 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, evidence: &Vec<Rc<RefCell
     let envidenceCandidates: Vec<Rc<RefCell<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, evidence);
 
     // * try to do inference
-    let mut concls:Vec<Arc<SentenceDummy>> = Vec::new();
+    let mut concls:Vec<(Arc<SentenceDummy>, Rc<RefCell<SentenceDummy>>)> = Vec::new(); // conclusions are tuple (goal, evidence)
     for iBelief in &envidenceCandidates {
         let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &(**iBelief).borrow());
         if conclOpt.is_some() {
-            concls.push(Arc::new(conclOpt.unwrap()));
+            concls.push((Arc::new(conclOpt.unwrap()), Rc::clone(iBelief)));
         }
     }
 
     // * try to add goals
-    for iConcl in &concls {
-        addEntry(goalSystem, Arc::clone(iConcl));
+    for (iGoal, iEvidence) in &concls {
+        addEntry(goalSystem, Arc::clone(iGoal), Some(Rc::clone(iEvidence)));
     }
 }
 
