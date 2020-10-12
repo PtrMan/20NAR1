@@ -271,64 +271,87 @@ pub fn narStep1(nar:&mut ProcNar) {
     match &pickedAction {
         Some(_act) => {},
         None => {
-            // TODO< search with highest exp and exec only if above descision threshold! >
-            
-            struct Picked {
-                evidence:Rc<RefCell<SentenceDummy>>, // the evidence of the picked option
-                
-            }
-            
-            let mut pickedOpt:Option<Picked> = None;
-            let mut pickedExp:f64 = 0.0;
-            
-            
-            
             // search if we can satisfy goal
-            for iEERc in &nar.evidence {
-                let iEE:&SentenceDummy = &(*iEERc).borrow();
-                
-                // check impl seq first ! for current event!
-                for perceptIdx in 0..nar.cfgPerceptWindow as usize {
-                    if nar.trace.len() > perceptIdx {
+            // OLD CODE 12.10.2020
+            //struct Picked {
+            //    evidence:Rc<RefCell<SentenceDummy>>, // the evidence of the picked option
+            //}
 
-                        // check if it did "hit" goal
-                        for iGoalEntry in &nar.goalSystem.entries {
-                            // OLD code for goal check was convTermToStr(& retPred(& iEE.term) ) == "0-1-xc"
-                            if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && checkEqTerm(&retPred(& iEE.term), &iGoalEntry.borrow().sentence.term) { // does it fullfil goal?
+            //let mut pickedOpt:Option<Picked> = None;
+            //let mut pickedExp:f64 = 0.0;
+            
+            
+            //for iEERc in &nar.evidence {
+            //    let iEE:&SentenceDummy = &(*iEERc).borrow();
+            //    
+            //    // check impl seq first ! for current event!
+            //    for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+            //        if nar.trace.len() > perceptIdx {
+            //
+            //            // check if it did "hit" goal
+            //            for iGoalEntry in &nar.goalSystem.entries {
+            //                // OLD code for goal check was convTermToStr(& retPred(& iEE.term) ) == "0-1-xc"
+            //                if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && checkEqTerm(&retPred(& iEE.term), &iGoalEntry.borrow().sentence.term) { // does it fullfil goal?
+            //
+            //                    let exp = calcExp(&retTv(&iEE).unwrap());
+            //                    if exp > pickedExp {
+            //                        pickedExp = exp;
+            //                        pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
 
-                                let exp = calcExp(&retTv(&iEE).unwrap());
-                                if exp > pickedExp {
-                                    pickedExp = exp;
-                                    pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
-                                }
-                            }
-                        }
+            let mut bestEntry:(f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = (0.0, None); // best entry from goal system to execute
 
+            // * search if we can satisfy goal
+            // NEW CODE
+            for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+                if nar.trace.len() > perceptIdx {
+
+                    let checkedState:Term = nar.trace[nar.trace.len()-1-perceptIdx].name.clone();
+
+                    // check if current state "leads" to action
+                    // tuple is (exp, entity)
+                    let thisEntry: (f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem, &checkedState);
+
+                    if thisEntry.0 > bestEntry.0 { // if exp is higher -> is a better choice
+                        bestEntry = thisEntry;
                     }
                 }
             }
-            
-            if pickedExp > nar.cfgDescnThreshold {
-                let picked = pickedOpt.unwrap().evidence;
-                let implSeqAsStr = convTermToStr(& (*picked).borrow().term);
+
+
+
+            // * pick action and expected event to anticipations
+            if bestEntry.0 > nar.cfgDescnThreshold && bestEntry.1.is_some() {
+                let entity:Rc<RefCell<NarGoalSystem::Entry>> = bestEntry.1.unwrap();
+                let pickedEvidenceOpt: &Option<Rc<RefCell<SentenceDummy>>> = &entity.borrow().evidence;
                 
-                {
-                    let act:Term = retSeqOp(& (*picked).borrow().term);
-                    let actAsStr:String = convTermToStr(&act);
-                    println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
+                if pickedEvidenceOpt.is_some() {
+                    let pickedEvidence: Rc<RefCell<SentenceDummy>> = Rc::clone(&pickedEvidenceOpt.as_ref().unwrap());
+                    { // info
+                        let implSeqAsStr = convTermToStr(& (*pickedEvidence).borrow().term);
+                        let act:Term = retSeqOp(& (*pickedEvidence).borrow().term);
+                        let actAsStr:String = convTermToStr(&act);
+                        let pickedExp:f64 = bestEntry.0;
+                        println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
+                    }
+    
+    
+                    pickedAction = Some(retSeqOp(& (*pickedEvidence).borrow().term));
+                    
+                    // add anticipated event
+                    let expIntervalIdx:i64 = (*pickedEvidence).borrow().expDt.unwrap();
+                    let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
+                    let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
+                    nar.anticipatedEvents.push(AnticipationEvent {
+                        evi:Rc::clone(&pickedEvidence),
+                        deadline:deadline,
+                    });
                 }
-
-
-                pickedAction = Some(retSeqOp(& (*picked).borrow().term));
-                
-                // add anticipated event
-                let expIntervalIdx:i64 = (*picked).borrow().expDt.unwrap();
-                let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
-                let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
-                nar.anticipatedEvents.push(AnticipationEvent {
-                    evi:Rc::clone(&picked),
-                    deadline:deadline,
-                });
             }
         },
     }
@@ -372,12 +395,12 @@ pub fn narStep1(nar:&mut ProcNar) {
     if nar.t % 3 == 0 {
         let enGoalSystem = true; // DISABLED because we want to test it without deriving goals!
         if enGoalSystem {
-            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, &nar.evidence, &mut nar.rng);
+            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidence, &mut nar.rng);
         }
     }
 
-    if nar.t % 123 == 1 {
-        NarGoalSystem::limitMemory(&mut nar.goalSystem);
+    if nar.t % 13 == 1 {
+        NarGoalSystem::limitMemory(&mut nar.goalSystem, nar.t);
     }
     
     nar.t+=1; // increment time of NAR

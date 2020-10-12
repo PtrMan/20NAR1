@@ -31,9 +31,11 @@ pub struct Entry {
     pub evidence: Option<Rc<RefCell<SentenceDummy>>>, // evidence which was used to derive this sentence. This is used to create the anticipations
                                                       // sentence: (a, ^b)!
                                                       // evidence: (a, ^b) =/> c.  (actual impl seq was this)
+    pub createTime: i64, // time of the creation of this entry
 }
 
-pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>, evidence: Option<Rc<RefCell<SentenceDummy>>>) {
+// /param t is the procedural reasoner NAR time
+pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Rc<RefCell<SentenceDummy>>>) {
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &goalSystem.entries {
         if 
@@ -45,16 +47,20 @@ pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>, evidence:
         }
     }
 
-    goalSystem.entries.push(Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence})));
+    goalSystem.entries.push(Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t})));
 }
 
 // called when it has to stay under AIKR
-pub fn limitMemory(goalSystem: &mut GoalSystem) {
+// /param t is the procedural reasoner NAR time
+pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     // * recalc utility
     for iv in &goalSystem.entries {
         let mut iv2 = iv.borrow_mut();
-        // TODO - consider age!
-        iv2.utility = Tv::calcExp(&retTv(&iv2.sentence).unwrap());
+        // consider age
+        let age: i64 = t-iv2.createTime;
+        let decay = ((age as f64)*-0.01).exp(); // compute decay by age
+
+        iv2.utility = Tv::calcExp(&retTv(&iv2.sentence).unwrap())*decay;
     }
 
     // * sort by utility
@@ -66,6 +72,7 @@ pub fn limitMemory(goalSystem: &mut GoalSystem) {
     }
 }
 
+// sample a goal from the goal table of the goal system
 pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Option<Arc<SentenceDummy>> {
     if goalSystem.entries.len() == 0 {
         return None;
@@ -175,7 +182,8 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
     res
 }
 
-pub fn sampleAndInference(goalSystem: &mut GoalSystem, evidence: &Vec<Rc<RefCell<SentenceDummy>>>, rng: &mut rand::rngs::ThreadRng) {
+// /param t is the procedural reasoner NAR time
+pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Rc<RefCell<SentenceDummy>>>, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal
     let sampledGoalOpt: Option<Arc<SentenceDummy>> = sample(&goalSystem, rng);
 
@@ -198,7 +206,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, evidence: &Vec<Rc<RefCell
 
     // * try to add goals
     for (iGoal, iEvidence) in &concls {
-        addEntry(goalSystem, Arc::clone(iGoal), Some(Rc::clone(iEvidence)));
+        addEntry(goalSystem, t, Arc::clone(iGoal), Some(Rc::clone(iEvidence)));
     }
 }
 
@@ -214,8 +222,8 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
     let mut res:String = String::new();
 
     for iv in &goalSystem.entries {
-        res += &NarSentence::convSentenceTermPunctToStr(&(*iv).borrow().sentence, true);
-        res += &"\n".to_string();
+        let sentenceAsStr = NarSentence::convSentenceTermPunctToStr(&(*iv).borrow().sentence, true);
+        res += &format!("{}   util={}\n", &sentenceAsStr, &(*iv).borrow().utility);
     }
 
     res
