@@ -13,6 +13,7 @@ use crate::Tv;
 
 use crate::NarStamp;
 
+use crate::NarSentence;
 use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::retTv;
@@ -26,23 +27,36 @@ pub struct GoalSystem {
 // entry for goal system
 pub struct Entry {
     pub sentence: Arc<SentenceDummy>,
+    pub utility: f64,
 }
 
 pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>) {
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &goalSystem.entries {
-        if NarStamp::checkSame(&iv.sentence.stamp, &goal.stamp) {
+        // optimization< checking term first is faster! >
+        if checkEqTerm(&iv.sentence.term, &goal.term) && NarStamp::checkSame(&iv.sentence.stamp, &goal.stamp) {
             return;
         }
     }
 
-    goalSystem.entries.push(Entry{sentence:Arc::clone(&goal)});
+    goalSystem.entries.push(Entry{sentence:Arc::clone(&goal), utility:1.0});
 }
 
 // called when it has to stay under AIKR
 pub fn limitMemory(goalSystem: &mut GoalSystem) {
-    // TODO TODO TODO
-    println!("TODO - GoalSystem - limit");
+    // * recalc utility
+    for iv in &mut goalSystem.entries {
+        // TODO - consider age!
+        iv.utility = Tv::calcExp(&retTv(&iv.sentence).unwrap());
+    }
+
+    // * sort by utility
+    goalSystem.entries.sort_by(|a, b| b.utility.partial_cmp(&a.utility).unwrap());
+
+    // * limit (AIKR)
+    while goalSystem.entries.len() > goalSystem.nMaxEntries {
+        goalSystem.entries.remove(goalSystem.nMaxEntries);
+    }
 }
 
 pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Option<Arc<SentenceDummy>> {
@@ -168,4 +182,16 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, evidence: &Vec<Rc<RefCell
 // helper
 pub fn retDesire(goal: &SentenceDummy) -> Tv::Tv {
     retTv(&goal).unwrap() // interpret tv as desire
+}
+
+// helper for debugging: return all goals as text
+pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
+    let mut res:String = String::new();
+
+    for iv in &goalSystem.entries {
+        res += &NarSentence::convSentenceTermPunctToStr(&iv.sentence, true);
+        res += &"\n".to_string();
+    }
+
+    res
 }

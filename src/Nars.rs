@@ -370,10 +370,14 @@ pub fn narStep1(nar:&mut ProcNar) {
 
     // give goal system resources
     if nar.t % 3 == 0 {
-        let enGoalSystem = false; // DISABLED because we want to test it without deriving goals!
+        let enGoalSystem = true; // DISABLED because we want to test it without deriving goals!
         if enGoalSystem {
             NarGoalSystem::sampleAndInference(&mut nar.goalSystem, &nar.evidence, &mut nar.rng);
         }
+    }
+
+    if nar.t % 123 == 1 {
+        NarGoalSystem::limitMemory(&mut nar.goalSystem);
     }
     
     nar.t+=1; // increment time of NAR

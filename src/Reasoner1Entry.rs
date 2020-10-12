@@ -12,6 +12,7 @@ use crate::Term::convTermToStr;
 use crate::NarSentence::*;
 use crate::Nars;
 use crate::Nar;
+use crate::NarGoalSystem;
 
 use crate::EnvPong3;
 
@@ -19,7 +20,7 @@ pub fn reasoner1Entry() {
     let mut rng = rand::thread_rng();
 
     let mut t:i64 = 0; // discrete time
-    let maxT:Option<i64> = Some(10000);
+    let maxT:Option<i64> = Some(5000);
 
     let mut nar:Nar::Nar = Nar::createNar();
     
@@ -104,6 +105,10 @@ pub fn reasoner1Entry() {
     
             println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt.unwrap(), pos, cnt);
         }
+    }
+
+    { // debug goals of goal system 
+        println!("{}", NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem));
     }
     
     { // print environment score
