@@ -190,23 +190,38 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Rc<
     if !sampledGoalOpt.is_some() {
         return; // no goal was sampled -> give up
     }
-    let sampledGoal = sampledGoalOpt.unwrap();
+    let sampledGoal:Arc<SentenceDummy> = sampledGoalOpt.unwrap();
 
-    // * try to find candidates for inference
-    let envidenceCandidates: Vec<Rc<RefCell<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, evidence);
+    let mut concls:Vec<(Arc<SentenceDummy>, Option<Rc<RefCell<SentenceDummy>>>)> = Vec::new(); // conclusions are tuple (goal, evidence)
+    
+    // * try to do goal detachment
+    match &*sampledGoal.term {
+        Term::Seq(seq) if seq.len() >= 1 => {
+            let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&sampledGoal).unwrap(),sampledGoal.stamp.clone());
+            //dbg(format!("dbg: detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
+            concls.push((Arc::new(detachedGoal), None));
+        },
+        _ => {
+            // * try to find candidates for inference
+            let envidenceCandidates: Vec<Rc<RefCell<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, evidence);
 
-    // * try to do inference
-    let mut concls:Vec<(Arc<SentenceDummy>, Rc<RefCell<SentenceDummy>>)> = Vec::new(); // conclusions are tuple (goal, evidence)
-    for iBelief in &envidenceCandidates {
-        let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &(**iBelief).borrow());
-        if conclOpt.is_some() {
-            concls.push((Arc::new(conclOpt.unwrap()), Rc::clone(iBelief)));
+            // * try to do inference
+            for iBelief in &envidenceCandidates {
+                let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &(**iBelief).borrow());
+                if conclOpt.is_some() {
+                    concls.push((Arc::new(conclOpt.unwrap()), Some(Rc::clone(iBelief))));
+                }
+            }
         }
     }
 
     // * try to add goals
     for (iGoal, iEvidence) in &concls {
-        addEntry(goalSystem, t, Arc::clone(iGoal), Some(Rc::clone(iEvidence)));
+        let iEvidence2 = match iEvidence { // clone evidence
+            Some(e) => {Some(Rc::clone(e))}
+            None => None
+        };
+        addEntry(goalSystem, t, Arc::clone(iGoal), iEvidence2);
     }
 }
 
