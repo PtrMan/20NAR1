@@ -9,19 +9,6 @@ use crate::Term::*;
 use crate::TermApi::*;
 use crate::NarGoalSystem;
 
-// DONE< check for events which were anticipated and remove anticipations! >
-// DONE< compute expectation while decision making and take the one with the highest exp(), check against decision threshold! >
-
-// DONE< check if we can revise and revise if possible >
-// DONE< revise higher expIntervals too >
-
-// DONE< filter for operations in perceptions ! and combine only current event with op and nonop before op >
-
-// DONE< compute table of exponential intervals! >
-// DONE< use table of exponential intervals! >
-
-// DONE< compute anticipation deadline by exponential interval thingy >
-
 // contains all necessary variables of a procedural NAR
 pub struct ProcNar {
     pub cfgIntervalExpBase:f64, // base for the exponential intervals
