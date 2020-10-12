@@ -14,6 +14,17 @@ pub fn ded(a:&Tv,b:&Tv)->Tv {
     Tv{f:f,c:c}
 }
 
+pub fn abd(a:&Tv,b:&Tv)->Tv {
+    let w = b.f*a.c*b.c;
+    let f = a.f;
+    let c = w2c(w);
+    Tv{f:f,c:c}
+}
+
+pub fn ind(a:&Tv,b:&Tv)->Tv {
+    abd(b,a)
+}
+
 pub fn rev(a:&Tv,b:&Tv)->Tv {
     let w1:f64 = c2w(a.c);
     let w2:f64 = c2w(b.c);

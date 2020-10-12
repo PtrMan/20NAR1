@@ -220,6 +220,50 @@ pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 
 
 
+// generalized rule with two judgement premises
+// works only when conclusion is composed out of a and b
+pub fn infGeneralizedJudgJudg(
+    a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, 
+    b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>,
+
+    aCopula: Copula,
+    bCopula: Copula,
+    conclCopula: Copula,
+
+    aSide:i32,
+    bSide:i32,
+    tvFn: fn(&Tv, &Tv) -> Tv // function for conclusion TV computation
+) -> Option<(Term,Tv,EnumPunctation)> {
+    // helper to select subj or pred based on number (side)
+    fn sel<'a>(subj:&'a Box<Term>,pred:&'a Box<Term>,side:i32)->&'a Box<Term> {
+        if side == 1 {subj} else {pred}
+    }
+
+
+    if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
+        return None;
+    }
+    
+    match a {
+        Term::Stmt(acop, asubj, apred) if *acop == aCopula => {
+            match b {
+                Term::Stmt(bcop, bsubj, bpred) if *bcop == bCopula => {
+                    if 
+                        checkEqTerm(sel(&asubj,&apred,aSide), sel(&bsubj,&bpred,bSide)) && // sides must be the same term
+                        !checkEqTerm(sel(&asubj,&apred,-aSide), sel(&bsubj,&bpred,-bSide)) // other sides must not be equal!
+                    {
+                        return Some(( Term::Stmt(conclCopula, Box::clone(sel(&asubj,&apred,-aSide)), Box::clone(sel(&bsubj,&bpred,-bSide))), tvFn(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
+                    }
+                },
+                _ => {},
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
 // a --> x.  x --> b.  |- a --> b.
 pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -855,6 +899,24 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match infCompSubj(&a, aPunct, &aTv, &b, bPunct, &bTv) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infGeneralizedJudgJudg( // S --> M, P --> M |-abd S --> P
+        &a, aPunct, &aTv, &b, bPunct, &bTv,
+
+        Copula::INH,
+        Copula::INH,
+        Copula::INH,
+        -1,-1,abd) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infGeneralizedJudgJudg( // M --> S, M --> P |-ind S --> P
+        &a, aPunct, &aTv, &b, bPunct, &bTv,
+
+        Copula::INH,
+        Copula::INH,
+        Copula::INH,
+        1,1,ind) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     
