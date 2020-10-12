@@ -27,13 +27,31 @@ pub fn createNar() -> Nar {
     }
 }
 
-pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {    
+// for eternal
+pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
+    inputT2(nar, term, punct, tv, false);
+}
+
+pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:bool) {    
     let stamp = newStamp(&vec![nar.mem.stampIdCounter]);
     nar.mem.stampIdCounter+=1;
     let sentence = newEternalSentenceByTv(&term,punct,&tv,stamp);
 
     if nar.cfgVerbosityInput >= 1 {
         println!("[v] input {}", convSentenceTermPunctToStr(&sentence, true));
+    }
+
+    if isEvent {
+        if punct == EnumPunctation::GOAL {
+            // add to goals
+            NarGoalSystem::addEntry(&mut nar.procNar.goalSystem, Arc::new(sentence));
+        }
+        else {
+            // add event
+            nar.procNar.trace.push(Nars::SimpleSentence {name:term.clone(),evi:nar.procNar.t,occT:nar.procNar.t});
+        }
+
+        return;
     }
 
     // compute if the term is a temporal term
@@ -48,8 +66,7 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     }
     else {
         if punct == EnumPunctation::GOAL {
-            // add to goals
-            NarGoalSystem::addEntry(&mut nar.procNar.goalSystem, Arc::new(sentence));
+            println!("ERR : eternal goals are not supported!");
         }
         else {
             memAddTask(&mut nar.mem, &sentence, true);
@@ -61,8 +78,8 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
 // return if narsese was parsed and had no error
 pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
     match parseNarsese(narsese) {
-        Some((term, tv, punct)) => {
-            inputT(nar, &term, punct, &tv);
+        Some((term, tv, punct, isEvent)) => {
+            inputT2(nar, &term, punct, &tv, isEvent);
             true
         },
         None => {

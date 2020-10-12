@@ -50,7 +50,7 @@ pub fn reasoner0Entry() {
     let mut currentPerceived : Vec< PerceptItem::< ClsnObj > > = Vec::new();
     
     // add goal
-    Nar::inputN(&mut nar, &"0-1-xc!".to_string());
+    Nar::inputN(&mut nar, &"0-1-xc! :|:".to_string());
     //nar.goals.push(newEternalSentenceByTv(&Term::Name("0-1-xc".to_string()),EnumPunctation::GOAL,&Tv{f:1.0,c:0.98},NarStamp::newStamp(&vec![99999999])));
 
 

@@ -43,8 +43,14 @@ pub fn parseNarseseRetTv(narsese:&mut String, tv:&mut Tv) {
   }
 }
 
-pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation, bool)> {
   let mut narsese2:String = narsese.clone();
+
+  let mut isEvent = false;
+  if narsese2.ends_with(" :|:") {
+    isEvent = true;
+    narsese2 = narsese2[..narsese2.len()-4].to_string();
+  }
 
   let mut tv = Tv{f:1.0,c:0.9};
   parseNarseseRetTv(&mut narsese2, &mut tv);
@@ -74,7 +80,7 @@ pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation)> {
 
   match parsed {
     Ok((_str2, term)) => {
-      Some((term, tv, punctation))
+      Some((term, tv, punctation, isEvent))
     },
     Err(_) => {
       None
@@ -94,10 +100,10 @@ mod tests {
   #[test]
   pub fn inhWithTv() {
     let narsese = "<a --> b>. {0.4 0.8}".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<a --> b>");
     assert_eq!((tv.f - 0.4).abs() < 0.01, true);
     assert_eq!((tv.c - 0.8).abs() < 0.01, true);
@@ -107,10 +113,10 @@ mod tests {
   #[test]
   pub fn inhWithoutTv() {
     let narsese = "<a --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<a --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -120,10 +126,10 @@ mod tests {
   #[test]
   pub fn predImpl() {
     let narsese = "<a =/> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<a =/> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -133,10 +139,10 @@ mod tests {
   #[test]
   pub fn equiv() {
     let narsese = "<a <=> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<a <=> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -147,10 +153,10 @@ mod tests {
   #[test]
   pub fn numeric() {
     let narsese = "<0 --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<0 --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -160,10 +166,10 @@ mod tests {
   #[test]
   pub fn qVar() {
     let narsese = "<?a --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<?a --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -173,10 +179,10 @@ mod tests {
   #[test]
   pub fn indepVar() {
     let narsese = "<$a --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<$a --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -186,10 +192,10 @@ mod tests {
   #[test]
   pub fn depVar() {
     let narsese = "<#a --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<#a --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -200,10 +206,10 @@ mod tests {
   #[test]
   pub fn setInt() {
     let narsese = "<a --> [b]>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<a --> [b]>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -213,10 +219,10 @@ mod tests {
   #[test]
   pub fn setExt() {
     let narsese = "<{a} --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<{a} --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -226,10 +232,10 @@ mod tests {
   #[test]
   pub fn setExtProd() {
     let narsese = "<{(a*c)} --> b>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<{( a * c )} --> b>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -239,10 +245,10 @@ mod tests {
   #[test]
   pub fn prod2() {
     let narsese = "<(a*c) --> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a * c ) --> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -252,10 +258,10 @@ mod tests {
   #[test]
   pub fn prod3() {
     let narsese = "<(a*c*z) --> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a * c * z ) --> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -265,10 +271,10 @@ mod tests {
   #[test]
   pub fn intint2() {
     let narsese = "<(a|c) --> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a | c ) --> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -279,10 +285,10 @@ mod tests {
   #[test]
   pub fn conj2_0() {
     let narsese = "<(a&&c) ==> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a && c ) ==> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -292,10 +298,10 @@ mod tests {
   #[test]
   pub fn conj2_1() {
     let narsese = "<(<a --> b>&&c) ==> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( <a --> b> && c ) ==> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -305,10 +311,10 @@ mod tests {
   #[test]
   pub fn conj3_0() {
     let narsese = "<(a&&c&&d) ==> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a && c && d ) ==> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -318,10 +324,10 @@ mod tests {
   #[test]
   pub fn conj4_0() {
     let narsese = "<(a&&c&&d&&e) ==> x>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a && c && d && e ) ==> x>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -331,10 +337,10 @@ mod tests {
   #[test]
   pub fn seqPredImpl() {
     let narsese = "<(a&/b) =/> c>.".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "<( a &/ b ) =/> c>");
     assert_eq!((tv.f - 1.0).abs() < 0.01, true);
     assert_eq!((tv.c - 0.9).abs() < 0.01, true);
@@ -346,10 +352,10 @@ mod tests {
   #[test]
   pub fn goalWithoutTv() {
     let narsese = "a-c!".to_string();
-    let parseResOpt: Option<(Term, Tv, EnumPunctation)> = parseNarsese(&narsese);
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
-    let (term, tv, punct) = parseResOpt.unwrap();
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
     assert_eq!(convTermToStr(&term), "a-c");
     assert_eq!(punct, EnumPunctation::GOAL);
   }
