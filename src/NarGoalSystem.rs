@@ -20,7 +20,7 @@ use crate::NarSentence::retTv;
 use crate::NarSentence::newEternalSentenceByTv;
 
 pub struct GoalSystem {
-    pub entries: Vec<Entry>,
+    pub entries: Vec<Rc<RefCell<Entry>>>,
     pub nMaxEntries: usize, // max number of entries
 }
 
@@ -33,25 +33,29 @@ pub struct Entry {
 pub fn addEntry(goalSystem: &mut GoalSystem, goal: Arc<SentenceDummy>) {
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &goalSystem.entries {
-        // optimization< checking term first is faster! >
-        if checkEqTerm(&iv.sentence.term, &goal.term) && NarStamp::checkSame(&iv.sentence.stamp, &goal.stamp) {
+        if 
+            // optimization< checking term first is faster! >
+            //checkEqTerm(&iv.sentence.term, &goal.term) &&
+            NarStamp::checkSame(&iv.borrow().sentence.stamp, &goal.stamp)
+        {
             return;
         }
     }
 
-    goalSystem.entries.push(Entry{sentence:Arc::clone(&goal), utility:1.0});
+    goalSystem.entries.push(Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0})));
 }
 
 // called when it has to stay under AIKR
 pub fn limitMemory(goalSystem: &mut GoalSystem) {
     // * recalc utility
-    for iv in &mut goalSystem.entries {
+    for iv in &goalSystem.entries {
+        let mut iv2 = iv.borrow_mut();
         // TODO - consider age!
-        iv.utility = Tv::calcExp(&retTv(&iv.sentence).unwrap());
+        iv2.utility = Tv::calcExp(&retTv(&iv2.sentence).unwrap());
     }
 
     // * sort by utility
-    goalSystem.entries.sort_by(|a, b| b.utility.partial_cmp(&a.utility).unwrap());
+    goalSystem.entries.sort_by(|a, b| b.borrow().utility.partial_cmp(&a.borrow().utility).unwrap());
 
     // * limit (AIKR)
     while goalSystem.entries.len() > goalSystem.nMaxEntries {
@@ -73,12 +77,12 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     for iv in &goalSystem.entries {
         sum += 1.0;
         if sum >= selPriority {
-            return Some(Arc::clone(&iv.sentence));
+            return Some(Arc::clone(&iv.borrow().sentence));
         }
     }
 
     // shouldn't happen
-    return Some(Arc::clone(&goalSystem.entries[goalSystem.entries.len()-1].sentence));
+    return Some(Arc::clone(&goalSystem.entries[goalSystem.entries.len()-1].borrow().sentence));
 }
 
 // does inference of goal with a belief
@@ -147,8 +151,26 @@ pub fn retBeliefCandidates(goal: &SentenceDummy, evidence: &Vec<Rc<RefCell<Sente
 
 
 // select highest ranked goal for state
-// pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> Some(Arc<SentenceDummy>) {
-// }
+pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, Option<Rc<RefCell<Entry>>>) {
+    let mut res:(f64, Option<Rc<RefCell<Entry>>>) = (0.0, None);
+
+    for iv in &goalSystem.entries {
+        match &(*(iv.borrow().sentence).term) {
+            Term::Seq(seq) if seq.len() >= 1 && checkEqTerm(&seq[0], &state) => { // does first event of seq match to state?
+                
+                let exp = Tv::calcExp(&retTv(&iv.borrow().sentence).unwrap());
+                let (resExp, _) = res;
+                if exp > resExp {
+                    res = (exp, Some(Rc::clone(&iv))); // TODO<hand over a reference to the Entry>
+                }
+            },
+            _ => {}
+        }
+
+    }
+
+    res
+}
 
 pub fn sampleAndInference(goalSystem: &mut GoalSystem, evidence: &Vec<Rc<RefCell<SentenceDummy>>>, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal
@@ -189,7 +211,7 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
     let mut res:String = String::new();
 
     for iv in &goalSystem.entries {
-        res += &NarSentence::convSentenceTermPunctToStr(&iv.sentence, true);
+        res += &NarSentence::convSentenceTermPunctToStr(&(*iv).borrow().sentence, true);
         res += &"\n".to_string();
     }
 
