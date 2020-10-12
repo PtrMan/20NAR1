@@ -264,27 +264,6 @@ pub fn infGeneralizedJudgJudg(
 }
 
 
-// a --> x.  x --> b.  |- a --> b.
-pub fn inf0(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
-    if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
-        return None;
-    }
-    
-    match a {
-        Term::Stmt(Copula::INH, asubj, apred) => {
-            match b {
-                Term::Stmt(Copula::INH, bsubj, bpred) => {
-                    if !checkEqTerm(&asubj, &bpred) && checkEqTerm(&apred, &bsubj) {
-                        return Some(( Term::Stmt(Copula::INH, Box::clone(asubj), Box::clone(bpred)), ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT)); // a.subj --> b.pred
-                    }
-                },
-                _ => {},
-            }
-        },
-        _ => {},
-    }
-    None
-}
 
 
 // a --> x.  a --> y.  |- x <-> y.
@@ -429,27 +408,6 @@ pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Option<Tv>, _b: &Term, _pun
     */
 }
 
-// a ==> x.  x ==> b.  |- a ==> b.
-pub fn inf1(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
-    if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
-        return None;
-    }
-
-    match a {
-        Term::Stmt(Copula::IMPL, asubj, apred) => {
-            match b {
-                Term::Stmt(Copula::IMPL, bsubj, bpred) => {
-                    if checkEqTerm(&apred, &bsubj) && !checkEqTerm(&asubj, &bpred) {
-                        return Some((Term::Stmt(Copula::IMPL, Box::clone(asubj), Box::clone(bpred)), ded(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
-                    }
-                },
-                _ => {},
-            }
-        },
-        _ => {},
-    }
-    None
-}
 
 
 pub struct Asgnment { // structure to store assignment of var
@@ -865,12 +823,6 @@ pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:
 pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
     
-    match inf0(&a, aPunct, &aTv, &b, bPunct, &bTv) {
-        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
-    }
-    match inf1(&a, aPunct, &aTv, &b, bPunct, &bTv) {
-        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
-    }
     match inf3(&a, aPunct, &aTv, &b, bPunct, &bTv) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
@@ -899,6 +851,33 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match infCompSubj(&a, aPunct, &aTv, &b, bPunct, &bTv) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infGeneralizedJudgJudg( // S =/> M, M =/> P |-ded S =/> P
+        &a, aPunct, &aTv, &b, bPunct, &bTv,
+
+        Copula::PREDIMPL,
+        Copula::PREDIMPL,
+        Copula::PREDIMPL,
+        -1,1,ded) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infGeneralizedJudgJudg( // S ==> M, M ==> P |-ded S ==> P
+        &a, aPunct, &aTv, &b, bPunct, &bTv,
+
+        Copula::IMPL,
+        Copula::IMPL,
+        Copula::IMPL,
+        -1,1,ded) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match infGeneralizedJudgJudg( // S --> M, M --> P |-ded S --> P
+        &a, aPunct, &aTv, &b, bPunct, &bTv,
+
+        Copula::INH,
+        Copula::INH,
+        Copula::INH,
+        -1,1,ded) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match infGeneralizedJudgJudg( // S --> M, P --> M |-abd S --> P
