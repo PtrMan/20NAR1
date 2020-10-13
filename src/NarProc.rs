@@ -261,7 +261,6 @@ pub fn narStep1(nar:&mut ProcNar) {
             let mut bestEntry:(f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = (0.0, None); // best entry from goal system to execute
 
             // * search if we can satisfy goal
-            // NEW CODE
             for perceptIdx in 0..nar.cfgPerceptWindow as usize {
                 if nar.trace.len() > perceptIdx {
 
