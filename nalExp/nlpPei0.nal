@@ -1,0 +1,31 @@
+// NLP knowledge and rules according to the idea/papers from/by Dr. Pei Wang
+// REF paper "Natural language processing by reasoning and learning" http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.568.6417&rep=rep1&type=pdf
+
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENcan*$w1)}*<($0*$1) --> RELcan>) --> RELrepresent>>.
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENeat*$w1)}*<($0*$1) --> RELfood>) --> RELrepresent>>.
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENis*$w1)}*<$0 --> $1>) --> RELrepresent>>.
+// ex: "cats are human"
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENare*$w1)}*<$0 --> $1>) --> RELrepresent>>.
+// ex: "cat in box"
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENin*$w1)}*<($0*$1) --> RELin>) --> RELrepresent>>.
+
+
+
+// some preloaded words
+<{(WORDENdog*dog)} --> RELrepresent>.
+//<{(WORDENdogs*dog)} --> RELrepresent>. {1.0 0.8}
+<{(WORDENcat*cat)} --> RELrepresent>.
+<{(WORDENcats*cat)} --> RELrepresent>. {1.0 0.8}
+<{(WORDENfish*fish)} --> RELrepresent>.
+
+//<{(WORDENanimal*animal)} --> RELrepresent>.
+//<{(WORDENanimals*animal)} --> RELrepresent>. {1.0 0.8}
+
+//<{(WORDENfat*[fat])} --> RELrepresent>.
+//<{(WORDENlazy*[lazy])} --> RELrepresent>.
+
+//<{(WORDENgood*good)} --> RELrepresent>.
+//<{(WORDENbad*bad)} --> RELrepresent>.
+
+// ask question to get represent of NLP
+//<({(WORDENcat*WORDENeat*WORDENfish)}*?0) --> RELrepresent>?
