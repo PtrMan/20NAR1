@@ -258,39 +258,6 @@ pub fn narStep1(nar:&mut ProcNar) {
     match &pickedAction {
         Some(_act) => {},
         None => {
-            // search if we can satisfy goal
-            // OLD CODE 12.10.2020
-            //struct Picked {
-            //    evidence:Rc<RefCell<SentenceDummy>>, // the evidence of the picked option
-            //}
-
-            //let mut pickedOpt:Option<Picked> = None;
-            //let mut pickedExp:f64 = 0.0;
-            
-            
-            //for iEERc in &nar.evidence {
-            //    let iEE:&SentenceDummy = &(*iEERc).borrow();
-            //    
-            //    // check impl seq first ! for current event!
-            //    for perceptIdx in 0..nar.cfgPerceptWindow as usize {
-            //        if nar.trace.len() > perceptIdx {
-            //
-            //            // check if it did "hit" goal
-            //            for iGoalEntry in &nar.goalSystem.entries {
-            //                // OLD code for goal check was convTermToStr(& retPred(& iEE.term) ) == "0-1-xc"
-            //                if checkEqTerm(&retSeqOp(& iEE.term), &nar.trace[nar.trace.len()-1-perceptIdx].name) && checkEqTerm(&retPred(& iEE.term), &iGoalEntry.borrow().sentence.term) { // does it fullfil goal?
-            //
-            //                    let exp = calcExp(&retTv(&iEE).unwrap());
-            //                    if exp > pickedExp {
-            //                        pickedExp = exp;
-            //                        pickedOpt = Some(Picked{evidence:Rc::clone(iEERc)});
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
             let mut bestEntry:(f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = (0.0, None); // best entry from goal system to execute
 
             // * search if we can satisfy goal
