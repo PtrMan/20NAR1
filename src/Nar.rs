@@ -8,11 +8,12 @@ use crate::NarseseParser::parseNarsese;
 use crate::NarSentence::*;
 use crate::NarStamp::*;
 use crate::NarWorkingCycle::*;
-use crate::Nars;
+use crate::NarProc;
 use crate::NarGoalSystem;
+use crate::NarSentence;
 
 pub struct Nar {
-    pub procNar:Nars::ProcNar, // procedural NAR
+    pub procNar:NarProc::ProcNar, // procedural NAR
 
     pub mem:Mem2, // actual (declarative) memory
 
@@ -21,7 +22,7 @@ pub struct Nar {
 
 pub fn createNar() -> Nar {
     Nar{
-        procNar:Nars::narInit(),
+        procNar:NarProc::narInit(),
         mem:createMem2(),
         cfgVerbosityInput:1, // enable verbose input by default
     }
@@ -48,7 +49,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
         }
         else {
             // add event
-            nar.procNar.trace.push(Nars::SimpleSentence {name:term.clone(),evi:nar.procNar.t,occT:nar.procNar.t});
+            nar.procNar.trace.push(NarProc::SimpleSentence {name:term.clone(),evi:nar.procNar.t,occT:nar.procNar.t});
         }
 
         return;

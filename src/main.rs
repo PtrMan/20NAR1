@@ -22,7 +22,6 @@ mod map2d;
 mod ad;
 mod mlutils;
 
-mod Nars;
 mod AeraishPerceptionComp;
 mod expRepresent0;
 mod Misc;
@@ -40,12 +39,13 @@ mod Term;
 mod TermApi;
 mod NarInteractive;
 mod Nar;
+mod NarProc;
+mod NarGoalSystem;
 
 mod NarModuleNlp;
 mod NarServer;
 mod NarInputFacade;
 mod NarUtilReadn;
-mod NarGoalSystem;
 
 //mod narPerception; // not include because file has issues
 

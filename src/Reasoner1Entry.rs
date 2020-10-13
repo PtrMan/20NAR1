@@ -10,7 +10,7 @@ use crate::Tv::*;
 use crate::Term::*;
 use crate::Term::convTermToStr;
 use crate::NarSentence::*;
-use crate::Nars;
+use crate::NarProc;
 use crate::Nar;
 use crate::NarGoalSystem;
 
@@ -46,20 +46,20 @@ pub fn reasoner1Entry() {
         }
         
         {
-            Nars::narStep0(&mut nar.procNar);
+            NarProc::narStep0(&mut nar.procNar);
 
             {
                 let mut envPong = (*envPongRc).borrow_mut();
                 let diff:i64 = envPong.ballX-envPong.batX;
                 let batWidth:i64 = envPong.batWidth;
                 if diff.abs() <= batWidth {
-                    nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
+                    nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
                 }
                 else if diff < 0 {
-                    nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
+                    nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
                 }
                 else { // diff > 0
-                    nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
+                    nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
                 }
             }
     
@@ -67,7 +67,7 @@ pub fn reasoner1Entry() {
                 println!("{} ballX={} batX={} diff={}", convTermToStr(&nar.procNar.trace[nar.procNar.trace.len()-1].name), (*envPongRc).borrow().ballX, (*envPongRc).borrow().batX, (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
             }
             
-            Nars::narStep1(&mut nar.procNar);
+            NarProc::narStep1(&mut nar.procNar);
             
             let mut envPong = (*envPongRc).borrow_mut();
             EnvPong3::simStep(&mut envPong, &mut rng);
@@ -129,7 +129,7 @@ pub struct OpPong {
 }
 
 
-impl Nars::Op for OpPong {
+impl NarProc::Op for OpPong {
     fn retName(&self) -> Term {
         Term::Name(self.selfName.clone())
     }

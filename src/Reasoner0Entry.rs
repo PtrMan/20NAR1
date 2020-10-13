@@ -10,7 +10,7 @@ use crate::Tv::*;
 use crate::Term::*;
 use crate::Term::convTermToStr;
 use crate::NarSentence::*;
-use crate::Nars;
+use crate::NarProc;
 use crate::Nar;
 use crate::AeraishPerceptionComp;
 use crate::AeraishPerceptionComp::{PerceptItem};
@@ -70,7 +70,7 @@ pub fn reasoner0Entry() {
         let selFocusItem:usize = pickByMass(&[1.0, 0.8], rng.gen_range(0.0, 1.0));
         
         if selFocusItem == 0 { // do we want to spend the time in the NARS reasoning?
-            Nars::narStep0(&mut nar.procNar);
+            NarProc::narStep0(&mut nar.procNar);
 
             {
                 // build relations between perceived proto-"objects"
@@ -93,26 +93,26 @@ pub fn reasoner0Entry() {
                         
                         if true {
                             if diffX > 1.0 {
-                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
+                                nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else if diffX < -1.0 {
-                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
+                                nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else {
-                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
+                                nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", a.objCat, b.objCat, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                         }
 
 
                         if false { // do we want to handle y events too?
                             if diffY > 1.0 {
-                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
+                                nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else if diffY < -1.0 {
-                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
+                                nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                             else {
-                                nar.procNar.trace.push(Nars::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
+                                nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-y{}", a.objCat, b.objCat, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
                             }
                         }
                     }
@@ -123,7 +123,7 @@ pub fn reasoner0Entry() {
                 println!("{} {}", convTermToStr(&nar.procNar.trace[nar.procNar.trace.len()-1].name), (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
             }
             
-            Nars::narStep1(&mut nar.procNar);
+            NarProc::narStep1(&mut nar.procNar);
             
             let mut envPong = (*envPongRc).borrow_mut();
             envPong.batX += envPong.batVelX; //envPongRc.get().batVelX;
@@ -273,7 +273,7 @@ pub struct OpPong {
 }
 
 
-impl Nars::Op for OpPong {
+impl NarProc::Op for OpPong {
     fn retName(&self) -> Term {
         Term::Name(self.selfName.clone())
     }
