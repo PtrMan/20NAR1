@@ -8,6 +8,7 @@ use crate::Term::*;
 use crate::TermApi::*;
 use crate::NarSentence::{SentenceDummy, EnumPunctation};
 use crate::Tv::{Tv};
+use crate::NarProc;
 
 // /param quit is used to signal if program has to get terminated
 // returns requested information as strings!
@@ -32,6 +33,22 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
         for _i in 0..nCycles {
             cycle(nar);
         }
+    }
+    else if input.len() >= 5 && &input[..5] == "!ps0s" { // procedural step 0
+        let mut nCycles = 1;
+        if input.len() > 5 && false { // parse number of cycles
+            // TODO< check if it was parsed fine! >
+            nCycles = input[5..].parse::<i64>().unwrap();
+        }
+        NarProc::narStep0(&mut nar.procNar);
+    }
+    else if input.len() >= 5 && &input[..5] == "!ps1s" { // procedural step 1
+        let mut nCycles = 1;
+        if input.len() > 5 && false { // parse number of cycles
+            // TODO< check if it was parsed fine! >
+            nCycles = input[5..].parse::<i64>().unwrap();
+        }
+        NarProc::narStep1(&mut nar.procNar);
     }
     else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
         let natural = &input[6..].to_string();
