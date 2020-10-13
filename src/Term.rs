@@ -266,7 +266,7 @@ pub fn convTermToStr(t:&Term) -> String {
         Term::Seq(seq) => {
             let mut inner = convTermToStr(&seq[0]);
             for i in 1..seq.len() {
-                inner = format!("{} &/ {}", inner, convTermToStr(&seq[i]));
+                inner = format!("{} , {}", inner, convTermToStr(&seq[i]));
             }
             format!("( {} )", inner)
         },
@@ -324,7 +324,7 @@ pub fn convTermToStr(t:&Term) -> String {
         Term::Par(seq) => {
             let mut inner = convTermToStr(&seq[0]);
             for i in 1..seq.len() {
-                inner = format!("{} &| {}", inner, convTermToStr(&seq[i]));
+                inner = format!("{} ; {}", inner, convTermToStr(&seq[i]));
             }
             format!("( {} )", inner)
         },
