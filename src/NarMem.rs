@@ -49,8 +49,7 @@ pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
                         if !exists { // add belief only if it doesn't already exist!
                             concept.beliefs.push(Arc::new((*s).clone())); // add belief
 
-                            println!("TODO - order by importance");
-
+                            concept.beliefs.sort_by(|a, b| calcExp(&retTv(b).unwrap()).partial_cmp(&calcExp(&retTv(a).unwrap())).unwrap()); // order by importance
                             concept.beliefs = concept.beliefs[..concept.beliefs.len().min(20)].to_vec(); // keep under AIKR
                         }
                     }
