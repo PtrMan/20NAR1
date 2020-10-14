@@ -14,8 +14,6 @@ use rand::Rng;
 use rand::distributions::{Normal, Distribution};
 //use rand_distr::Normal;
 
-mod Reasoner0Entry;
-//use crate::Reasoner0Entry::{reasoner0Entry}; not used because it is not a real pong environment
 mod Reasoner1Entry;
 use crate::Reasoner1Entry::{reasoner1Entry};
 mod ProcChaosEntry;
