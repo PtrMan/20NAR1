@@ -3,7 +3,7 @@
 use std::rc::Rc;
 use core::cell::RefCell;
 use std::sync::Arc;
-use crate::rand::Rng;
+use rand::Rng;
 
 use crate::Term::*;
 
