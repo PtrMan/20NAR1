@@ -18,6 +18,7 @@ mod Reasoner0Entry;
 //use crate::Reasoner0Entry::{reasoner0Entry}; not used because it is not a real pong environment
 mod Reasoner1Entry;
 use crate::Reasoner1Entry::{reasoner1Entry};
+mod ProcChaosEntry;
 mod map2d;
 mod ad;
 mod mlutils;
@@ -78,6 +79,9 @@ pub fn main() {
     else if runEnv == "pong3" { // run environment
         // jump to environment test
         reasoner1Entry();
+    }
+    else if runEnv == "chaos" { // run chaos environment to stresstest NAR
+        ProcChaosEntry::procChaosEntry();
     }
     else if runEnv == "srv" { // run server
         NarServer::run();
