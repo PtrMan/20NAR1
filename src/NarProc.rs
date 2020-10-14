@@ -17,6 +17,8 @@ pub struct ProcNar {
     pub cfgPerceptWindow:i64, // perception window for current events
     pub cfgDescnThreshold:f64,
 
+    pub cfgNMaxEvidence:i64, // maximal number of evidence
+
     pub evidence: Vec<Rc<RefCell<SentenceDummy>>>,
     
     pub trace: Vec<SimpleSentence>,
@@ -42,6 +44,7 @@ pub fn narInit() -> ProcNar {
         cfgIntervalMax: 40,
         cfgPerceptWindow: 2,
         cfgDescnThreshold: 0.48,
+        cfgNMaxEvidence: 5000,
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -341,6 +344,12 @@ pub fn narStep1(nar:&mut ProcNar) {
     // limit trace (AIKR)
     if nar.trace.len() > 20 {
         nar.trace = (&nar.trace[nar.trace.len()-20..]).to_vec();
+    }
+
+    // limit evidence (AIKR)
+    if nar.t % 101 == 1 && nar.evidence.len() > nar.cfgNMaxEvidence as usize {
+        nar.evidence.sort_by(|a, b| calcExp(&retTv(&*b.borrow()).unwrap()).partial_cmp(&calcExp(&retTv(&*a.borrow()).unwrap())).unwrap()); // order by importance
+        nar.evidence = nar.evidence[..nar.evidence.len().min(nar.cfgNMaxEvidence as usize)].to_vec(); // keep under AIKR
     }
 
 
