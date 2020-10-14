@@ -220,6 +220,64 @@ pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 
 
 
+
+// see ONA
+// [a] <-> [b]. |- a <-> b.
+pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
+    if punctA != EnumPunctation::JUGEMENT {
+        return None;
+    }
+    
+    match a {
+        Term::Stmt(Copula::SIM, asubj2, apred2) => {
+            match &**asubj2 {
+                Term::SetInt(asubj) if asubj.len() == 1 => {
+                    match &**apred2 {
+                        Term::SetInt(apred) if apred.len() == 1 => {
+                            println!("TODO - compute tv");
+                            return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
+                        },
+                        _ => {},
+                    }
+                },
+                _ => {},
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+// see ONA
+// {a} <-> {b}. |- a <-> b.
+pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
+    if punctA != EnumPunctation::JUGEMENT {
+        return None;
+    }
+    
+    match a {
+        Term::Stmt(Copula::SIM, asubj2, apred2) => {
+            match &**asubj2 {
+                Term::SetExt(asubj) if asubj.len() == 1 => {
+                    match &**apred2 {
+                        Term::SetExt(apred) if apred.len() == 1 => {
+                            println!("TODO - compute tv");
+                            return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
+                        },
+                        _ => {},
+                    }
+                },
+                _ => {},
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
+
+
 // generalized rule with two judgement premises
 // works only when conclusion is composed out of a and b
 pub fn infGeneralizedJudgJudg(
@@ -944,6 +1002,13 @@ pub fn infSinglePremise(a: &Term, punct:EnumPunctation, aTv:&Option<Tv>) -> Vec<
         Some(x) => { res.push(x); } _ => {}
     }
     match infStructImg1(&a, punct, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+
+    match infStructSetInt(&a, punct, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
+    match infStructSetExt(&a, punct, &aTv) {
         Some(x) => { res.push(x); } _ => {}
     }
 
