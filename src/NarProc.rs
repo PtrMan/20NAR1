@@ -18,6 +18,7 @@ pub struct ProcNar {
     pub cfgDescnThreshold:f64,
 
     pub cfgNMaxEvidence:i64, // maximal number of evidence
+    pub cfgVerbosity:i64, // how verbose is the reasoner, mainly used for debugging
 
     pub evidence: Vec<Rc<RefCell<SentenceDummy>>>,
     
@@ -45,6 +46,7 @@ pub fn narInit() -> ProcNar {
         cfgPerceptWindow: 2,
         cfgDescnThreshold: 0.48,
         cfgNMaxEvidence: 5000,
+        cfgVerbosity: 0, // be silent
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -82,7 +84,7 @@ pub fn narInit() -> ProcNar {
 
 // does one reasoner step
 pub fn narStep0(nar:&mut ProcNar) {
-    println!("ae# = {}", nar.anticipatedEvents.len()); // debug number of anticipated events
+    if nar.cfgVerbosity > 0 {println!("ae# = {}", nar.anticipatedEvents.len());}; // debug number of anticipated events
     
     // remove confirmed anticipations
     for perceptIdx in 0..nar.cfgPerceptWindow as usize {
@@ -195,7 +197,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                             let e1 = &nar.trace[idxs[1]];
                             let e2 = &nar.trace[idxs[2]];
                             
-                            println!("perceive ({},{})=/>{}", convTermToStr(&e0.name), convTermToStr(&e1.name), convTermToStr(&e2.name));
+                            if nar.cfgVerbosity > 0 {println!("perceive ({},{})=/>{}", convTermToStr(&e0.name), convTermToStr(&e1.name), convTermToStr(&e2.name));};
                             
                             let dt:i64 = e2.occT - e1.occT;
                             // compute exponential delta time
