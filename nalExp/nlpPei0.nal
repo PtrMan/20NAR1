@@ -11,6 +11,15 @@
 
 
 
+// ex: "tom thinks that REL"
+//<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENthinks*WORDENthat*$w1)}*<($0*$1) --> RELreasons>) --> RELrepresent>>.
+
+// will be used to parse conjunctions
+// ex: "tim and tom"
+//<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENand*$w1)}*<($0*$1) --> RELconj> --> RELrepresent>>.
+
+
+
 // some preloaded words
 <{(WORDENdog*dog)} --> RELrepresent>.
 //<{(WORDENdogs*dog)} --> RELrepresent>. {1.0 0.8}
