@@ -157,6 +157,7 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     else if input == "!QQ" { // quit
         *quit = true;
     }
+    else if input == "" {}
     else {
         inputN(nar, &input);
     }
