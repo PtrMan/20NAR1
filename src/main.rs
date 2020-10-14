@@ -44,6 +44,7 @@ mod NarProc;
 mod NarGoalSystem;
 
 mod NarModuleNlp;
+mod NarModuleNlp2;
 mod NarServer;
 mod NarInputFacade;
 mod NarUtilReadn;
