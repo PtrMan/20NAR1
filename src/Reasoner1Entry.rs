@@ -84,7 +84,7 @@ pub fn reasoner1Entry() {
 
     
     // debug all evidence of NAR
-    let enDbgEvidence:bool = false;
+    let enDbgEvidence:bool = true;
     if enDbgEvidence {
         println!("");
         println!("EVIDENCE:");
@@ -99,6 +99,11 @@ pub fn reasoner1Entry() {
             };
     
             println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt.unwrap(), pos, cnt);
+        }
+        println!("");
+
+        if nar.procNar.evidence.len() == 0 { // check if there is no evidence, which indicates a fatal bug
+            panic!("no evidence after running {}", "pong3");
         }
     }
 
@@ -127,8 +132,8 @@ pub struct OpPong {
 
 
 impl NarProc::Op for OpPong {
-    fn retName(&self) -> Term {
-        Term::Name(self.selfName.clone())
+    fn retName(&self) -> String {
+        self.selfName.clone()
     }
     fn call(&self, _args:&Vec<Term>) {
         (*self.env).borrow_mut().batVX = self.opDir;

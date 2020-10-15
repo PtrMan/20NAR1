@@ -96,8 +96,8 @@ pub struct OpNop {
 
 
 impl NarProc::Op for OpNop {
-    fn retName(&self) -> Term {
-        Term::Name(self.selfName.clone())
+    fn retName(&self) -> String {
+        self.selfName.clone()
     }
     fn call(&self, _args:&Vec<Term>) {
         println!("CALL {}", &self.selfName);

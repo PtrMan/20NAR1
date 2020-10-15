@@ -46,7 +46,7 @@ pub fn narInit() -> ProcNar {
         cfgPerceptWindow: 2,
         cfgDescnThreshold: 0.48,
         cfgNMaxEvidence: 5000,
-        cfgVerbosity: 0, // be silent
+        cfgVerbosity: 10, // be silent
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -139,7 +139,7 @@ pub fn narStep0(nar:&mut ProcNar) {
     if nar.trace.len() >= 3 { // add evidence
         for _sampleIt in 0..cfgPerceptionSamplesPerStep {
             // filter middle by ops and select random first event before that!
-            let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar.trace);
+            let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &nar.trace);
             if idxsOfOps.len() > 0 { // there must be at least one op to sample
 
 
@@ -155,24 +155,13 @@ pub fn narStep0(nar:&mut ProcNar) {
                     
                     let idx0 = nar.rng.gen_range(0, idx1);
                     let mut idx2 = nar.trace.len()-1; // last event is last
-                    
-
-                    // is the name a op?
-                    let checkIsOp=|name:&Term| {
-                        for i in &nar.ops {
-                            if checkEqTerm(&i.retName(), &name) {
-                                return true;
-                            }
-                        }
-                        false
-                    };
 
                     // TODO< rewrite to logic which scans for the first op between idxLast and idx1, select random event as idx2 between these!
                     
                     // check if we can select previous event
                     {
                         let sel = nar.trace[nar.trace.len()-1-1].clone();
-                        if rng0 == 1 && nar.trace.len()-1-1 > idx1 && !checkIsOp(&sel.name) {
+                        if rng0 == 1 && nar.trace.len()-1-1 > idx1 && !checkIsCallableOp(&nar, &sel.name) {
                             idx2 = nar.trace.len()-1-1;
                         }
                     }
@@ -183,11 +172,11 @@ pub fn narStep0(nar:&mut ProcNar) {
 
                     
                     // middle must be op
-                    if checkIsOp(&nar.trace[idxs[1]].name) {
+                    if checkIsCallableOp(&nar, &nar.trace[idxs[1]].name) {
                         // first and last must not be op
                         if
-                            !checkIsOp(&nar.trace[idxs[0]].name)  &&
-                            !checkIsOp(&nar.trace[idxs[2]].name) && 
+                            !checkIsCallableOp(&nar, &nar.trace[idxs[0]].name)  &&
+                            !checkIsCallableOp(&nar, &nar.trace[idxs[2]].name) && 
                             nar.trace[idxs[0]].name != nar.trace[idxs[2]].name
                         {
                             
@@ -257,49 +246,51 @@ pub fn narStep0(nar:&mut ProcNar) {
 }
 
 pub fn narStep1(nar:&mut ProcNar) {    
-    let mut pickedAction:Option<Term> = None;
-    
-    
-    match &pickedAction {
-        Some(_act) => {},
-        None => {
-            let mut bestEntry:(f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = (0.0, None); // best entry from goal system to execute
+    let mut pickedAction:Option<Term> = None; // complete term of op
+    {
+        let mut bestEntry:(f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = (0.0, None); // best entry from goal system to execute
 
-            // * search if we can satisfy goal
-            for perceptIdx in 0..nar.cfgPerceptWindow as usize {
-                if nar.trace.len() > perceptIdx {
+        // * search if we can satisfy goal
+        for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+            if nar.trace.len() > perceptIdx {
 
-                    let checkedState:Term = nar.trace[nar.trace.len()-1-perceptIdx].name.clone();
+                let checkedState:Term = nar.trace[nar.trace.len()-1-perceptIdx].name.clone();
 
-                    // check if current state "leads" to action
-                    // tuple is (exp, entity)
-                    let thisEntry: (f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem, &checkedState);
+                // check if current state "leads" to action
+                // tuple is (exp, entity)
+                let thisEntry: (f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem, &checkedState);
 
-                    if thisEntry.0 > bestEntry.0 { // if exp is higher -> is a better choice
-                        bestEntry = thisEntry;
-                    }
+                if thisEntry.0 > bestEntry.0 { // if exp is higher -> is a better choice
+                    bestEntry = thisEntry;
                 }
             }
+        }
 
 
 
-            // * pick action and expected event to anticipations
-            if bestEntry.0 > nar.cfgDescnThreshold && bestEntry.1.is_some() {
-                let entity:Rc<RefCell<NarGoalSystem::Entry>> = bestEntry.1.unwrap();
-                let pickedEvidenceOpt: &Option<Rc<RefCell<SentenceDummy>>> = &entity.borrow().evidence;
+        // * pick action and expected event to anticipations
+        if bestEntry.0 > nar.cfgDescnThreshold && bestEntry.1.is_some() {
+            let entity:Rc<RefCell<NarGoalSystem::Entry>> = bestEntry.1.unwrap();
+            let pickedEvidenceOpt: &Option<Rc<RefCell<SentenceDummy>>> = &entity.borrow().evidence;
+            
+            if pickedEvidenceOpt.is_some() {
+                let pickedEvidence: Rc<RefCell<SentenceDummy>> = Rc::clone(&pickedEvidenceOpt.as_ref().unwrap());
+                { // info
+                    let implSeqAsStr = convTermToStr(& (*pickedEvidence).borrow().term);
+                    let act:Term = retSeqOp(& (*pickedEvidence).borrow().term);
+                    let actAsStr:String = convTermToStr(&act);
+                    let pickedExp:f64 = bestEntry.0;
+                    println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
+                }
                 
-                if pickedEvidenceOpt.is_some() {
-                    let pickedEvidence: Rc<RefCell<SentenceDummy>> = Rc::clone(&pickedEvidenceOpt.as_ref().unwrap());
-                    { // info
-                        let implSeqAsStr = convTermToStr(& (*pickedEvidence).borrow().term);
-                        let act:Term = retSeqOp(& (*pickedEvidence).borrow().term);
-                        let actAsStr:String = convTermToStr(&act);
-                        let pickedExp:f64 = bestEntry.0;
-                        println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
-                    }
-    
-    
-                    pickedAction = Some(retSeqOp(& (*pickedEvidence).borrow().term));
+                // extract op of seq
+                let opTerm:Term = retSeqOp(& (*pickedEvidence).borrow().term);
+                // try to decode op into args and name
+                let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
+                if decodedOpOpt.is_some() { // we can only exec op if op is valid format
+                    let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
+
+                    pickedAction = Some(opTerm.clone());
                     
                     // add anticipated event
                     let expIntervalIdx:i64 =
@@ -315,33 +306,41 @@ pub fn narStep1(nar:&mut ProcNar) {
                     });
                 }
             }
-        },
+        }
     }
     
     match &pickedAction {
-        Some(_act) => {},
+        Some(_) => {},
         None => {
             // TODO< better distribution >
             let p = nar.rng.gen_range(0, 18);
             if p < nar.ops.len() {
                 let idx = p;
-                pickedAction = Some(nar.ops[idx].retName());
+                let opName: &String = &nar.ops[idx].retName(); // sel op
+
+                let callTerm:Term = encodeOp(&vec![Term::SetExt(vec![Box::new(Term::Name("SELF".to_string()))])], opName);
+                
+                if nar.cfgVerbosity > 5 {println!("procedural: babbling: picked act {}", &convTermToStr(&callTerm));};
+                
+                pickedAction = Some(callTerm.clone());
             }
         }
     }
     
     
     match &pickedAction {
-        Some(act) => {
+        Some(term) => {
+            let (opArgs, opName) = decodeOp(&term).unwrap();
+
             // scan for action
             for iOp in &nar.ops {
-                if checkEqTerm(&iOp.retName(), &act) {
-                    iOp.call(&vec![]); // call op
+                if iOp.retName() == opName.clone() {
+                    iOp.call(&opArgs); // call op
                     break;
                 }
             }
 
-            nar.trace.push(SimpleSentence {name:act.clone(),evi:nar.t,occT:nar.t});
+            nar.trace.push(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t});
         },
         None => {},
     }
@@ -372,6 +371,25 @@ pub fn narStep1(nar:&mut ProcNar) {
     }
     
     nar.t+=1; // increment time of NAR
+}
+
+
+// is the term a op which can be called
+fn checkIsCallableOp(nar: &ProcNar, term:&Term) -> bool {
+    let opArgsAndNameOpt: Option<(Vec<Term>,String)> = decodeOp(&term);
+    if !opArgsAndNameOpt.is_some() {
+        return false; // isn't callable because it isn't 
+    }
+    let (_opArgs, opName) = opArgsAndNameOpt.unwrap();
+    
+    // TODO< check for {SELF} as first argument! >
+
+    for i in &nar.ops {
+        if &i.retName() == &opName {
+            return true;
+        }
+    }
+    false
 }
 
 // abstraction over term
@@ -416,6 +434,39 @@ pub fn retSeqCond(term:&Term) -> Term {
     }
 }
 
+// decodes a operator into the arguments and name
+// returns None if the term can't be decoded
+// expects term to be <{(arg0 * arg1 * ...)} --> ^opname>
+pub fn decodeOp(term:&Term) -> Option<(Vec<Term>,String)> {
+    match term {
+        Term::Stmt(Copula::INH, subj, pred) => {
+            match &**pred {
+                Term::Name(predName) => {
+                    match &**subj {
+                        Term::SetExt(subj2) if subj2.len() == 1 => {
+                            match &*subj2[0] {
+                                Term::Prod(args) if args.len() >= 1 => {
+                                    return Some((args.iter().map(|v| (**v).clone()).collect(), predName.clone()));
+                                },
+                                _ => {return None;}
+                            }
+                        },
+                        _ => {return None;}
+                    }
+                },
+                _ => {return None;}
+            }
+        },
+        _ => {return None;}
+    }
+}
+
+// encode op, used to get called from external code
+pub fn encodeOp(args:&Vec<Term>, name:&String) -> Term {
+    let argProd = Term::Prod(args.iter().map(|v| Box::new(v.clone())).collect()); // build product of arg
+    Term::Stmt(Copula::INH, Box::new(Term::SetExt(vec![Box::new(argProd)])), Box::new(Term::Name(name.clone())))
+}
+
 // event
 // string and evidence
 // (emulation of sentence and term)
@@ -427,15 +478,14 @@ pub struct SimpleSentence {
 }
 
 // helper to return indices of events with OPS
-pub fn calcIdxsOfOps(trace:&Vec<SimpleSentence>) -> Vec<i64> {
+pub fn calcIdxsOfOps(nar: &ProcNar, trace:&Vec<SimpleSentence>) -> Vec<i64> {
     let mut res = Vec::new();
     for idx in 0..trace.len() {
-        if convTermToStr(&trace[idx].name).chars().next().unwrap() == '^' { // is it a op?
+        if checkIsCallableOp(nar, &trace[idx].name) {
             res.push(idx as i64);
-        } 
+        }
     }
-    
-    return res;
+    res
 }
 
 
@@ -458,6 +508,6 @@ pub struct AnticipationEvent {
 
 // trait for a op, all implementations implement a op
 pub trait Op {
-    fn retName(&self) -> Term; // return name of the op
+    fn retName(&self) -> String; // return name of the op
     fn call(&self, args:&Vec<Term>);
 }
