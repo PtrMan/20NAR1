@@ -11,7 +11,7 @@ use crate::TermApi::*;
 use crate::NarWorkingCycle::{Task2, debugCreditsOfTasks, QHandler};
 use crate::Tv::*;
 use crate::NarStamp::newStamp;
-use crate::NarSentence::{SentenceDummy, EnumPunctation, Evidence};
+use crate::NarSentence::{SentenceDummy, EnumPunctation};
 
 pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     *isQuestion = false;

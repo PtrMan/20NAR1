@@ -4,12 +4,6 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-use rand::Rng;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use crate::NarStamp;
-use crate::Tv::*;
 use crate::Term::*;
 use crate::Term::convTermToStr;
 use crate::NarSentence::*;

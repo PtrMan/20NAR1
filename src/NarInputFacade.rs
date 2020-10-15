@@ -1,6 +1,5 @@
 // facade which consumes narse, comments, empty lines and commands
 
-use std::io;
 use crate::Nar::*;
 use crate::NarWorkingCycle::{debugCreditsOfTasks};
 use crate::NarModuleNlp;

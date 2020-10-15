@@ -10,7 +10,6 @@ use crate::NarStamp::*;
 use crate::NarWorkingCycle::*;
 use crate::NarProc;
 use crate::NarGoalSystem;
-use crate::NarSentence;
 
 pub struct Nar {
     pub procNar:NarProc::ProcNar, // procedural NAR
