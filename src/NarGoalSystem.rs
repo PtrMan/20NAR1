@@ -36,6 +36,8 @@ pub struct Entry {
 
 // /param t is the procedural reasoner NAR time
 pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Rc<RefCell<SentenceDummy>>>) {
+    println!("goal system: addEntry {}", &NarSentence::convSentenceTermPunctToStr(&goal, true)); // print goal which is tried to put into system
+    
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &goalSystem.entries {
         if 
