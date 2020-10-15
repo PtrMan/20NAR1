@@ -302,7 +302,11 @@ pub fn narStep1(nar:&mut ProcNar) {
                     pickedAction = Some(retSeqOp(& (*pickedEvidence).borrow().term));
                     
                     // add anticipated event
-                    let expIntervalIdx:i64 = (*pickedEvidence).borrow().expDt.unwrap();
+                    let expIntervalIdx:i64 =
+                        if (*pickedEvidence).borrow().expDt.is_some() {
+                            (*pickedEvidence).borrow().expDt.unwrap()
+                        }
+                        else {0}; // else it needs a default interval
                     let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
                     let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
                     nar.anticipatedEvents.push(AnticipationEvent {

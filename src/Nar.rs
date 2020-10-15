@@ -36,7 +36,7 @@ pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
 pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:bool) {    
     let stamp = newStamp(&vec![nar.mem.stampIdCounter]);
     nar.mem.stampIdCounter+=1;
-    let sentence = newEternalSentenceByTv(&term,punct,&tv,stamp);
+    let mut sentence = newEternalSentenceByTv(&term,punct,&tv,stamp);
 
     if nar.cfgVerbosityInput >= 1 {
         println!("[v] input {}", convSentenceTermPunctToStr(&sentence, true));
@@ -63,6 +63,8 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
 
     if isTemporal {
         // add to temporal knowledge
+        sentence.evi = Some(Evidence::CNT{pos:1,cnt:1}); // we need to transcribe TV
+                                                          // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
         nar.procNar.evidence.push(Rc::new(RefCell::new(sentence)));
     }
     else {
