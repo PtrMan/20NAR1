@@ -15,9 +15,10 @@ pub fn procChaosEntry() {
     let mut rng = rand::thread_rng();
 
     let mut t:i64 = 0; // discrete time
-    let maxT:Option<i64> = Some(15000);
+    let maxT:Option<i64> = Some(1100);
 
     let mut nar:Nar::Nar = Nar::createNar();
+    nar.procNar.cfgNMaxEvidence = 1000; // only allow 5000 beliefs
 
     nar.procNar.ops.push(Box::new( OpNop {
         selfName: "^L".to_string(),
@@ -81,6 +82,9 @@ pub fn procChaosEntry() {
         println!("nEvidence={}", nar.procNar.evidence.len());
     }
 
+    if nar.procNar.evidence.len() as f64 > nar.procNar.cfgNMaxEvidence as f64 * 1.5 {
+        panic!("procedural reasoner has to much evidence!");
+    }
 
     println!("[d] reasoner: DONE!");
 }
