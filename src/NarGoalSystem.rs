@@ -18,6 +18,7 @@ use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::retTv;
 use crate::NarSentence::newEternalSentenceByTv;
+use crate::NarWorkingCycle;
 
 pub struct GoalSystem {
     pub entries: Vec<Rc<RefCell<Entry>>>,
@@ -163,17 +164,25 @@ pub fn retBeliefCandidates(goal: &SentenceDummy, evidence: &Vec<Rc<RefCell<Sente
 
 
 // select highest ranked goal for state
-pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, Option<Rc<RefCell<Entry>>>) {
-    let mut res:(f64, Option<Rc<RefCell<Entry>>>) = (0.0, None);
+// returns entity and unified result
+pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, Option<(Rc<RefCell<Entry>>, Term)>) {
+    let mut res:(f64, Option<(Rc<RefCell<Entry>>, Term)>) = (0.0, None);
 
     for iv in &goalSystem.entries {
         match &(*(iv.borrow().sentence).term) {
-            Term::Seq(seq) if seq.len() >= 1 && checkEqTerm(&seq[0], &state) => { // does first event of seq match to state?
-                
-                let exp = Tv::calcExp(&retTv(&iv.borrow().sentence).unwrap());
-                let (resExp, _) = res;
-                if exp > resExp {
-                    res = (exp, Some(Rc::clone(&iv))); // TODO<hand over a reference to the Entry>
+            
+            Term::Seq(seq) if seq.len() >= 1 => {
+                // try to unify first part of sequence with observed state
+                // we can only consider if it matches!
+                let asgnmts:Option<Vec<NarWorkingCycle::Asgnment>> = NarWorkingCycle::unify(&seq[0], &state);
+
+                if asgnmts.is_some() { // does first event of seq match to state with unification?, must unify!
+                    let exp = Tv::calcExp(&retTv(&iv.borrow().sentence).unwrap());
+                    let (resExp, _) = res;
+                    if exp > resExp {
+                        let unifiedTerm: Term = NarWorkingCycle::unifySubst(&*(iv.borrow().sentence).term, &asgnmts.unwrap()); // unify because we need term with less or no variables!
+                        res = (exp, Some((Rc::clone(&iv), unifiedTerm)));
+                    }
                 }
             },
             _ => {}

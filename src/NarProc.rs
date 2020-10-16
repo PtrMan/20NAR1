@@ -204,7 +204,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                                             
                                             // does impl seq match?
                                             checkEqTerm(&retSeqCond(&iEE.term), &e0.name) &&
-                                            checkEqTerm(&retSeqOp(&iEE.term), &e1.name) &&
+                                            checkEqTerm(&retImplSeqOp(&iEE.term), &e1.name) &&
                                             checkEqTerm(&retPred(&iEE.term), &e2.name)
                                         {
                                             iEE.stamp = merge(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi)));
@@ -248,7 +248,7 @@ pub fn narStep0(nar:&mut ProcNar) {
 pub fn narStep1(nar:&mut ProcNar) {    
     let mut pickedAction:Option<Term> = None; // complete term of op
     {
-        let mut bestEntry:(f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = (0.0, None); // best entry from goal system to execute
+        let mut bestEntry:(f64, Option<(Rc<RefCell<NarGoalSystem::Entry>>, Term)>) = (0.0, None); // best entry from goal system to execute
 
         // * search if we can satisfy goal
         for perceptIdx in 0..nar.cfgPerceptWindow as usize {
@@ -258,7 +258,7 @@ pub fn narStep1(nar:&mut ProcNar) {
 
                 // check if current state "leads" to action
                 // tuple is (exp, entity)
-                let thisEntry: (f64, Option<Rc<RefCell<NarGoalSystem::Entry>>>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem, &checkedState);
+                let thisEntry: (f64, Option<(Rc<RefCell<NarGoalSystem::Entry>>, Term)>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem, &checkedState);
 
                 if thisEntry.0 > bestEntry.0 { // if exp is higher -> is a better choice
                     bestEntry = thisEntry;
@@ -270,21 +270,25 @@ pub fn narStep1(nar:&mut ProcNar) {
 
         // * pick action and expected event to anticipations
         if bestEntry.0 > nar.cfgDescnThreshold && bestEntry.1.is_some() {
-            let entity:Rc<RefCell<NarGoalSystem::Entry>> = bestEntry.1.unwrap();
+            let entryAndUnfied:&(Rc<RefCell<NarGoalSystem::Entry>>, Term) = &bestEntry.1.unwrap();
+            let entity:&Rc<RefCell<NarGoalSystem::Entry>> = &entryAndUnfied.0;
             let pickedEvidenceOpt: &Option<Rc<RefCell<SentenceDummy>>> = &entity.borrow().evidence;
             
             if pickedEvidenceOpt.is_some() {
                 let pickedEvidence: Rc<RefCell<SentenceDummy>> = Rc::clone(&pickedEvidenceOpt.as_ref().unwrap());
+
+                // extract op of seq
+                println!("DBG16 {}", &convTermToStr(&entryAndUnfied.1));
+                let opTerm:Term = retSeqOp(&entryAndUnfied.1);
+
+
                 { // info
-                    let implSeqAsStr = convTermToStr(& (*pickedEvidence).borrow().term);
-                    let act:Term = retSeqOp(& (*pickedEvidence).borrow().term);
-                    let actAsStr:String = convTermToStr(&act);
+                    let implSeqAsStr = convTermToStr(&entryAndUnfied.1); // unified
+                    let actAsStr:String = convTermToStr(&opTerm);
                     let pickedExp:f64 = bestEntry.0;
                     println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
                 }
                 
-                // extract op of seq
-                let opTerm:Term = retSeqOp(& (*pickedEvidence).borrow().term);
                 // try to decode op into args and name
                 let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
                 if decodedOpOpt.is_some() { // we can only exec op if op is valid format
@@ -406,7 +410,7 @@ pub fn retPred(term:&Term) -> Term {
     }
 }
 
-pub fn retSeqOp(term:&Term) -> Term {
+pub fn retImplSeqOp(term:&Term) -> Term {
     match term {
         Term::Stmt(Copula::PREDIMPL, subj, _pred) => {
             match &**subj {
@@ -417,6 +421,15 @@ pub fn retSeqOp(term:&Term) -> Term {
             }
         },
         _ => {panic!("expected pred impl!");}
+    }
+}
+
+pub fn retSeqOp(term:&Term) -> Term {
+    match &term {
+        Term::Seq(seq) => {
+            *seq[1].clone()
+        },
+        _ => {panic!("expected seq!");}
     }
 }
 
