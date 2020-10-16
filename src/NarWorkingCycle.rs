@@ -11,6 +11,7 @@ use rand::rngs::ThreadRng;
 
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use crate::Term::Term;
 use crate::Term::Copula;
@@ -1443,6 +1444,8 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy) {
 // performs one reasoning cycle
 // /param cycleCounter counter of done cycles of reasoner
 pub fn reasonCycle(mem:&mut Mem2) {
+    let cfgEnInstrumentation:bool = true; // enable instrumentation
+
     mem.cycleCounter+=1;
 
     // transfer credits from questionTasks to Judgement tasks
@@ -1678,12 +1681,19 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 }
 
                 if enInferenceSecondaryAll {
+                    let timeStart = Instant::now();
+                    
                     for iSecondaryTask in &secondaryElligable {
                         // do inference and add conclusions to array
                         let mut wereRulesApplied = false;
                         let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.borrow().sentence, &iSecondaryTask.borrow().sentence, &mut wereRulesApplied);
                         concl.append(&mut concl2);
                     }
+
+                    if cfgEnInstrumentation {
+                        println!("[instr] secondard inf took {}us", timeStart.elapsed().as_micros());
+                    }
+
                 }
             }
         }
