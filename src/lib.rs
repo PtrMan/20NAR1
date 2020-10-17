@@ -33,4 +33,6 @@ pub mod NarServer;
 pub mod NarInputFacade;
 pub mod NarUtilReadn;
 
+pub mod OpLib;
+
 //pub mod narPerception; // not include because file has issues

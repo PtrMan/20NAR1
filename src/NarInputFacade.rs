@@ -8,6 +8,7 @@ use crate::TermApi::*;
 use crate::NarSentence::{SentenceDummy, EnumPunctation};
 use crate::Tv::{Tv};
 use crate::NarProc;
+use crate::OpLib;
 
 // /param quit is used to signal if program has to get terminated
 // returns requested information as strings!
@@ -48,6 +49,18 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
             nCycles = input[5..].parse::<i64>().unwrap();
         }
         NarProc::narStep1(&mut nar.procNar);
+    }
+    else if input.len() >= 5 && &input[..5] == "!por " { // procedural op register --- register op, argument is type/name of op, 2nd argument is name of op
+        let args:Vec<&str> = input[5..].split_whitespace().collect();
+        if args.len() == 2 { // must have two args
+            let argOpType:String = args[0].to_string();
+            let argOpName:String = args[1].to_string();
+            if argOpType == "NOP" { // it it a NOP operator to get registered?
+                // add op
+                nar.procNar.ops.push(Box::new(OpLib::OpNop{name:argOpName}));
+            }
+            else {} // other types aren't supported
+        }
     }
     else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
         let natural = &input[6..].to_string();
