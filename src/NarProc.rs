@@ -343,6 +343,8 @@ pub fn narStep1(nar:&mut ProcNar) {
                     break;
                 }
             }
+            
+            println!("{}!", &convTermToStr(&term)); // print execution
 
             nar.trace.push(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t});
         },
