@@ -16,8 +16,14 @@ class Binding(object):
         # we need queue for reading
         # see https://stackoverflow.com/a/4896288/388614
         def enqueueOutput(out, queue):
-            for line in iter(out.readline, b''):
+            while True:
+                line = out.readline()
+                #print("r"+str(line), flush=True)
                 queue.put(line)
+
+            #for line in iter(out.readline, b''):
+            #    print("r"+str(line), flush=True)
+            #    queue.put(line)
             out.close()
         
         self.queue = Queue()
@@ -28,6 +34,7 @@ class Binding(object):
     # input
     def i(self, text):
         self.proc.stdin.write(text+"\n")
+        self.proc.stdin.flush()
     
     # procedural step0
     def ps0(self):
