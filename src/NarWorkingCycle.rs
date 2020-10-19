@@ -1174,6 +1174,7 @@ pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
 pub struct Task {
     pub sentence:SentenceDummy,
     pub credit:f64,
+    pub qaCredit:f64, // create assigned for Q&A
     pub id:i64, // unique id to quickly find unique tasks
     pub derivTime:i64, // time when this task was put into the working table
 }
@@ -1185,7 +1186,8 @@ pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
     let dt:i64 = cycleCounter - task.derivTime;
     let decayFactor:f64 = (-decayFactor * (dt as f64)).exp();
 
-    task.credit*decayFactor // multiply because we want to decay the actual "base credit"
+    let qaCredit:f64 = task.qaCredit*0.2; // limit Q&A credit to a low range, to give other tasks a higher chance
+    (qaCredit + task.credit)*decayFactor // multiply because we want to decay the actual "base credit"
 }
 
 pub struct Task2 {
@@ -1375,6 +1377,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             let mut task = Task {
                 sentence:sentence.clone(),
                 credit:1.0,
+                qaCredit:0.0, // no question was posed!
                 id:mem.taskIdCounter,
                 derivTime:mem.cycleCounter
             };
@@ -1411,6 +1414,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
 // helper for attention
 pub fn divCreditByComplexity(task:&mut Task) {
     task.credit /= calcComplexity(&task.sentence.term) as f64;
+    task.qaCredit /= calcComplexity(&task.sentence.term) as f64;
 }
 
 // tries to find a better answer for a question task
@@ -1457,7 +1461,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                     Some(tasksBySubterms) => {
                         for iIdx in 0..tasksBySubterms.len() {
                             let x:&RefCell<Task> = &(*tasksBySubterms[iIdx]);
-                            x.borrow_mut().credit += (*iTask).prio;
+                            x.borrow_mut().qaCredit += (*iTask).prio;
                         }
                     },
                     None => {},
