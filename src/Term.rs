@@ -22,6 +22,7 @@ pub enum Term {
     Img(Box<Term>, usize, Vec<Box<Term>>),// image (rel /idx+1 others)
     IntInt(Vec<Box<Term>>), // | intensional intersection
     Par(Vec<Box<Term>>), // &| parallel events
+    Neg(Box<Term>), // negation
 }
 
 impl Clone for Term {
@@ -96,6 +97,9 @@ impl Clone for Term {
                 }
                 Term::Par(arr)
             },
+            Term::Neg(term) => {
+                Term::Neg(term.clone())
+            },
         }
     }
 }
@@ -149,6 +153,9 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
             for i in elements {
                 retSubterms2(&i, res);
             }
+        },
+        Term::Neg(term) => {
+            retSubterms2(&term, res);
         },
         _=>{}, // no special handling necessary for "terminal" ones
     }
@@ -251,6 +258,9 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
+        Term::Neg(term) => {
+            1 + calcComplexity(term)
+        },
     }
 }
 
@@ -328,7 +338,10 @@ pub fn convTermToStr(t:&Term) -> String {
             }
             format!("( {} )", inner)
         },
-        
+        Term::Neg(term) => {
+            let inner = convTermToStr(term);
+            format!("(! {} )", inner)
+        },
     }
 }
 
@@ -476,6 +489,12 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
                     }
                     else {false}
                 },
+                _ => false
+            }
+        },
+        Term::Neg(terma) => {
+            match b {
+                Term::Neg(termb) => checkEqTerm(&terma, &termb),
                 _ => false
             }
         },
