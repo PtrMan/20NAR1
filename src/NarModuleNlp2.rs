@@ -41,7 +41,12 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
             else if  *iToken == "is" {} // ignore special token
             else if  *iToken == "are" {} // ignore special token
             else {
-                let term:Term = s(Copula::INH, &Term::SetExt( vec![Box::new(p2(&Term::Name(format!("WORDEN{}", iToken)), &Term::Name((&iToken).to_string())))]), &Term::Name("RELrepresent".to_string()));
+                let mut term:Term = Term::Name((&iToken).to_string());
+                if iToken.len() > 0 && iToken.chars().nth(0).unwrap().is_uppercase() { // do we have to represent the term as a set because it is a entity?
+                    term = Term::SetExt(vec![Box::new(term)]);
+                }
+
+                let term:Term = s(Copula::INH, &Term::SetExt( vec![Box::new(p2(&Term::Name(format!("WORDEN{}", iToken)), &term))]), &Term::Name("RELrepresent".to_string()));
                 inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
             }
 
