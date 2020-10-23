@@ -3,6 +3,7 @@
 use crate::Nar::*;
 use crate::NarWorkingCycle::{debugCreditsOfTasks};
 use crate::NarModuleNlp;
+use crate::NarModuleNlp2;
 use crate::Term::*;
 use crate::TermApi::*;
 use crate::NarSentence::{SentenceDummy, EnumPunctation};
@@ -61,6 +62,10 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
             }
             else {} // other types aren't supported
         }
+    }
+    else if input.len() > 7 && &input[..7] == "!.nlp2 " {
+        let natural = &input[6..].to_string();
+        NarModuleNlp2::process(nar, &natural);
     }
     else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
         let natural = &input[6..].to_string();

@@ -13,10 +13,10 @@ use crate::Tv::*;
 use crate::NarStamp::newStamp;
 use crate::NarSentence::{SentenceDummy, EnumPunctation};
 
-pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
+pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     *isQuestion = false;
 
-    let nCycles = 0; // number of reasoning cycles for "worker NAR"
+    let nCycles = 200; // number of reasoning cycles for "worker NAR"
 
     let mut tokens: Vec<&str> = natural.split_whitespace().collect(); // split into tokens
 
@@ -27,19 +27,14 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
     let mut workerNar = createNar();
 
-    //let mut relationWords = Vec::new(); // words which describe relations and thus have a special meaning
-    // TODO< load relation words from file >
-    //relationWords.push("is");
-    //relationWords.push("can");
-    //relationWords.push("in");
-    //relationWords.push("of");
-    //
-    //relationWords.push("need");
-
-
+    { // load NAL module from file
+        use crate::NarUtilReadn;
+        crate::NarUtilReadn::readNarseseFile(&mut workerNar, &"nalMod/modNlp.nal".to_string());    
+    }
     
+    let mut termTokens:Vec<Box<Term>> = vec![];
     {
-        // feed unknown words into NAR
+        // feed unknown words into NAR, translate question to tokens
         for iToken in &tokens {
             if false {}
             //else if *iToken == "a" || *iToken == "an") {} 
@@ -49,7 +44,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
                 let term:Term = s(Copula::INH, &Term::SetExt( vec![Box::new(p2(&Term::Name(format!("WORDEN{}", iToken)), &Term::Name((&iToken).to_string())))]), &Term::Name("RELrepresent".to_string()));
                 inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
             }
-            
+
+            termTokens.push(Box::new(Term::Name("WORDEN".to_string()+iToken)));
         }
     }
 
@@ -60,7 +56,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let rc0 = Rc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &p2(&Term::SetExt(vec![Box::new(p3(  &Term::Name("WORDENtom".to_string()), &Term::Name("WORDENis".to_string()), &Term::Name("WORDENfat".to_string())   ))]), &Term::QVar("0".to_string())), &Term::Name("RELrepresent".to_string())) ),
+            term:Rc::new( s(Copula::INH, &p2(&Term::SetExt(vec![Box::new(Term::Prod(termTokens))]), &Term::QVar("0".to_string())), &Term::Name("RELrepresent".to_string())) ),
             t:None, // time of occurence
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
@@ -93,6 +89,45 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     }
 
     None
+}
+
+// /param parentNar is the NAR to which the beliefs and questions will be fed
+pub fn process(parentNar: &mut Nar, natural:&String) {
+    let mut isQuestion = false;
+    let resTermOpt:Option<SentenceDummy> = processInternal(&natural, &mut isQuestion);
+    let punct = match isQuestion { // compute punctuation of narsese if it is a question or not
+        true => EnumPunctation::QUESTION,
+        false => EnumPunctation::JUGEMENT
+    };
+
+    if resTermOpt.is_some() {
+        let resTerm:&Term = &(*resTermOpt.unwrap().term);
+        match resTerm {
+            Term::Stmt(Copula::INH, subj, pred) => { // is relationship
+                let prod0;
+                let prod1;
+                let mut prod2:Option<Term> = None;
+                
+                match &**subj {
+                    Term::Prod(arr) if arr.len() == 2 => {
+                        prod0 = *arr[0].clone();
+                        prod1 = *arr[1].clone();
+                    },
+                    _ => {
+                        // term doesn't fit expected structure!
+                        println!("W term from NLP isn't recognized 2!");
+                        return;
+                    }
+                }
+
+                inputT(parentNar, &prod1, punct, &Tv{f:1.0,c:0.9});
+            },
+            _ => {
+                // term doesn't fit expected structure!
+                println!("W term from NLP isn't recognized!");
+            }
+        }
+    }
 }
 
 struct NlpAnswerHandler {
