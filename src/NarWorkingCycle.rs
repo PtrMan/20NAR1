@@ -657,6 +657,15 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
                 _ => false
             }
         },
+
+        Term::Neg(terma) => {
+            match b2 {
+                Term::Neg(termb) => {
+                    unify2(&terma, &termb, assignments)
+                },
+                _ => false
+            }
+        },
     }
 }
 
@@ -776,6 +785,7 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
             }
             Term::Par(arr)
         },
+        Term::Neg(term2) => {Term::Neg(Box::new(unifySubst(term2, subst)))},
     }
 }
 
