@@ -12,9 +12,15 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
+use std::rc::Rc;
+use std::cell::{RefCell};
 
+use crate::Term::{Term, convTermToStr};
 use crate::Nar::*;
 use crate::NarInputFacade;
+use crate::NarWorkingCycle::QHandler;
+use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::convSentenceTermPunctToStr;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -102,6 +108,7 @@ pub fn run() {
     // worker thread which runs NAR
     thread::spawn(move || {
         let mut nar = createNar();
+        nar.mem.globalQaHandlers.push(Rc::new(RefCell::new(QHandlerImpl{global:Arc::clone(&global)}))); // register Q&A handler to send answers to all clients
 
         loop {
             let received:String = rx.recv().unwrap();
@@ -128,3 +135,21 @@ pub fn run() {
     
     task::block_on(future);
 }
+
+// handler to send answer to clients
+pub struct QHandlerImpl {
+    pub global:Arc<Mutex<Global>>,
+}
+
+impl QHandler for QHandlerImpl {
+    fn answer(&mut self, question:&Term, answer:&SentenceDummy) {
+        // print question and send answer
+        let msg = "TRACE answer: ".to_owned() + &convTermToStr(&question) + "? " + &convSentenceTermPunctToStr(&answer, true);
+
+        let mut data = self.global.lock().unwrap(); // unwrap to panic when it can't unlock
+        let idCounter = data.idCounter;
+        data.arr.push((idCounter, msg.clone()));
+        data.idCounter+=1;
+    }
+}
+
