@@ -359,6 +359,20 @@ mod tests {
     assert_eq!(convTermToStr(&term), "a-c");
     assert_eq!(punct, EnumPunctation::GOAL);
   }
+
+
+  #[test]
+  pub fn neg_0() {
+    let narsese = "(!a).".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "(! a )");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
 }
 
 
@@ -451,6 +465,16 @@ fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
 
   {
     let res0 = c(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = parseNeg(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -624,6 +648,13 @@ fn parseCopula(input: &str) -> IResult<&str, Copula> {
   return copEquiv(input);
 }
 
+
+pub fn parseNeg(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(!")(input)?; // neg as in ONA
+  let (input, a) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, Term::Neg(Box::new(a.clone()))))
+}
 
 pub fn parseSeq2(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
