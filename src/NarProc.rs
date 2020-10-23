@@ -120,20 +120,7 @@ pub fn narStep0(nar:&mut ProcNar) {
             }
         }
         
-        
-        // TODO< refactor this as filtering >
-        {
-            let mut newanticipatedEvents = Vec::new();
-            for iDeadline in &nar.anticipatedEvents {
-                if iDeadline.deadline > nar.t {
-                    newanticipatedEvents.push(iDeadline.clone());                        
-                }
-            }
-            
-            nar.anticipatedEvents = newanticipatedEvents;
-        }
-        
-
+        nar.anticipatedEvents = nar.anticipatedEvents.iter().filter(|&iDeadline| iDeadline.deadline > nar.t).map(|v| v.clone()).collect();
     }
 
     let cfgPerceptionSamplesPerStep = 4; // how ofter should event-FIFO get sampled for perception in cycle?
