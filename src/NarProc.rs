@@ -20,6 +20,9 @@ pub struct ProcNar {
     pub cfgDescnThreshold:f64,
 
     pub cfgNMaxEvidence:i64, // maximal number of evidence
+
+    pub cfgPerceptionSamplesPerStep:i64, // how ofter should event-FIFO get sampled for perception in cycle?
+    
     pub cfgVerbosity:i64, // how verbose is the reasoner, mainly used for debugging
 
     pub evidence: Vec<Arc<Mutex<SentenceDummy>>>, //Vec<Rc<RefCell<SentenceDummy>>>,
@@ -48,7 +51,10 @@ pub fn narInit() -> ProcNar {
         cfgPerceptWindow: 2,
         cfgDescnThreshold: 0.48,
         cfgNMaxEvidence: 5000,
+        cfgPerceptionSamplesPerStep:4,
+    
         cfgVerbosity: 10, // be silent
+
         evidence: Vec::new(),
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -123,10 +129,8 @@ pub fn narStep0(nar:&mut ProcNar) {
         nar.anticipatedEvents = nar.anticipatedEvents.iter().filter(|&iDeadline| iDeadline.deadline > nar.t).map(|v| v.clone()).collect();
     }
 
-    let cfgPerceptionSamplesPerStep = 4; // how ofter should event-FIFO get sampled for perception in cycle?
-    
     if nar.trace.len() >= 3 { // add evidence
-        for _sampleIt in 0..cfgPerceptionSamplesPerStep {
+        for _sampleIt in 0..nar.cfgPerceptionSamplesPerStep {
             // filter middle by ops and select random first event before that!
             let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &nar.trace);
             if idxsOfOps.len() > 0 { // there must be at least one op to sample
