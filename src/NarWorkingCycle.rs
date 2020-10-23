@@ -1205,6 +1205,8 @@ pub struct Mem2 {
     pub judgementTasksByTerm:HashMap<Term, Vec<Rc<RefCell<Task>>>>, // for fast lookup
     pub questionTasks:Vec<Box<Task2>>,
 
+    pub globalQaHandlers: Vec<Rc<RefCell< dyn QHandler>>>, // global handlers for Q&A
+
     pub mem: Rc<RefCell<NarMem::Mem>>,
     pub stampIdCounter: i64, // counter for stamp id
     pub taskIdCounter: i64, // counter for id of task, mainly used for fast checking if two tasks are the same!
@@ -1420,7 +1422,8 @@ pub fn divCreditByComplexity(task:&mut Task) {
 // tries to find a better answer for a question task
 // /param qTask the question task to find a answer to
 // /param concl candidate answer to get evaluated
-pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy) {
+// /param globalQaHandlers 
+pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &Vec<Rc<RefCell< dyn QHandler>>>) {
     if concl.punct != EnumPunctation::JUGEMENT { // only jugements can answer questions!
         return;
     }
@@ -1431,9 +1434,16 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy) {
             let _unifiedRes: Term = unifySubst(&qTask.sentence.term, &unifyRes.unwrap());
             
             if qTask.handler.is_some() {
+                // call Q&A handler for task
                 let handler1 = qTask.handler.as_ref().unwrap();
                 let mut handler2 = handler1.borrow_mut();
                 handler2.answer(&qTask.sentence.term, &concl); // call callback because we found a answer
+            }
+
+            // call global Q&A handlers
+            for iHandler in globalQaHandlers {
+                let mut handler2 = iHandler.borrow_mut();
+                handler2.answer(&qTask.sentence.term, &concl);
             }
 
             qTask.bestAnswerExp = calcExp(&retTv(&concl).unwrap()); // update exp of best found answer
@@ -1498,7 +1508,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                             Some(concept) => {
                                 // try to answer question with all beliefs which may be relevant
                                 for iBelief in &concept.beliefs {
-                                    qaTryAnswer(&mut selTask, &iBelief);
+                                    qaTryAnswer(&mut selTask, &iBelief, &mem.globalQaHandlers);
                                 }
                             }
                             None => {
@@ -1750,7 +1760,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
             for iConcl in &concl {
                 if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
                     for mut iQTask in &mut mem.questionTasks {
-                        qaTryAnswer(&mut iQTask, &iConcl);
+                        qaTryAnswer(&mut iQTask, &iConcl, &mem.globalQaHandlers);
                     }
                 }
             }
@@ -1817,7 +1827,7 @@ pub fn createMem2()->Mem2 {
         concepts:HashMap::new(),
     };
     
-    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), rng:rand::thread_rng(), stampIdCounter:0, taskIdCounter:1000, // high number to easy debugging to prevent confusion
+    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), globalQaHandlers:vec![], rng:rand::thread_rng(), stampIdCounter:0, taskIdCounter:1000, // high number to easy debugging to prevent confusion
         cycleCounter:0,
     }
 }
