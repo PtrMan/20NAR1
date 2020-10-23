@@ -50,7 +50,8 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
                 inputT(&mut workerNar, &term, EnumPunctation::JUGEMENT, &Tv{f:1.0,c:0.998});
             }
 
-            termTokens.push(Box::new(Term::Name("WORDEN".to_string()+iToken)));
+            let iTokenReplaced = iToken.replace("'","_"); // make parsable
+            termTokens.push(Box::new(Term::Name("WORDEN".to_string()+&iTokenReplaced)));
         }
     }
 

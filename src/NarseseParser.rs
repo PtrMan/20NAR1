@@ -382,7 +382,7 @@ fn ok1(input: &str) -> Result<&str, std::num::ParseIntError> {
 }
 
 fn isValidSign(c: char) -> bool {
-  c.is_alphanumeric() || c == '-' || c == '^'
+  c.is_alphanumeric() || c == '-' || c == '_' || c == '^'
 }
 
 fn alpha2(input: &str) -> IResult<&str, &str> {
