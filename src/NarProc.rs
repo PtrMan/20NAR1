@@ -1,6 +1,8 @@
 use rand::Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::NarStamp::*;
 use crate::NarSentence::*;
@@ -20,7 +22,7 @@ pub struct ProcNar {
     pub cfgNMaxEvidence:i64, // maximal number of evidence
     pub cfgVerbosity:i64, // how verbose is the reasoner, mainly used for debugging
 
-    pub evidence: Vec<Rc<RefCell<SentenceDummy>>>,
+    pub evidence: Vec<Arc<Mutex<SentenceDummy>>>, //Vec<Rc<RefCell<SentenceDummy>>>,
     
     pub trace: Vec<SimpleSentence>,
     pub anticipatedEvents: Vec<AnticipationEvent>,
@@ -93,7 +95,7 @@ pub fn narStep0(nar:&mut ProcNar) {
             
             let mut newanticipatedEvents = Vec::new();
             for iDeadline in &nar.anticipatedEvents {
-                let evi = (*iDeadline).evi.borrow();
+                let evi = iDeadline.evi.lock().unwrap();
                 if !checkEqTerm( &retPred(& evi.term), &curEvent) { // is predicted event not current event?
                     newanticipatedEvents.push(iDeadline.clone());
                 }
@@ -107,7 +109,7 @@ pub fn narStep0(nar:&mut ProcNar) {
 
         {
             for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= nar.t) {
-                let mut mutEvi = (*iDeadlineViolated).evi.borrow_mut();
+                let mut mutEvi = iDeadlineViolated.evi.lock().unwrap();
                 
                 match mutEvi.evi.as_ref().unwrap() {
                     Evidence::CNT{pos,cnt} => {
@@ -192,11 +194,15 @@ pub fn narStep0(nar:&mut ProcNar) {
                             // compute exponential delta time
                             let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
                             
-                            let mut addEvidence:bool = true; // do we need to add new evidence?
+                            let addEvidence: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
+
                             
+
+
+
                             {
-                                for iEERc in &nar.evidence {
-                                    let iEE = &mut(*iEERc).borrow_mut();
+                                for iEEArc in &nar.evidence {
+                                    let mut iEE = iEEArc.lock().unwrap();
                                     
                                     if !checkOverlap(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi))) { // evidence must no overlap!
                                         if
@@ -217,15 +223,15 @@ pub fn narStep0(nar:&mut ProcNar) {
                                             
                                             if false {println!("dbg - REV")};
                                             
-                                            addEvidence = false; // because we revised
+                                            addEvidence.store(false, Ordering::Relaxed); // because we revised
                                         }                                
                                     }
         
                                 }
                             }
                             
-                            if addEvidence {
-                                nar.evidence.push(Rc::new(RefCell::new(SentenceDummy {
+                            if addEvidence.load(Ordering::Relaxed) {
+                                nar.evidence.push(Arc::new(Mutex::new(SentenceDummy {
                                     punct:EnumPunctation::JUGEMENT,
                                     t:None,
                                     stamp:newStamp(&vec!(e0.evi,e1.evi,e2.evi)),
@@ -272,10 +278,10 @@ pub fn narStep1(nar:&mut ProcNar) {
         if bestEntry.0 > nar.cfgDescnThreshold && bestEntry.1.is_some() {
             let entryAndUnfied:&(Rc<RefCell<NarGoalSystem::Entry>>, Term) = &bestEntry.1.unwrap();
             let entity:&Rc<RefCell<NarGoalSystem::Entry>> = &entryAndUnfied.0;
-            let pickedEvidenceOpt: &Option<Rc<RefCell<SentenceDummy>>> = &entity.borrow().evidence;
+            let pickedEvidenceOpt: &Option<Arc<Mutex<SentenceDummy>>> = &entity.borrow().evidence;
             
             if pickedEvidenceOpt.is_some() {
-                let pickedEvidence: Rc<RefCell<SentenceDummy>> = Rc::clone(&pickedEvidenceOpt.as_ref().unwrap());
+                let pickedEvidence: Arc<Mutex<SentenceDummy>> = Arc::clone(&pickedEvidenceOpt.as_ref().unwrap());
 
                 // extract op of seq
                 println!("DBG16 {}", &convTermToStr(&entryAndUnfied.1));
@@ -298,14 +304,14 @@ pub fn narStep1(nar:&mut ProcNar) {
                     
                     // add anticipated event
                     let expIntervalIdx:i64 =
-                        if (*pickedEvidence).borrow().expDt.is_some() {
-                            (*pickedEvidence).borrow().expDt.unwrap()
+                        if pickedEvidence.lock().unwrap().expDt.is_some() {
+                            pickedEvidence.lock().unwrap().expDt.unwrap()
                         }
                         else {0}; // else it needs a default interval
                     let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
                     let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
                     nar.anticipatedEvents.push(AnticipationEvent {
-                        evi:Rc::clone(&pickedEvidence),
+                        evi:Arc::clone(&pickedEvidence),
                         deadline:deadline,
                     });
                 }
@@ -359,7 +365,7 @@ pub fn narStep1(nar:&mut ProcNar) {
 
     // limit evidence (AIKR)
     if nar.t % 101 == 1 && nar.evidence.len() > nar.cfgNMaxEvidence as usize {
-        nar.evidence.sort_by(|a, b| calcExp(&retTv(&*b.borrow()).unwrap()).partial_cmp(&calcExp(&retTv(&*a.borrow()).unwrap())).unwrap()); // order by importance
+        nar.evidence.sort_by(|a, b| calcExp(&retTv(&b.lock().unwrap()).unwrap()).partial_cmp(&calcExp(&retTv(&a.lock().unwrap()).unwrap())).unwrap()); // order by importance
         nar.evidence = nar.evidence[..nar.evidence.len().min(nar.cfgNMaxEvidence as usize)].to_vec(); // keep under AIKR
     }
 
@@ -517,7 +523,7 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
 // anticipated event
 #[derive(Clone)]
 pub struct AnticipationEvent {
-    pub evi:Rc<RefCell<SentenceDummy>>, // evidence
+    pub evi:Arc<Mutex<SentenceDummy>>, // evidence
     pub deadline:i64, // deadline in absolute cycles
 }
 

@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::Tv::*;
 use crate::Term::*;
@@ -64,7 +64,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
         // add to temporal knowledge
         sentence.evi = Some(Evidence::CNT{pos:1,cnt:1}); // we need to transcribe TV
                                                           // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
-        nar.procNar.evidence.push(Rc::new(RefCell::new(sentence)));
+        nar.procNar.evidence.push(Arc::new(Mutex::new(sentence)));
     }
     else {
         if punct == EnumPunctation::GOAL {

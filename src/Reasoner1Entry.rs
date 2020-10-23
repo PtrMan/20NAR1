@@ -3,6 +3,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use crate::Term::*;
 use crate::Term::convTermToStr;
@@ -89,16 +90,16 @@ pub fn reasoner1Entry() {
         println!("");
         println!("EVIDENCE:");
         for iEvi in &nar.procNar.evidence {
-            let implSeqAsStr = convTermToStr(& (*iEvi).borrow().term);
+            let implSeqAsStr = convTermToStr(&iEvi.lock().unwrap().term);
     
-            let eviHelper = (*iEvi).borrow();
+            let eviHelper = iEvi.lock().unwrap();
             let evi:&Evidence = &eviHelper.evi.as_ref().unwrap();
             let (pos,cnt) = match evi {
                 Evidence::CNT{pos,cnt} => {(pos,cnt)},
                 _ => {panic!("expected CNT");}
             };
     
-            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, (*iEvi).borrow().expDt.unwrap(), pos, cnt);
+            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, iEvi.lock().unwrap().expDt.unwrap(), pos, cnt);
         }
         println!("");
 

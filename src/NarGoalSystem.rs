@@ -2,7 +2,7 @@
 
 use std::rc::Rc;
 use core::cell::RefCell;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use rand::Rng;
 
 use crate::Term::*;
@@ -29,14 +29,14 @@ pub struct GoalSystem {
 pub struct Entry {
     pub sentence: Arc<SentenceDummy>,
     pub utility: f64,
-    pub evidence: Option<Rc<RefCell<SentenceDummy>>>, // evidence which was used to derive this sentence. This is used to create the anticipations
+    pub evidence: Option<Arc<Mutex<SentenceDummy>>>, // evidence which was used to derive this sentence. This is used to create the anticipations
                                                       // sentence: (a, ^b)!
                                                       // evidence: (a, ^b) =/> c.  (actual impl seq was this)
     pub createTime: i64, // time of the creation of this entry
 }
 
 // /param t is the procedural reasoner NAR time
-pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Rc<RefCell<SentenceDummy>>>) {
+pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<Mutex<SentenceDummy>>>) {
     if false {println!("goal system: addEntry {}", &NarSentence::convSentenceTermPunctToStr(&goal, true))}; // print goal which is tried to put into system
     
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
@@ -145,14 +145,14 @@ pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDumm
 
 
 // filters belief candidates which can be used for inference with the goal
-pub fn retBeliefCandidates(goal: &SentenceDummy, evidence: &Vec<Rc<RefCell<SentenceDummy>>>) -> Vec<Rc<RefCell<SentenceDummy>>> {
+pub fn retBeliefCandidates(goal: &SentenceDummy, evidence: &Vec<Arc<Mutex<SentenceDummy>>>) -> Vec<Arc<Mutex<SentenceDummy>>> {
     let mut res = Vec::new();
     
     for iBelief in &*evidence {
-        match &*(**iBelief).borrow().term {
+        match &*(iBelief.lock().unwrap()).term {
             Term::Stmt(Copula::PREDIMPL, subj, pred) => {
                 if checkEqTerm(&goal.term, &pred) {
-                    res.push(Rc::clone(iBelief));
+                    res.push(Arc::clone(iBelief));
                 }
             },
             _ => {}
@@ -194,7 +194,7 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
 }
 
 // /param t is the procedural reasoner NAR time
-pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Rc<RefCell<SentenceDummy>>>, rng: &mut rand::rngs::ThreadRng) {
+pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Arc<Mutex<SentenceDummy>>>, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal
     let sampledGoalOpt: Option<Arc<SentenceDummy>> = sample(&goalSystem, rng);
 
@@ -203,7 +203,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Rc<
     }
     let sampledGoal:Arc<SentenceDummy> = sampledGoalOpt.unwrap();
 
-    let mut concls:Vec<(Arc<SentenceDummy>, Option<Rc<RefCell<SentenceDummy>>>)> = Vec::new(); // conclusions are tuple (goal, evidence)
+    let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<Mutex<SentenceDummy>>>)> = Vec::new(); // conclusions are tuple (goal, evidence)
     
     // * try to do goal detachment
     match &*sampledGoal.term {
@@ -214,13 +214,13 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Rc<
         },
         _ => {
             // * try to find candidates for inference
-            let envidenceCandidates: Vec<Rc<RefCell<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, evidence);
+            let envidenceCandidates: Vec<Arc<Mutex<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, evidence);
 
             // * try to do inference
             for iBelief in &envidenceCandidates {
-                let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &(**iBelief).borrow());
+                let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &iBelief.lock().unwrap());
                 if conclOpt.is_some() {
-                    concls.push((Arc::new(conclOpt.unwrap()), Some(Rc::clone(iBelief))));
+                    concls.push((Arc::new(conclOpt.unwrap()), Some(Arc::clone(iBelief))));
                 }
             }
         }
@@ -229,7 +229,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Rc<
     // * try to add goals
     for (iGoal, iEvidence) in &concls {
         let iEvidence2 = match iEvidence { // clone evidence
-            Some(e) => {Some(Rc::clone(e))}
+            Some(e) => {Some(Arc::clone(e))}
             None => None
         };
         addEntry(goalSystem, t, Arc::clone(iGoal), iEvidence2);
