@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::{Arc};
 
 use crate::Term::Term;
 use crate::Tv;
@@ -22,7 +22,7 @@ pub enum Evidence {
 
 #[derive(Clone)]
 pub struct SentenceDummy {
-    pub term:Rc<Term>,
+    pub term:Arc<Term>,
     pub t:Option<i64>, // time of occurence 
     pub punct:EnumPunctation,
     pub stamp:Stamp,
@@ -35,7 +35,7 @@ pub struct SentenceDummy {
 // create new eternal sentence
 pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:Stamp)->SentenceDummy {
     SentenceDummy {
-        term:Rc::new(term.clone()),
+        term:Arc::new(term.clone()),
         t:None, // time of occurence 
         punct:punct,
         stamp:stamp,

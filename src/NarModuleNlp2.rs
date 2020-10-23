@@ -4,6 +4,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::Nar::*;
 use crate::Term::*;
@@ -62,7 +63,7 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
     let rc0 = Rc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &p2(&Term::SetExt(vec![Box::new(Term::Prod(termTokens))]), &Term::QVar("0".to_string())), &Term::Name("RELrepresent".to_string())) ),
+            term:Arc::new( s(Copula::INH, &p2(&Term::SetExt(vec![Box::new(Term::Prod(termTokens))]), &Term::QVar("0".to_string())), &Term::Name("RELrepresent".to_string())) ),
             t:None, // time of occurence
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),

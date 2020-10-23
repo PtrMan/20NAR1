@@ -4,6 +4,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::Nar::*;
 use crate::Term::*;
@@ -188,7 +189,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let rc0 = Rc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relGENERIC".to_string())) ),
+            term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relGENERIC".to_string())) ),
             t:None, // time of occurence
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
@@ -209,7 +210,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let rc1 = Rc::clone(&answerHandlerRef1);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIsQuery".to_string())) ),
+            term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIsQuery".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),
@@ -230,7 +231,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let rc2 = Rc::clone(&answerHandlerRef2);
     {
         let sentence = SentenceDummy {
-            term:Rc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs2".to_string())) ),
+            term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs2".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
             stamp:newStamp(&vec![999]),

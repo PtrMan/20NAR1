@@ -227,7 +227,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                                     t:None,
                                     stamp:newStamp(&vec!(e0.evi,e1.evi,e2.evi)),
                                     expDt:Some(expDt),
-                                    term:Rc::new(s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone())), // (e0 &/ e1) =/> e2
+                                    term:Arc::new(s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone())), // (e0 &/ e1) =/> e2
                                     evi:Some(Evidence::CNT{pos:1,cnt:1})
                                 })));
                             }
