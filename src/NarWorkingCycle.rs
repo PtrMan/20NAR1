@@ -6,6 +6,7 @@
 
 // TODO< add question variable >
 
+use std::sync::mpsc;
 use std::thread;
 use rand::Rng;
 use rand::rngs::ThreadRng;
@@ -1132,33 +1133,46 @@ mod tests {
 }
 
 
-
-
 // do inference of two sentences
 // /param wereRulesApplied is true if any rules were applied
-pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<SentenceDummy> {
+pub fn inference2(
+    paTerm:&Term, paPunct:EnumPunctation, paStamp:&Stamp, paTv:&Option<Tv>,  
+    pbTerm:&Term, pbPunct:EnumPunctation, pbStamp:&Stamp, pbTv:&Option<Tv>, 
+    wereRulesApplied:&mut bool
+)->Vec<SentenceDummy> {
     *wereRulesApplied = false;
 
     let mut concl = vec![];
 
-    let infConcl = infBinary(&pa.term, pa.punct, &retTv(&pa), &pb.term, pb.punct, &retTv(&pb), wereRulesApplied);
+    let infConcl = infBinary(&paTerm, paPunct, paTv, &pbTerm, pbPunct, pbTv, wereRulesApplied);
     for iInfConcl in infConcl {
         let (term, tv, punct) = iInfConcl;
         concl.push(SentenceDummy{
             term:Arc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
-            stamp:merge(&pa.stamp, &pb.stamp),
+            stamp:merge(&paStamp, &pbStamp),
             t:None, // time of occurence 
             punct:punct,
             expDt:None
         });
     }
 
-    if concl.len() > 0 && checkOverlap(&pa.stamp, &pb.stamp) { // check for overlap
+    if concl.len() > 0 && checkOverlap(&paStamp, &pbStamp) { // check for overlap
       concl = vec![]; // flush conclusions because we don't have any conclusions when the premises overlapped
     }
     
     concl
+}
+
+
+// do inference of two sentences
+// /param wereRulesApplied is true if any rules were applied
+pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<SentenceDummy> {
+    inference2(
+        &pa.term, pa.punct, &pa.stamp, &retTv(&pa),  
+        &pb.term, pb.punct, &pb.stamp, &retTv(&pb), 
+        wereRulesApplied
+    )
 }
 
 pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
@@ -1721,28 +1735,34 @@ pub fn reasonCycle(mem:&mut Mem2) {
                     let timeStart = Instant::now();
 
                     let secondaryElligablePartA = &secondaryElligable[..secondaryElligable.len()/2];
-                    let secondaryElligablePartB = &secondaryElligable[secondaryElligable.len()/2..];
-                    
-                    let secondaryElligablePartBArc = Arc::new(Mutex::new(secondaryElligablePartB));
-                    let mut conclPartB:Vec<SentenceDummy> = vec![]; // conclusions for part B
+                    let secondaryElligablePartB2 = secondaryElligable[secondaryElligable.len()/2..].to_vec();
+                    let secondaryElligablePartB:Vec<(Term,EnumPunctation,Stamp,Option<Tv>)> = secondaryElligablePartB2.iter().map(|s| {
+                        let s2:&SentenceDummy = &s.lock().unwrap().sentence;
+                        ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
+                    }).collect();
+
+                    let selPrimarySentenceTuple;
+                    {
+                        let s2:&SentenceDummy = &selPrimaryTask.lock().unwrap().sentence;
+                        selPrimarySentenceTuple = ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
+                    }
+
+                    let handleB = thread::spawn(move|| {
+                        let mut res = vec![];
+                        for iSecondarySentence in &secondaryElligablePartB {
+                            let mut wereRulesApplied = false;
+                            let mut concl2: Vec<SentenceDummy> = inference2(
+                                &selPrimarySentenceTuple.0, selPrimarySentenceTuple.1, &selPrimarySentenceTuple.2, &selPrimarySentenceTuple.3,
+                                &iSecondarySentence.0, iSecondarySentence.1, &iSecondarySentence.2, &iSecondarySentence.3, 
+                                &mut wereRulesApplied
+                            );
+                            res.append(&mut concl2);
+                        }
+                        res
+                    });
 
                     let selPrimaryTaskSentence:&SentenceDummy = &selPrimaryTask.lock().unwrap().sentence;
-                    
-                    
-                    /*
-                    let handleB = thread::spawn(move || {
-                        
-                        for iSecondaryTask in secondaryElligablePartB {
-                            // do inference and add conclusions to array
-                            if !Arc::ptr_eq(selPrimaryTask, &iSecondaryTask) { // arcs must not point to same task!
-                                let mut wereRulesApplied = false;
-                                let mut concl2: Vec<SentenceDummy> = inference(selPrimaryTaskSentence, &iSecondaryTask.lock().unwrap().sentence, &mut wereRulesApplied);
-                                conclPartB.append(&mut concl2);
-                            }
-                        }
-                    });*/
-                    
-                    for iSecondaryTask in secondaryElligable {
+                    for iSecondaryTask in secondaryElligablePartA {
                         // do inference and add conclusions to array
                         if !Arc::ptr_eq(selPrimaryTask, &iSecondaryTask) { // arcs must not point to same task!
                             let mut wereRulesApplied = false;
@@ -1751,7 +1771,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                         }
                     }
                     
-                    //handleB.join().unwrap();
+                    let mut conclPartB = handleB.join().unwrap();
                     concl.append(&mut conclPartB);
 
                     if cfgEnInstrumentation {
