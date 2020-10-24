@@ -52,6 +52,22 @@ pub fn inf2(a: &Term, punct:EnumPunctation, aTv: &Tv) -> Option<(Term, Tv, EnumP
 }
 */
 
+// (!a) |- a
+pub fn infNeg(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+    if punct != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
+    match a {
+        Term::Neg(aterm) => {
+            return Some(((**aterm).clone(), neg(&aTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
+        },
+        _ => {},
+    }
+    None
+}
+
+
 // structural
 // a --> (X | Y).
 // |-
@@ -984,7 +1000,10 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPu
 
 pub fn infSinglePremise(a: &Term, punct:EnumPunctation, aTv:&Option<Tv>) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
-    
+
+    match infNeg(&a, punct, &aTv) {
+        Some(x) => { res.push(x); } _ => {}
+    }
     match infStructSubj1(&a, punct, &aTv, 0) {
         Some(x) => { res.push(x); } _ => {}
     }

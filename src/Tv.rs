@@ -41,6 +41,10 @@ pub fn comp(a:&Tv,b:&Tv)->Tv {
     Tv{f:f,c:c}
 }
 
+pub fn neg(a:&Tv)->Tv {
+    Tv{f:1.0-a.f,c:a.c}
+}
+
 pub fn w2c(w:f64) -> f64 {
     let h=1.0;
     w / (w + h)
