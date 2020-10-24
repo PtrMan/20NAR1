@@ -11,8 +11,6 @@ extern crate nom;
 
 pub fn main() {
     //NnTrain::testTrainingNn0();
-    nar20_1::NarWorkingCycle::expNarsWorkingCycle0(); // experiment with NAR working cycle
-
 
     let runEnv:String = std::env::args().nth(1).expect("no environment given");
 

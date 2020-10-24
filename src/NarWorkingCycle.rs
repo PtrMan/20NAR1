@@ -1900,62 +1900,6 @@ pub fn createMem2()->Mem2 {
     }
 }
 
-// not working prototype of attention mechanism based on credits
-pub fn expNarsWorkingCycle0() {
-    // TODO< create and fill concepts! by sentence when storing sentence into memory >
-    let mut mem:Mem2 = createMem2();
-    
-    // add testing tasks
-    {
-        { // .
-            let sentence = SentenceDummy {
-                //isOp:false, // is it a operation?
-                term:Arc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("b".to_string())))),
-                t:None, // time of occurence 
-                punct:EnumPunctation::JUGEMENT,
-                stamp:newStamp(&vec![0]),
-                evi:Some(Evidence::TV(Tv{f:1.0,c:0.9})),
-                expDt:None
-            };
-            memAddTask(&mut mem, &sentence, true);
-        }
-
-        { // .
-            let sentence = SentenceDummy {
-                //isOp:false, // is it a operation?
-                term:Arc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("b".to_string())), Box::new(Term::Name("c".to_string())))),
-                t:None, // time of occurence 
-                punct:EnumPunctation::JUGEMENT,
-                stamp:newStamp(&vec![1]),
-                evi:Some(Evidence::TV(Tv{f:1.0,c:0.9})),
-                expDt:None
-            };
-            memAddTask(&mut mem, &sentence, true);
-        }
-
-        { // ?
-            let sentence = SentenceDummy {
-                //isOp:false, // is it a operation?
-                term:Arc::new(Term::Stmt(Copula::INH, Box::new(Term::Name("a".to_string())), Box::new(Term::Name("c".to_string())))),
-                t:None, // time of occurence 
-                punct:EnumPunctation::QUESTION,
-                stamp:newStamp(&vec![2]),
-                evi:None,
-                expDt:None
-            };
-            memAddTask(&mut mem, &sentence, true);
-        }
-    }
-
-    println!("cycle...");
-    reasonCycle(&mut mem);
-    println!("cycle done");
-
-    for iLine in &debugCreditsOfTasks(&mut mem) {
-        println!("{}", iLine);
-    }
-}
-
 pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
     let mut res = Vec::new();
     
