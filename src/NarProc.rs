@@ -313,17 +313,19 @@ pub fn narStep1(nar:&mut ProcNar) {
     match &pickedAction {
         Some(_) => {},
         None => {
-            // TODO< better distribution >
-            let p = nar.rng.gen_range(0, nar.ops.len()*9);
-            if p < nar.ops.len() {
-                let idx = p;
-                let opName: &String = &nar.ops[idx].retName(); // sel op
+            if nar.ops.len() > 0 { // we have to have ops to sample from
+                // TODO< better distribution >
+                let p = nar.rng.gen_range(0, nar.ops.len()*9);
+                if p < nar.ops.len() {
+                    let idx = p;
+                    let opName: &String = &nar.ops[idx].retName(); // sel op
 
-                let callTerm:Term = encodeOp(&vec![Term::SetExt(vec![Box::new(Term::Name("SELF".to_string()))])], opName);
-                
-                if nar.cfgVerbosity > 5 {println!("procedural: babbling: picked act {}", &convTermToStr(&callTerm));};
-                
-                pickedAction = Some(callTerm.clone());
+                    let callTerm:Term = encodeOp(&vec![Term::SetExt(vec![Box::new(Term::Name("SELF".to_string()))])], opName);
+                    
+                    if nar.cfgVerbosity > 5 {println!("procedural: babbling: picked act {}", &convTermToStr(&callTerm));};
+                    
+                    pickedAction = Some(callTerm.clone());
+                }
             }
         }
     }
