@@ -49,7 +49,7 @@ pub fn narInit() -> ProcNar {
         cfgIntervalExpBase: 1.5,
         cfgIntervalMax: 40,
         cfgPerceptWindow: 2,
-        cfgDescnThreshold: 0.48,
+        cfgDescnThreshold: 0.58,
         cfgNMaxEvidence: 5000,
         cfgPerceptionSamplesPerStep:4,
     
