@@ -1,7 +1,7 @@
 [package]
 name = "nar20_1"
-version = "0.0.1"
-authors = ["x"]
+version = "0.0.2"
+authors = ["PtrMan rt09@protonmail.com"]
 edition = "2018"
 
 [dependencies]
