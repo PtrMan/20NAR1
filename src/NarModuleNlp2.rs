@@ -110,14 +110,13 @@ pub fn process(parentNar: &mut Nar, natural:&String) {
     if resTermOpt.is_some() {
         let resTerm:&Term = &(*resTermOpt.unwrap().term);
         match resTerm {
-            Term::Stmt(Copula::INH, subj, pred) => { // is relationship
-                let prod0;
+            Term::Stmt(Copula::INH, subj, _pred) => { // is relationship
+                //let prod0;
                 let prod1;
-                let mut prod2:Option<Term> = None;
                 
                 match &**subj {
                     Term::Prod(arr) if arr.len() == 2 => {
-                        prod0 = *arr[0].clone();
+                        //prod0 = *arr[0].clone();
                         prod1 = *arr[1].clone();
                     },
                     _ => {

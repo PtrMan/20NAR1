@@ -47,7 +47,7 @@ pub fn reasoner1Entry() {
             NarProc::narStep0(&mut nar.procNar);
 
             {
-                let mut envPong = (*envPongRc).borrow_mut();
+                let envPong = (*envPongRc).borrow();
                 let diff:i64 = envPong.ballX-envPong.batX;
                 let batWidth:i64 = envPong.batWidth;
                 if diff.abs() <= batWidth {

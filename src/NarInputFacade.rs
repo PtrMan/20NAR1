@@ -36,19 +36,19 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
         }
     }
     else if input.len() >= 5 && &input[..5] == "!ps0s" { // procedural step 0
-        let mut nCycles = 1;
-        if input.len() > 5 && false { // parse number of cycles
-            // TODO< check if it was parsed fine! >
-            nCycles = input[5..].parse::<i64>().unwrap();
-        }
+        //let mut nCycles = 1;
+        //if input.len() > 5 && false { // parse number of cycles
+        //    // TODO< check if it was parsed fine! >
+        //    nCycles = input[5..].parse::<i64>().unwrap();
+        //}
         NarProc::narStep0(&mut nar.procNar);
     }
     else if input.len() >= 5 && &input[..5] == "!ps1s" { // procedural step 1
-        let mut nCycles = 1;
-        if input.len() > 5 && false { // parse number of cycles
-            // TODO< check if it was parsed fine! >
-            nCycles = input[5..].parse::<i64>().unwrap();
-        }
+        //let mut nCycles = 1;
+        //if input.len() > 5 && false { // parse number of cycles
+        //    // TODO< check if it was parsed fine! >
+        //    nCycles = input[5..].parse::<i64>().unwrap();
+        //}
         NarProc::narStep1(&mut nar.procNar);
     }
     else if input.len() >= 5 && &input[..5] == "!por " { // procedural op register --- register op, argument is type/name of op, 2nd argument is name of op

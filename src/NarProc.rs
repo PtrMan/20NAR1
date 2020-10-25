@@ -289,7 +289,7 @@ pub fn narStep1(nar:&mut ProcNar) {
                 // try to decode op into args and name
                 let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
                 if decodedOpOpt.is_some() { // we can only exec op if op is valid format
-                    let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
+                    //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
 
                     pickedAction = Some(opTerm.clone());
                     

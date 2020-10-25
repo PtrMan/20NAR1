@@ -148,7 +148,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
         }
         selBatch
     };
-    let mut selBatch = selBatchRef.borrow();
+    let selBatch = selBatchRef.borrow();
 
 
     
@@ -182,7 +182,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDummy> {
     // check if term is same and inference can be done
     match &*belief.term {
-        Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+        Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
             if !checkEqTerm(&goal.term, &pred) {
                 return None; // can't do inference because terms have to be equal
             }
@@ -229,7 +229,7 @@ pub fn retBeliefCandidates(goal: &SentenceDummy, evidence: &Vec<Arc<Mutex<Senten
     
     for iBelief in &*evidence {
         match &*(iBelief.lock().unwrap()).term {
-            Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+            Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
                 if checkEqTerm(&goal.term, &pred) {
                     res.push(Arc::clone(iBelief));
                 }

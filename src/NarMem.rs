@@ -82,7 +82,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
 pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
     let mut concepts: Vec<(Arc<Concept>, f64)> = Vec::new(); // concept with rating
     // scan concepts
-    for (key, mut iConcept) in &mut mem.concepts {
+    for (_key, mut iConcept) in &mut mem.concepts {
         let mut rating:f64 = 0.0;
         match Arc::get_mut(&mut iConcept) {
             Some(concept) => {

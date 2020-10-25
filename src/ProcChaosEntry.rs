@@ -12,8 +12,6 @@ use crate::Nar;
 use crate::NarGoalSystem;
 
 pub fn procChaosEntry() {
-    let mut rng = rand::thread_rng();
-
     let mut t:i64 = 0; // discrete time
     let maxT:Option<i64> = Some(1100);
 
