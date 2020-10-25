@@ -29,11 +29,16 @@ pub struct Mem {
 }
 
 pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
+    storeInConcepts2(mem, s, &retSubterms(&*s.term)); // enumerate all terms, we need to do this to add the sentence to all relevant names
+}
+
+// function is a indirection for more control over which subterms are used for storage
+pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
     if s.punct != EnumPunctation::JUGEMENT {
         return; // ignore everything else than JUGEMENT
     }
     
-    for iTerm in retSubterms(&*s.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
+    for iTerm in subterms {
         match mem.concepts.get_mut(&iTerm.clone()) {
             Some(arcConcept) => {
                 match Arc::get_mut(arcConcept) {
@@ -71,6 +76,7 @@ pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
         }
     }
 }
+
 
 // limit size of memory
 pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
