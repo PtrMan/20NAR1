@@ -65,7 +65,7 @@ pub fn narInit() -> ProcNar {
 
         expIntervalsTable: Vec::new(),
 
-        goalSystem: NarGoalSystem::GoalSystem{entries:Vec::new(), nMaxEntries:20},
+        goalSystem: NarGoalSystem::makeGoalSystem(20, 8),
     };
 
 
