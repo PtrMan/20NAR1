@@ -314,7 +314,7 @@ pub fn narStep1(nar:&mut ProcNar) {
         Some(_) => {},
         None => {
             // TODO< better distribution >
-            let p = nar.rng.gen_range(0, 18);
+            let p = nar.rng.gen_range(0, nar.ops.len()*9);
             if p < nar.ops.len() {
                 let idx = p;
                 let opName: &String = &nar.ops[idx].retName(); // sel op
