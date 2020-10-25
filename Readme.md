@@ -13,3 +13,5 @@ connect to server with for example netcat: `nc 127.0.0.1 2039`<br />
 * rust
 ## when using python binding
 * python 3.X, recommended 3.5 and up
+## robotics
+Robot examples need pybullet, install with `pip install pybullet`
