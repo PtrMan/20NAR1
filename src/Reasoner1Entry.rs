@@ -90,16 +90,17 @@ pub fn reasoner1Entry() {
         println!("");
         println!("EVIDENCE:");
         for iEvi in &nar.procNar.evidence {
-            let implSeqAsStr = convTermToStr(&iEvi.lock().unwrap().term);
+            let iEvi2 = iEvi.lock().unwrap();
+
+            let implSeqAsStr = convTermToStr(&iEvi2.term);
     
-            let eviHelper = iEvi.lock().unwrap();
-            let evi:&Evidence = &eviHelper.evi.as_ref().unwrap();
+            let evi:&Evidence = &iEvi2.evi.as_ref().unwrap();
             let (pos,cnt) = match evi {
                 Evidence::CNT{pos,cnt} => {(pos,cnt)},
                 _ => {panic!("expected CNT");}
             };
     
-            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, iEvi.lock().unwrap().expDt.unwrap(), pos, cnt);
+            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, iEvi2.expDt.unwrap(), pos, cnt);
         }
         println!("");
 
