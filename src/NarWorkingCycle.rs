@@ -35,7 +35,7 @@ use crate::NarStamp::*;
 use crate::NarStamp;
 
 /* commented because not needed
-// a --> b |- b --> a
+/// a --> b |- b --> a
 pub fn inf2(a: &Term, punct:EnumPunctation, aTv: &Tv) -> Option<(Term, Tv, EnumPunctation)> {
     //if punctA != EnumPunctation::JUGEMENT {
     //    return None;
@@ -52,7 +52,7 @@ pub fn inf2(a: &Term, punct:EnumPunctation, aTv: &Tv) -> Option<(Term, Tv, EnumP
 }
 */
 
-// (!a) |- a
+/// (!a) |- a
 pub fn infNeg(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
@@ -68,12 +68,12 @@ pub fn infNeg(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term,
 }
 
 
-// structural
-// a --> (X | Y).
-// |-
-// a --> X.
-// a --> Y.
-// ...
+/// structural
+/// a --> (X | Y).
+/// |-
+/// a --> X.
+/// a --> Y.
+/// ...
 pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
@@ -96,12 +96,12 @@ pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usiz
     None
 }
 
-// structural
-// (X | Y) --> a.
-// |-
-// X --> a.
-// Y --> a.
-// ...
+/// structural
+/// (X | Y) --> a.
+/// |-
+/// X --> a.
+/// Y --> a.
+/// ...
 pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
@@ -125,11 +125,11 @@ pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usiz
 }
 
 
-// structural
-// (X * Y) --> rel.
-// |-
-// <X --> (rel /1 Y)>.
-// <Y --> (rel /2 X)>.
+/// structural
+/// (X * Y) --> rel.
+/// |-
+/// <X --> (rel /1 Y)>.
+/// <Y --> (rel /2 X)>.
 pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
@@ -153,11 +153,11 @@ pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Optio
     None
 }
 
-// structural
-// (X * Y) --> rel.
-// |-
-// <X --> (rel /1 Y)>.
-// <Y --> (rel /2 X)>.
+/// structural
+/// (X * Y) --> rel.
+/// |-
+/// <X --> (rel /1 Y)>.
+/// <Y --> (rel /2 X)>.
 pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
@@ -182,10 +182,10 @@ pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Optio
     None
 }
 
-// structural
-// <X --> (rel /1 Y)>.?
-// |-
-// (X * Y) --> rel.?
+/// structural
+/// <X --> (rel /1 Y)>.?
+/// |-
+/// (X * Y) --> rel.?
 pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT && punct != EnumPunctation::QUESTION {
         return None;
@@ -210,10 +210,10 @@ pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 }
 
 
-// structural
-// <Y --> (rel /2 X)>.?
-// |-
-// (X * Y) --> rel.?
+/// structural
+/// <Y --> (rel /2 X)>.?
+/// |-
+/// (X * Y) --> rel.?
 pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punct != EnumPunctation::JUGEMENT && punct != EnumPunctation::QUESTION {
         return None;
@@ -240,8 +240,8 @@ pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 
 
 
-// see ONA
-// [a] <-> [b]. |- a <-> b.
+/// see ONA
+/// [a] <-> [b]. |- a <-> b.
 pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT {
         return None;
@@ -267,8 +267,8 @@ pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
     None
 }
 
-// see ONA
-// {a} <-> {b}. |- a <-> b.
+/// see ONA
+/// {a} <-> {b}. |- a <-> b.
 pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT {
         return None;
@@ -297,8 +297,8 @@ pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
 
 
 
-// generalized rule with two judgement premises
-// works only when conclusion is composed out of a and b
+/// generalized rule with two judgement premises
+/// works only when conclusion is composed out of a and b
 pub fn infGeneralizedJudgJudg(
     a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, 
     b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>,
@@ -343,7 +343,7 @@ pub fn infGeneralizedJudgJudg(
 
 
 
-// a --> x.  a --> y.  |- x <-> y.
+/// a --> x.  a --> y.  |- x <-> y.
 pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
@@ -366,7 +366,7 @@ pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
 }
 
 
-// x --> a.  y --> a.  |- x <-> y.
+/// x --> a.  y --> a.  |- x <-> y.
 pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
@@ -389,7 +389,7 @@ pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
 }
 
 
-// x --> [a].  x --> [b].  |- x --> [a b].
+/// x --> [a].  x --> [b].  |- x --> [a b].
 pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
@@ -436,7 +436,7 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
 }
 
 
-// {a} --> x.  {b} --> x.  |- {a b} --> x.
+/// {a} --> x.  {b} --> x.  |- {a b} --> x.
 pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Option<Tv>, _b: &Term, _punctB:EnumPunctation, _bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     return None; // is disabled because it violates AIKR to some degree!
     /*
@@ -687,7 +687,7 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
     }
 }
 
-// check if the variable is already assigned
+/// check if the variable is already assigned
 fn checkAssigned(var:&Term, assignments:&Vec<Asgnment>) -> bool {
     assignments.iter().any(|asgn| checkEqTerm(&asgn.var, &var))
 }
@@ -701,7 +701,7 @@ fn checkSameVal(var:&Term, val:&Term, assignments:&Vec<Asgnment>) -> bool {
     false
 }
 
-// tries to unify terms
+/// tries to unify terms
 pub fn unify(a: &Term, b: &Term) -> Option<Vec<Asgnment>> {
     let mut assignments:Vec<Asgnment> = vec![];
     if unify2(&a,&b,&mut assignments) {
@@ -807,11 +807,11 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
     }
 }
 
-// see https://cis.temple.edu/~pwang/Writing/NAL-Specification.pdf?page=50
-// (a && b) ==> x.
-// unify a.
-// |- ded
-// b ==> x.
+/// see https://cis.temple.edu/~pwang/Writing/NAL-Specification.pdf?page=50
+/// (a && b) ==> x.
+/// unify a.
+/// |- ded
+/// b ==> x.
 pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>, conjIdx:usize) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
@@ -857,11 +857,11 @@ pub fn inf5(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
 }
 
 
-// see https://cis.temple.edu/~pwang/Writing/NAL-Specification.pdf?page=42
-// a ==> x.
-// unify a.
-// |- ded
-// x.
+/// see https://cis.temple.edu/~pwang/Writing/NAL-Specification.pdf?page=42
+/// a ==> x.
+/// unify a.
+/// |- ded
+/// x.
 pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
@@ -880,11 +880,11 @@ pub fn infImplDed(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, pu
     }
 }
 
-// necessary for symbolic manipulation for example in https://github.com/orgs/NARS-team/teams/all/discussions/71
-// a ==> x?
-// unify x.
-// |-
-// a ==> x.
+/// necessary for symbolic manipulation for example in https://github.com/orgs/NARS-team/teams/all/discussions/71
+/// a ==> x?
+/// unify x.
+/// |-
+/// a ==> x.
 pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
     if punctA != EnumPunctation::QUESTION || punctB != EnumPunctation::JUGEMENT {
         return None;
@@ -906,7 +906,7 @@ pub fn inf7(a: &Term, punctA:EnumPunctation, _aTv:&Option<Tv>, b: &Term, punctB:
 
 
 
-// do binary inference
+/// do binary inference
 pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
     
@@ -989,7 +989,7 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term
     res
 }
 
-// do binary inference
+/// do binary inference
 pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPunct:EnumPunctation, bTv:&Option<Tv>, wereRulesApplied:&mut bool) -> Vec<(Term,Tv,EnumPunctation)> {
     let mut res = vec![];
     *wereRulesApplied = false; // because no rules were applied yet
@@ -1152,8 +1152,8 @@ mod tests {
 }
 
 
-// do inference of two sentences
-// /param wereRulesApplied is true if any rules were applied
+/// do inference of two sentences
+/// /param wereRulesApplied is true if any rules were applied
 pub fn inference2(
     paTerm:&Term, paPunct:EnumPunctation, paStamp:&Stamp, paTv:&Option<Tv>,  
     pbTerm:&Term, pbPunct:EnumPunctation, pbStamp:&Stamp, pbTv:&Option<Tv>, 
@@ -1184,8 +1184,8 @@ pub fn inference2(
 }
 
 
-// do inference of two sentences
-// /param wereRulesApplied is true if any rules were applied
+/// do inference of two sentences
+/// /param wereRulesApplied is true if any rules were applied
 pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<SentenceDummy> {
     inference2(
         &pa.term, pa.punct, &pa.stamp, &retTv(&pa),  
@@ -1223,7 +1223,7 @@ pub struct Task {
     pub derivTime:i64, // time when this task was put into the working table
 }
 
-// compute "real" credit of task by insertion based time decay
+/// compute "real" credit of task by insertion based time decay
 pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
     let decayFactor:f64 = 0.001; // how fast does it decay?
     
@@ -1262,7 +1262,7 @@ pub struct Mem2 {
 
 
 
-// helper to select random task by credit
+/// helper to select random task by credit
 pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Arc<Mutex<Task>>>, cycleCounter:i64)->usize {
     let sum:f64 = arr.iter().map(|iv| taskCalcCredit(&iv.lock().unwrap(), cycleCounter)).sum();
     let mut acc = 0.0;
@@ -1293,8 +1293,8 @@ pub fn task2SelByCreditRandom(selVal:f64, arr: &Vec<Box<Task2>>)->usize {
     arr.len()-1 // sel last
 }
 
-// helper to select random belief by AV
-// expect that the arr isn't question!
+/// helper to select random belief by AV
+/// expect that the arr isn't question!
 pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<SentenceDummy>>)->usize {
     let sum:f64 = arr.iter().map(|iv| {
         if iv.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
@@ -1315,7 +1315,7 @@ pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<SentenceDummy>>)->usize {
     arr.len()-1 // sel last
 }
 
-// helper to select task with highest prio
+/// helper to select task with highest prio
 pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>, cycleCounter:i64) -> Option<usize> {
     if arr.len() == 0 {
         return None;
@@ -1333,9 +1333,9 @@ pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>, cycleCounter:i64) 
 }
 
 
-// stores missing entries of mem.judgementTasksByTerm by subterm of term
-//
-// IMPL< is actually a helper function for memAddTask, still exposed as public for code reuse >
+/// stores missing entries of mem.judgementTasksByTerm by subterm of term
+///
+/// IMPL< is actually a helper function for memAddTask, still exposed as public for code reuse >
 pub fn populateTaskByTermLookup(mem:&mut Mem2, term:&Term, task:&Arc<Mutex<Task>>) {
     for iSubTerm in &retSubterms(&term) {
         if mem.judgementTasksByTerm.contains_key(iSubTerm) {
@@ -1349,7 +1349,7 @@ pub fn populateTaskByTermLookup(mem:&mut Mem2, term:&Term, task:&Arc<Mutex<Task>
     }
 }
 
-// /param calcCredit compute the credit?
+/// /param calcCredit compute the credit?
 pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
     // try to revise
     let mut wasRevised = false;
@@ -1458,16 +1458,17 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
     
 }
 
-// helper for attention
+/// helper for attention
 pub fn divCreditByComplexity(task:&mut Task) {
     task.credit /= calcComplexity(&task.sentence.term) as f64;
     task.qaCredit /= calcComplexity(&task.sentence.term) as f64;
 }
 
-// tries to find a better answer for a question task
-// /param qTask the question task to find a answer to
-// /param concl candidate answer to get evaluated
-// /param globalQaHandlers 
+/// tries to find a better answer for a question task
+/// # Arguments
+/// * `qTask` - the question task to find a answer to
+/// * `concl` - candidate answer to get evaluated
+/// * `globalQaHandlers` - 
 pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &Vec<Rc<RefCell< dyn QHandler>>>) {
     if concl.punct != EnumPunctation::JUGEMENT { // only jugements can answer questions!
         return;
@@ -1500,8 +1501,9 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &
     }
 }
 
-// performs one reasoning cycle
-// /param cycleCounter counter of done cycles of reasoner
+/// performs one reasoning cycle
+/// # Arguments
+/// * `mem` - memory
 pub fn reasonCycle(mem:&mut Mem2) {
     let cfgEnInstrumentation:bool = true; // enable instrumentation
 
@@ -1952,7 +1954,7 @@ pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
 
 
 
-// called when answer is found
+/// called when answer is found
 pub trait QHandler {
     fn answer(&mut self, question:&Term, answer:&SentenceDummy);
 }
