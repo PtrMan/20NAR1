@@ -63,6 +63,9 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
             else {} // other types aren't supported
         }
     }
+    else if input == "!pse" { // procedural show evidence
+        NarProc::debugEvidence(&nar.procNar);
+    }
     else if input.len() > 7 && &input[..7] == "!.nlp2 " {
         let natural = &input[6..].to_string();
         NarModuleNlp2::process(nar, &natural);

@@ -511,6 +511,25 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
     return expIntervalsTable.len() as i64 - 1;
 }
 
+// helper to debug evidence to console
+pub fn debugEvidence(nar: &ProcNar) {
+    println!("EVIDENCE:");
+    for iEvi in &nar.evidence {
+        let iEvi2 = iEvi.lock().unwrap();
+
+        let implSeqAsStr = convTermToStr(&iEvi2.term);
+
+        let evi:&Evidence = &iEvi2.evi.as_ref().unwrap();
+        let (pos,cnt) = match evi {
+            Evidence::CNT{pos,cnt} => {(pos,cnt)},
+            _ => {panic!("expected CNT");}
+        };
+
+        let expDtAsStr = if iEvi2.expDt.is_some() {format!("+EXPDT{}", iEvi2.expDt.unwrap())} else {"".to_string()}; // convert expDt to string if it exists
+        println!("{} {} {}/{}", &implSeqAsStr, expDtAsStr, pos, cnt);
+    }
+}
+
 // anticipated event
 #[derive(Clone)]
 pub struct AnticipationEvent {

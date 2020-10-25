@@ -88,20 +88,7 @@ pub fn reasoner1Entry() {
     let enDbgEvidence:bool = true;
     if enDbgEvidence {
         println!("");
-        println!("EVIDENCE:");
-        for iEvi in &nar.procNar.evidence {
-            let iEvi2 = iEvi.lock().unwrap();
-
-            let implSeqAsStr = convTermToStr(&iEvi2.term);
-    
-            let evi:&Evidence = &iEvi2.evi.as_ref().unwrap();
-            let (pos,cnt) = match evi {
-                Evidence::CNT{pos,cnt} => {(pos,cnt)},
-                _ => {panic!("expected CNT");}
-            };
-    
-            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, iEvi2.expDt.unwrap(), pos, cnt);
-        }
+        NarProc::debugEvidence(&nar.procNar);
         println!("");
 
         if nar.procNar.evidence.len() == 0 { // check if there is no evidence, which indicates a fatal bug
