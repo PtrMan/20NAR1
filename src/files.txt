@@ -1,16 +1,13 @@
 
 
 experiments
-    expGa0.rs          Genetic algorithm experiment
     main.rs            POWERPLAY inspired search for problem solver for simple problems, is using a NN
 
     expRepresent0.rs   prototype based representation learning experiment
-    ExpEdt0.rs         expected utility maximization experiment
 
     ExpStopwatch.rs    basic implementation of stopwatch to time things
 
 ML/AI components
-    Edt.rs             decision making: expected decision theory
 
 AGI components
     aeraDecision.rs    decision making: decision making based on AERA
