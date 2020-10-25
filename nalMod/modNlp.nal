@@ -5,9 +5,11 @@
 <(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENcan_t*$w1)}*(!<($0*$1) --> RELcan>)) --> RELrepresent>>.
 <(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENeat*$w1)}*<($0*$1) --> RELfood>) --> RELrepresent>>.
 <(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENis*$w1)}*<$0 --> $1>) --> RELrepresent>>.
-<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENis_t*$w1)}*(!<$0 --> $1>)) --> RELrepresent>>.
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENisn_t*$w1)}*(!<$0 --> $1>)) --> RELrepresent>>.
 // ex: "cats are human"
 <(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENare*$w1)}*<$0 --> $1>) --> RELrepresent>>.
+<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENaren_t*$w1)}*(!<$0 --> $1>)) --> RELrepresent>>.
+
 // ex: "cat in box"
 <(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENin*$w1)}*<($0*$1) --> RELin>) --> RELrepresent>>.
 
