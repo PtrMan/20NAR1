@@ -1243,6 +1243,7 @@ pub struct Task2 {
 
 use std::collections::HashMap;
 use std::cell::{RefCell};
+use parking_lot::RwLock;
 
 pub struct Mem2 {
     pub judgementTasks:Vec<Arc<Mutex<Task>>>,
@@ -1251,7 +1252,7 @@ pub struct Mem2 {
 
     pub globalQaHandlers: Vec<Rc<RefCell< dyn QHandler>>>, // global handlers for Q&A
 
-    pub mem: Rc<RefCell<NarMem::Mem>>,
+    pub mem: Arc<RwLock<NarMem::Mem>>,
     pub stampIdCounter: i64, // counter for stamp id
     pub taskIdCounter: i64, // counter for id of task, mainly used for fast checking if two tasks are the same!
 
@@ -1359,7 +1360,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
         EnumPunctation::JUGEMENT => {
             
             for iTerm in retSubterms(&*sentence.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
-                match ((*mem.mem).borrow_mut()).concepts.get_mut(&iTerm.clone()) {
+                match mem.mem.write().concepts.get_mut(&iTerm.clone()) {
                     Some(arcConcept) => {
                         match Arc::get_mut(arcConcept) {
                             Some(concept) => {
@@ -1415,7 +1416,7 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
     }
     // we are here if it can't revise
     
-    NarMem::storeInConcepts(&mut mem.mem.borrow_mut(), sentence); // store sentence in memory, adressed by concepts
+    NarMem::storeInConcepts(&mut mem.mem.write(), sentence); // store sentence in memory, adressed by concepts
     
 
     match sentence.punct {
@@ -1556,18 +1557,11 @@ pub fn reasonCycle(mem:&mut Mem2) {
             for iSubTerm in &retUniqueSubterms(&(*selTask).sentence.term.clone()) {
 
                 // * retrieve concept by subterm
-                match mem.mem.borrow_mut().concepts.get_mut(&iSubTerm) {
-                    Some(arcConcept) => {
-                        match Arc::get_mut(arcConcept) {
-                            Some(concept) => {
-                                // try to answer question with all beliefs which may be relevant
-                                for iBelief in &concept.beliefs {
-                                    qaTryAnswer(&mut selTask, &iBelief.lock().unwrap(), &mem.globalQaHandlers);
-                                }
-                            }
-                            None => {
-                                println!("INTERNAL ERROR - couldn't aquire arc!");
-                            }
+                match mem.mem.read().concepts.get(&iSubTerm) {
+                    Some(concept) => {
+                        // try to answer question with all beliefs which may be relevant
+                        for iBelief in &concept.beliefs {
+                            qaTryAnswer(&mut selTask, &iBelief.lock().unwrap(), &mem.globalQaHandlers);
                         }
                     },
                     None => {} // concept doesn't exist, ignore
@@ -1812,39 +1806,32 @@ pub fn reasonCycle(mem:&mut Mem2) {
         }
 
         { // attention mechanism which selects the secondary task from concepts
-            match mem.mem.borrow_mut().concepts.get_mut(&selPrimaryTaskTerm) {
-                Some(arcConcept) => {
-                    match Arc::get_mut(arcConcept) {
-                        Some(concept) => {
-                            println!("sample concept {}", convTermToStr(&*concept.name));
+            match mem.mem.read().concepts.get(&selPrimaryTaskTerm) {
+                Some(concept) => {
+                    println!("sample concept {}", convTermToStr(&*concept.name));
 
-                            let processAllBeliefs:bool = true; // does the deriver process all beliefs?
-                            let processSampledBelief:bool = false; // does it just sample one belief?
+                    let processAllBeliefs:bool = true; // does the deriver process all beliefs?
+                    let processSampledBelief:bool = false; // does it just sample one belief?
 
-                            if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
-                                for iBelief in &concept.beliefs {
-                                    let iBeliefGuard = iBelief.lock().unwrap();
-                                    // do inference and add conclusions to array
-                                    let mut wereRulesApplied = false;
-                                    let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
-                                    concl.append(&mut concl2);
-                                }
-                            }
-                            if processSampledBelief { // code for sampling, is faster
-                                // sample belief from concept
-                                let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
-
-                                // do inference and add conclusions to array
-                                let mut wereRulesApplied = false;
-                                let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, selBelief, &mut wereRulesApplied);
-                                concl.append(&mut concl2);
-                            }
+                    if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
+                        for iBelief in &concept.beliefs {
+                            let iBeliefGuard = iBelief.lock().unwrap();
+                            // do inference and add conclusions to array
+                            let mut wereRulesApplied = false;
+                            let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
+                            concl.append(&mut concl2);
                         }
-                        None => {
-                            println!("INTERNAL ERROR - couldn't aquire arc!");
-                        }
+                    }
+                    if processSampledBelief { // code for sampling, is faster
+                        // sample belief from concept
+                        let selVal:f64 = mem.rng.gen_range(0.0,1.0);
+                        let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
+                        let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
+
+                        // do inference and add conclusions to array
+                        let mut wereRulesApplied = false;
+                        let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, selBelief, &mut wereRulesApplied);
+                        concl.append(&mut concl2);
                     }
                 },
                 None => {} // concept doesn't exist, ignore
@@ -1915,7 +1902,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     { // limit number of concepts
         if mem.cycleCounter % intervalCheckConcepts == 0 {
-            NarMem::limitMemory(&mut mem.mem.borrow_mut(), nConcepts);
+            NarMem::limitMemory(&mut mem.mem.write(), nConcepts);
         }
     }
 }
@@ -1925,7 +1912,7 @@ pub fn createMem2()->Mem2 {
         concepts:HashMap::new(),
     };
     
-    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Rc::new(RefCell::new(mem0)), globalQaHandlers:vec![], rng:rand::thread_rng(), stampIdCounter:0, taskIdCounter:1000, // high number to easy debugging to prevent confusion
+    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Arc::new(RwLock::new(mem0)), globalQaHandlers:vec![], rng:rand::thread_rng(), stampIdCounter:0, taskIdCounter:1000, // high number to easy debugging to prevent confusion
         cycleCounter:0,
     }
 }

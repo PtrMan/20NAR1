@@ -178,7 +178,7 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     }
     else if input == "!dmd" { // debug memory declarative
         // TODO< put into function and call it here >
-        return vec![format!("concept count = {}", nar.mem.mem.borrow().concepts.len())];
+        return vec![format!("concept count = {}", nar.mem.mem.read().concepts.len())];
     }
     else if input == "!QQ" { // quit
         *quit = true;
