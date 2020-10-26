@@ -24,6 +24,9 @@ pub struct ProcNar {
 
     pub cfgPerceptionSamplesPerStep:i64, // how ofter should event-FIFO get sampled for perception in cycle?
     
+    pub cfgEnBabbling:bool, // enable motor babbling?
+
+
     pub cfgVerbosity:i64, // how verbose is the reasoner, mainly used for debugging
 
     //pub evidence: Vec<Arc<Mutex<SentenceDummy>>>,
@@ -54,6 +57,7 @@ pub fn narInit() -> ProcNar {
         cfgDescnThreshold: 0.58,
         cfgNMaxEvidence: 5000,
         cfgPerceptionSamplesPerStep:4,
+        cfgEnBabbling: true,
     
         cfgVerbosity: 10, // be silent
 
@@ -363,7 +367,7 @@ pub fn narStep1(nar:&mut ProcNar) {
     match &pickedAction {
         Some(_) => {},
         None => {
-            if nar.ops.len() > 0 { // we have to have ops to sample from
+            if nar.cfgEnBabbling && nar.ops.len() > 0 { // we have to have ops to sample from
                 // TODO< better distribution >
                 let p = nar.rng.gen_range(0, nar.ops.len()*9);
                 if p < nar.ops.len() {

@@ -66,6 +66,12 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     else if input == "!pse" { // procedural show evidence
         NarProc::debugEvidence(&nar.procNar);
     }
+    else if input == "!peb 0" { // procedural enable babbling
+        nar.procNar.cfgEnBabbling = false;
+    }
+    else if input == "!peb 1" {
+        nar.procNar.cfgEnBabbling = true;
+    }
     else if input.len() > 7 && &input[..7] == "!.nlp2 " {
         let natural = &input[6..].to_string();
         NarModuleNlp2::process(nar, &natural);
