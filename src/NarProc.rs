@@ -289,7 +289,6 @@ pub fn narStep1(nar:&mut ProcNar) {
                 let pickedEvidence: Arc<Mutex<SentenceDummy>> = Arc::clone(&pickedEvidenceOpt.as_ref().unwrap());
 
                 // extract op of seq
-                println!("DBG16 {}", &convTermToStr(&entryAndUnfied.1));
                 let opTerm:Term = retSeqOp(&entryAndUnfied.1);
 
 
