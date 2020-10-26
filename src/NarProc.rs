@@ -1,12 +1,9 @@
 use rand::Rng;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::NarStamp::*;
 use crate::NarSentence::*;
-use crate::Tv::*;
 use crate::Term::*;
 use crate::TermApi::*;
 use crate::NarGoalSystem;

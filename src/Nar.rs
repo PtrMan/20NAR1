@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 use crate::Tv::*;
 use crate::Term::*;
