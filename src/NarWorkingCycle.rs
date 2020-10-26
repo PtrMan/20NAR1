@@ -1716,15 +1716,15 @@ pub fn reasonCycle(mem:&mut Mem2) {
                 
             }
 
-            if secondaryElligable.len() > 0 { // must contain any premise to get selected
-                let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
-                if dbgSecondaryElligable {
-                    println!("TRACE secondary eligable:");
-                    for iSecondaryElligable in &secondaryElligable {
-                        println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.lock().unwrap().sentence, true));
-                    }
+            let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
+            if dbgSecondaryElligable {
+                println!("TRACE secondary eligable:");
+                for iSecondaryElligable in &secondaryElligable {
+                    println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.lock().unwrap().sentence, true));
                 }
-                
+            }
+
+            if secondaryElligable.len() > 0 { // must contain any premise to get selected
                 let enInferenceSampleSecondaryByCredit = false; // do we sample secondary premise randomly by credit?
                 let enInferenceSecondaryAll = true; // do we select and process all secondary premises (like in ALANN)
 
