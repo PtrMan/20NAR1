@@ -46,8 +46,8 @@ pub struct ProcNar {
 // init and set to default values
 pub fn narInit() -> ProcNar {
     let mut nar = ProcNar {
-        cfgIntervalExpBase: 1.5,
-        cfgIntervalMax: 40,
+        cfgIntervalExpBase: 1.3,
+        cfgIntervalMax: 20,
         cfgPerceptWindow: 2,
         cfgDescnThreshold: 0.58,
         cfgNMaxEvidence: 5000,
