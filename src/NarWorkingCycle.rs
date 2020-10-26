@@ -1295,17 +1295,19 @@ pub fn task2SelByCreditRandom(selVal:f64, arr: &Vec<Box<Task2>>)->usize {
 
 /// helper to select random belief by AV
 /// expect that the arr isn't question!
-pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<SentenceDummy>>)->usize {
+pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<Mutex<SentenceDummy>>>)->usize {
     let sum:f64 = arr.iter().map(|iv| {
-        if iv.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
-        retTv(&*iv).unwrap().c
+        let ivGuard = iv.lock().unwrap();
+        if ivGuard.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
+        retTv(&ivGuard).unwrap().c
     }).sum();
     let mut acc = 0.0;
     let mut idx = 0;
     for iv in arr {
-        if iv.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
+        let ivGuard = iv.lock().unwrap();
+        if ivGuard.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
 
-        acc += retTv(&*iv).unwrap().c;
+        acc += retTv(&ivGuard).unwrap().c;
         if acc >= selVal*sum {
             return idx;
         }
@@ -1362,24 +1364,26 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
                         match Arc::get_mut(arcConcept) {
                             Some(concept) => {
                                 let mut delBeliefIdx:Option<usize> = None;
+
+                                let mut additionalBelief:Option<SentenceDummy> = None; // stores the additional belief
                                 
                                 for iBeliefIdx in 0..concept.beliefs.len() {
-                                    let iBelief = &concept.beliefs[iBeliefIdx];
+                                    let iBelief = &concept.beliefs[iBeliefIdx].lock().unwrap();
                                     if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
                                         let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
-                                        let tvA:Tv = retTv(&concept.beliefs[iBeliefIdx]).unwrap();
+                                        let tvA:Tv = retTv(&concept.beliefs[iBeliefIdx].lock().unwrap()).unwrap();
                                         let tvB:Tv = retTv(&sentence).unwrap();
                                         let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
                                         
                                         delBeliefIdx = Some(iBeliefIdx);
-                                        concept.beliefs.push(Arc::new(SentenceDummy {
+                                        additionalBelief = Some(SentenceDummy {
                                             term:iBelief.term.clone(),
                                             t:iBelief.t,
                                             punct:iBelief.punct,
                                             stamp:stamp,
                                             expDt:iBelief.expDt, // exponential time delta, used for =/>
                                             evi:Some(evi),
-                                        })); // add revised belief!
+                                        }); // add revised belief!
 
                                         wasRevised = true;
                                         break; // breaking here is fine, because belief should be just once in table!
@@ -1388,6 +1392,10 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
 
                                 if delBeliefIdx.is_some() {
                                     concept.beliefs.remove(delBeliefIdx.unwrap());
+                                }
+
+                                if additionalBelief.is_some() {
+                                    concept.beliefs.push(Arc::new(Mutex::new(additionalBelief.unwrap())));
                                 }
                             }
                             None => {
@@ -1554,7 +1562,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                             Some(concept) => {
                                 // try to answer question with all beliefs which may be relevant
                                 for iBelief in &concept.beliefs {
-                                    qaTryAnswer(&mut selTask, &iBelief, &mem.globalQaHandlers);
+                                    qaTryAnswer(&mut selTask, &iBelief.lock().unwrap(), &mem.globalQaHandlers);
                                 }
                             }
                             None => {
@@ -1815,9 +1823,10 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
                             if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
                                 for iBelief in &concept.beliefs {
+                                    let iBeliefGuard = iBelief.lock().unwrap();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
-                                    let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, iBelief, &mut wereRulesApplied);
+                                    let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
                                     concl.append(&mut concl2);
                                 }
                             }
@@ -1825,7 +1834,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
                                 // sample belief from concept
                                 let selVal:f64 = mem.rng.gen_range(0.0,1.0);
                                 let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx];
+                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
 
                                 // do inference and add conclusions to array
                                 let mut wereRulesApplied = false;

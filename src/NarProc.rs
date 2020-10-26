@@ -10,6 +10,7 @@ use crate::Tv::*;
 use crate::Term::*;
 use crate::TermApi::*;
 use crate::NarGoalSystem;
+use crate::NarMem;
 
 // contains all necessary variables of a procedural NAR
 pub struct ProcNar {
@@ -25,8 +26,9 @@ pub struct ProcNar {
     
     pub cfgVerbosity:i64, // how verbose is the reasoner, mainly used for debugging
 
-    pub evidence: Vec<Arc<Mutex<SentenceDummy>>>, //Vec<Rc<RefCell<SentenceDummy>>>,
-    
+    //pub evidence: Vec<Arc<Mutex<SentenceDummy>>>,
+    pub evidenceMem: NarMem::Mem,
+
     pub trace: Vec<SimpleSentence>,
     pub anticipatedEvents: Vec<AnticipationEvent>,
 
@@ -55,7 +57,9 @@ pub fn narInit() -> ProcNar {
     
         cfgVerbosity: 10, // be silent
 
-        evidence: Vec::new(),
+        //evidence: Vec::new(),
+        evidenceMem: NarMem::make(),
+
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
         ops: Vec::new(),
@@ -89,6 +93,36 @@ pub fn narInit() -> ProcNar {
     
     nar
 }
+
+/// add procedural evidence to memory
+pub fn mem_add_evidence(nar:&mut ProcNar, evidenceSentence: &SentenceDummy) {
+    // enumerate subterms to decide concept names where we store the belief
+    let subterms = {
+        let mut subterms = vec![];
+        // enumerate subterms from first seq element of predimpl and predicate of predimpl
+        subterms.extend(retSubterms(&retSeqCond(&evidenceSentence.term)));
+        subterms.extend(retSubterms(&retPred(&evidenceSentence.term)));
+        subterms
+    };
+
+    NarMem::storeInConcepts2(&mut nar.evidenceMem, &evidenceSentence, &subterms);
+}
+
+// returns all evidence, can be overlapping!
+pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<Mutex<SentenceDummy>>> {
+    let mut res = vec![];
+    for (ikey, _iConcept) in &procNar.evidenceMem.concepts {
+        let beliefsOfConcept = NarMem::ret_beliefs_of_concept(&procNar.evidenceMem, &ikey);
+
+        // add to result
+        for iBelief in beliefsOfConcept.iter() {
+            res.push(Arc::clone(iBelief));
+        }
+    }
+    res
+}
+
+
 
 // does one reasoner step
 pub fn narStep0(nar:&mut ProcNar) {
@@ -199,14 +233,14 @@ pub fn narStep0(nar:&mut ProcNar) {
                             // compute exponential delta time
                             let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
                             
-                            let addEvidence: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
+                            let addEvidenceFlag: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
 
                             
 
 
 
                             {
-                                for iEEArc in &nar.evidence {
+                                for iEEArc in &NarMem::ret_beliefs_by_terms_nonunique(&nar.evidenceMem, &[e0.name.clone(), e2.name.clone()]) { // iterate over evidence where seqCond and/or pred appear
                                     let mut iEE = iEEArc.lock().unwrap();
                                     
                                     if !checkOverlap(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi))) { // evidence must no overlap!
@@ -228,22 +262,25 @@ pub fn narStep0(nar:&mut ProcNar) {
                                             
                                             if false {println!("dbg - REV")};
                                             
-                                            addEvidence.store(false, Ordering::Relaxed); // because we revised
+                                            addEvidenceFlag.store(false, Ordering::Relaxed); // because we revised
                                         }                                
                                     }
         
                                 }
                             }
                             
-                            if addEvidence.load(Ordering::Relaxed) {
-                                nar.evidence.push(Arc::new(Mutex::new(SentenceDummy {
+                            if addEvidenceFlag.load(Ordering::Relaxed) {
+                                // add evidence
+
+                                let evidenceSentence: SentenceDummy = SentenceDummy {
                                     punct:EnumPunctation::JUGEMENT,
                                     t:None,
                                     stamp:newStamp(&vec!(e0.evi,e1.evi,e2.evi)),
                                     expDt:Some(expDt),
                                     term:Arc::new(s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone())), // (e0 &/ e1) =/> e2
                                     evi:Some(Evidence::CNT{pos:1,cnt:1})
-                                })));
+                                };
+                                mem_add_evidence(nar, &evidenceSentence);
                             }
                         }
                         
@@ -370,9 +407,9 @@ pub fn narStep1(nar:&mut ProcNar) {
     }
 
     // limit evidence (AIKR)
-    if nar.t % 101 == 1 && nar.evidence.len() > nar.cfgNMaxEvidence as usize {
-        nar.evidence.sort_by(|a, b| calcExp(&retTv(&b.lock().unwrap()).unwrap()).partial_cmp(&calcExp(&retTv(&a.lock().unwrap()).unwrap())).unwrap()); // order by importance
-        nar.evidence = nar.evidence[..nar.evidence.len().min(nar.cfgNMaxEvidence as usize)].to_vec(); // keep under AIKR
+    if nar.t % 101 == 1 {
+        let nConcepts = 1000;
+        NarMem::limitMemory(&mut nar.evidenceMem, nConcepts);
     }
 
 
@@ -380,7 +417,7 @@ pub fn narStep1(nar:&mut ProcNar) {
     if nar.t % 3 == 0 {
         let enGoalSystem = true; // DISABLED because we want to test it without deriving goals!
         if enGoalSystem {
-            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidence, &mut nar.rng);
+            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem, &mut nar.rng);
         }
     }
 
@@ -527,9 +564,9 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
 }
 
 // helper to debug evidence to console
-pub fn debugEvidence(nar: &ProcNar) {
+pub fn debugEvidence(procNar: &ProcNar) {
     println!("EVIDENCE:");
-    for iEvi in &nar.evidence {
+    for iEvi in &mem_ret_evidence_all_nonunique(procNar) {
         let iEvi2 = iEvi.lock().unwrap();
 
         let implSeqAsStr = convTermToStr(&iEvi2.term);

@@ -1,7 +1,7 @@
 // memory system for NAR
 
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 use crate::Term::Term;
@@ -20,12 +20,16 @@ use crate::NarSentence::retTv;
 pub struct Concept {
     pub name:Rc<Term>,
 
-    pub beliefs:Vec<Arc<SentenceDummy>>, // =/> beliefs
+    pub beliefs:Vec<Arc<Mutex<SentenceDummy>>>,
 }
 
 // memory
 pub struct Mem {
     pub concepts:HashMap<Term, Arc<Concept>>,
+}
+
+pub fn make() -> Mem {
+    Mem{concepts:HashMap::new(),}
 }
 
 pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
@@ -45,17 +49,26 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
                     Some(concept) => {
                         let mut exists = false;
                         for iBelief in &concept.beliefs {
-                            if checkEqTerm(&iBelief.term, &s.term) && NarStamp::checkOverlap(&iBelief.stamp, &s.stamp) {
+                            let iBeliefGuard = iBelief.lock().unwrap();
+                            if checkEqTerm(&iBeliefGuard.term, &s.term) && NarStamp::checkOverlap(&iBeliefGuard.stamp, &s.stamp) {
                                 exists = true;
                                 break; // OPT
                             }
                         }
                         
                         if !exists { // add belief only if it doesn't already exist!
-                            concept.beliefs.push(Arc::new((*s).clone())); // add belief
+                            concept.beliefs.push(Arc::new(Mutex::new((*s).clone()))); // add belief
 
-                            concept.beliefs.sort_by(|a, b| calcExp(&retTv(b).unwrap()).partial_cmp(&calcExp(&retTv(a).unwrap())).unwrap()); // order by importance
-                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(20)].to_vec(); // keep under AIKR
+                            // order by importance
+                            let mut temp:Vec<(f64,Arc<Mutex<SentenceDummy>>)> = concept.beliefs.iter().map(|iv| {
+                                    let ivGuard = iv.lock().unwrap();
+                                    (calcExp(&retTv(&ivGuard).unwrap()), Arc::clone(iv))
+                                }).collect(); // compute exp for each element, necessary because else we have a deadlock
+                            temp.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap()); // do actual sorting by exp
+                            concept.beliefs = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
+                            
+                            // keep under AIKR
+                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(20)].to_vec();
                         }
                     }
                     None => {
@@ -68,7 +81,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
                 
                 let concept = Arc::new(Concept {
                     name:Rc::new(iTerm.clone()),
-                    beliefs:vec![Arc::new((*s).clone())],
+                    beliefs:vec![Arc::new(Mutex::new((*s).clone()))],
                 });
                 
                 mem.concepts.insert(iTerm.clone(), concept); // add concept to memory
@@ -80,6 +93,10 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
 
 // limit size of memory
 pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
+    if mem.concepts.len() <= nConcepts {
+        return; // not enough concepts to limit
+    }
+
     let mut concepts: Vec<(Arc<Concept>, f64)> = Vec::new(); // concept with rating
     // scan concepts
     for (_key, mut iConcept) in &mut mem.concepts {
@@ -87,7 +104,8 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
         match Arc::get_mut(&mut iConcept) {
             Some(concept) => {
                 for iBelief in &concept.beliefs {
-                    rating = rating.max(calcExp(&retTv(&iBelief).unwrap()));
+                    let iBeliefGuard = iBelief.lock().unwrap();
+                    rating = rating.max(calcExp(&retTv(&iBeliefGuard).unwrap()));
                 }
             }
             None => {
@@ -110,4 +128,35 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
         let name:Term = (*iConcept.name).clone();
         mem.concepts.insert(name.clone(), Arc::clone(&iConcept));
     }
+}
+
+/// return beliefs of concept by term
+///
+/// doesn't examine memory for subterms!
+pub fn ret_beliefs_of_concept(mem: &Mem, selTerm: &Term) -> Vec<Arc<Mutex<SentenceDummy>>> {
+    match mem.concepts.get(&selTerm) {
+        Some(concept) => {
+            concept.beliefs.iter().map(|iv| Arc::clone(iv)).collect()
+        },
+        None => { // concept doesn't exist
+            vec![]
+        }
+    } 
+}
+
+/// return non-unique beliefs by terms and it's subterms
+pub fn ret_beliefs_by_terms_nonunique(narMem:&Mem, terms:&[Term]) -> Vec<Arc<Mutex<SentenceDummy>>> {
+    let mut res:Vec<Arc<Mutex<SentenceDummy>>> = vec![];
+    for iTerm in terms {
+        for isubterm in &retSubterms(&iTerm) { // we have to iterate over term and subterm, ex: a-->b   ===> a, b, a-->b
+            let beliefsOfConcept = ret_beliefs_of_concept(narMem, &isubterm);
+
+            // add to result
+            for iBelief in beliefsOfConcept.iter() {
+                res.push(Arc::clone(iBelief));
+            }
+        }
+    }
+    
+    res
 }

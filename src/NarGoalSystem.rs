@@ -19,6 +19,7 @@ use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::retTv;
 use crate::NarSentence::newEternalSentenceByTv;
 use crate::NarWorkingCycle;
+use crate::NarMem;
 
 pub struct GoalSystem {
     //pub entries: Vec<Rc<RefCell<Entry>>>, //REMOVE!!!
@@ -224,10 +225,14 @@ pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDumm
 
 
 // filters belief candidates which can be used for inference with the goal
-pub fn retBeliefCandidates(goal: &SentenceDummy, evidence: &Vec<Arc<Mutex<SentenceDummy>>>) -> Vec<Arc<Mutex<SentenceDummy>>> {
+pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Arc<Mutex<SentenceDummy>>> {
     let mut res = Vec::new();
+
+    // query memory for potential evidence which we can use
+    let potentialEvidence = NarMem::ret_beliefs_by_terms_nonunique(procMem, &[(*goal.term).clone()]);
     
-    for iBelief in &*evidence {
+    // filter
+    for iBelief in &potentialEvidence {
         match &*(iBelief.lock().unwrap()).term {
             Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
                 if checkEqTerm(&goal.term, &pred) {
@@ -273,7 +278,8 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
 }
 
 // /param t is the procedural reasoner NAR time
-pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Arc<Mutex<SentenceDummy>>>, rng: &mut rand::rngs::ThreadRng) {
+//pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procNar:&NarProc::ProcNar, rng: &mut rand::rngs::ThreadRng) {
+pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal
     let sampledGoalOpt: Option<(Arc<SentenceDummy>, i64)> = sample(&goalSystem, rng);
 
@@ -293,7 +299,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, evidence: &Vec<Arc
         },
         _ => {
             // * try to find candidates for inference
-            let envidenceCandidates: Vec<Arc<Mutex<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, evidence);
+            let envidenceCandidates: Vec<Arc<Mutex<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, procMem);
 
             // * try to do inference
             for iBelief in &envidenceCandidates {

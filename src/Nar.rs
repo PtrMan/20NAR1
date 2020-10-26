@@ -63,8 +63,9 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
     if isTemporal {
         // add to temporal knowledge
         sentence.evi = Some(Evidence::CNT{pos:1,cnt:1}); // we need to transcribe TV
-                                                          // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
-        nar.procNar.evidence.push(Arc::new(Mutex::new(sentence)));
+                                                         // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
+        
+        NarProc::mem_add_evidence(&mut nar.procNar, &sentence);
     }
     else {
         if punct == EnumPunctation::GOAL {

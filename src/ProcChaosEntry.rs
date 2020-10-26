@@ -55,33 +55,16 @@ pub fn procChaosEntry() {
     // debug all evidence of NAR
     let enDbgEvidence:bool = false;
     if enDbgEvidence {
-        println!("");
-        println!("EVIDENCE:");
-        for iEvi in &nar.procNar.evidence {
-            let implSeqAsStr = convTermToStr(&iEvi.lock().unwrap().term);
-    
-            let eviHelper = iEvi.lock().unwrap();
-            let evi:&Evidence = &eviHelper.evi.as_ref().unwrap();
-            let (pos,cnt) = match evi {
-                Evidence::CNT{pos,cnt} => {(pos,cnt)},
-                _ => {panic!("expected CNT");}
-            };
-    
-            println!("{} +EXPDT{} {}/{}", &implSeqAsStr, iEvi.lock().unwrap().expDt.unwrap(), pos, cnt);
-        }
+        NarProc::debugEvidence(&nar.procNar);
     }
 
     { // debug goals of goal system 
         println!("{}", NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem));
     }
     
-    { // print number of evidence
-        // TODO< print number of procedural concepts!
-        println!("nEvidence={}", nar.procNar.evidence.len());
-    }
-
-    if nar.procNar.evidence.len() as f64 > nar.procNar.cfgNMaxEvidence as f64 * 1.5 {
-        panic!("procedural reasoner has to much evidence!");
+    {
+        // print number of procedural concepts
+        println!("nConcepts={}", nar.procNar.evidenceMem.concepts.len());
     }
 
     println!("[d] reasoner: DONE!");
