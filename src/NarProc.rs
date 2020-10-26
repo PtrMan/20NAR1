@@ -112,17 +112,31 @@ pub fn narStep0(nar:&mut ProcNar) {
 
     
     { // neg confirm for anticipated events
-
         {
             for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= nar.t) {
-                let mut mutEvi = iDeadlineViolated.evi.lock().unwrap();
+                let mut mutEviGuard = iDeadlineViolated.evi.lock().unwrap();
                 
-                match mutEvi.evi.as_ref().unwrap() {
+                // KEYWORD< neg-confirm >
+                if false {match mutEviGuard.evi.as_ref().unwrap() {
                     Evidence::CNT{pos,cnt} => {
-                        mutEvi.evi = Some(Evidence::CNT{pos:*pos,cnt:cnt+1}); // add negative evidence
+                        println!("TRACE anticipation: before neg conf   evidence: +/n {}/{}", pos, cnt); // evidence before neg-confirm
+                    },
+                    _ => {panic!("expected CNT!");}
+                }}
+
+                match mutEviGuard.evi.as_ref().unwrap() {
+                    Evidence::CNT{pos,cnt} => {
+                        mutEviGuard.evi = Some(Evidence::CNT{pos:*pos,cnt:cnt+1}); // add negative evidence
                     },
                     _ => {panic!("expected CNT!");}
                 }
+
+                if false {match mutEviGuard.evi.as_ref().unwrap() {
+                    Evidence::CNT{pos,cnt} => {
+                        println!("TRACE anticipation: after neg conf   evidence: +/n {}/{}", pos, cnt); // evidence before neg-confirm
+                    },
+                    _ => {panic!("expected CNT!");}
+                }}
             }
         }
         
