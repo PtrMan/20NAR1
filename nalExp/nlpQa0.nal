@@ -1,0 +1,8 @@
+// EXAMPLE for Q&A with NLP
+
+!.nlp2 Tom is human
+!.nlp2 human can can_can
+!.nlp2 can_can is dance
+
+// question
+!.nlp2 Tom can dance ?
