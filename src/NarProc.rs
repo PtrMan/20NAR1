@@ -180,6 +180,12 @@ pub fn narStep0(nar:&mut ProcNar) {
         nar.anticipatedEvents = nar.anticipatedEvents.iter().filter(|&iDeadline| iDeadline.deadline > nar.t).map(|v| v.clone()).collect();
     }
 
+    // neutralize goals which are fullfilled by current event
+    if nar.trace.len() > 0 {
+        let lastEvent:&SimpleSentence = &nar.trace[nar.trace.len()-1];
+        NarGoalSystem::event_occurred(&mut nar.goalSystem, &lastEvent.name);
+    }
+
     if nar.trace.len() >= 3 { // add evidence
         for _sampleIt in 0..nar.cfgPerceptionSamplesPerStep {
             // filter middle by ops and select random first event before that!

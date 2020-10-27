@@ -37,6 +37,7 @@ pub struct Entry {
                                                       // evidence: (a, ^b) =/> c.  (actual impl seq was this)
     pub createTime: i64, // time of the creation of this entry
     pub depth: i64, // depth of the goal
+    pub desirability: f32, // from -1.0 to 1.0
 }
 
 pub struct BatchByDepth {
@@ -84,7 +85,7 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
         }
     }
 
-    addEntry2(goalSystem, Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth})));
+    addEntry2(goalSystem, Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth, desirability:1.0})));
 }
 
 pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
@@ -104,7 +105,10 @@ pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
         let age: i64 = t-iv2.createTime;
         let decay = ((age as f64)*-0.01).exp(); // compute decay by age
 
-        iv2.utility = Tv::calcExp(&retTv(&iv2.sentence).unwrap())*decay;
+        iv2.utility = 
+            Tv::calcExp(&retTv(&iv2.sentence).unwrap())*
+            (iv2.desirability as f64).abs()* // times the desirability because not so desired goals should get forgotten
+            decay;
     }
 
     // * sort by utility
@@ -159,14 +163,15 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
         return None;
     }
     
-    let sumPriorities:f64 = selBatch.entries.iter().map(|iv| 1.0).sum();
+    let sumPriorities:f64 = selBatch.entries.iter().map(|iv| (iv.borrow().desirability as f64).max(0.0)).sum();
     
     let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
 
     // select
     let mut sum:f64 = 0.0;
     for iv in &selBatch.entries {
-        sum += 1.0;
+        assert!(sum <= sumPriorities); // priorities are summed in the wrong way in this loop if this invariant is violated
+        sum += (iv.borrow().desirability as f64).max(0.0); // desired goals should be favored to get sampled
         if sum >= selPriority {
             let selEntry = iv.borrow();
             return Some((Arc::clone(&selEntry.sentence), selEntry.depth));
@@ -320,6 +325,17 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
         addEntry(goalSystem, t, Arc::clone(iGoal), iEvidence2, *iDepth);
     }
 }
+
+/// called from outside when event happened
+pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
+    for iEntityRc in retEntries(goalSystem) {
+        let mut iEntity = iEntityRc.borrow_mut();
+        if checkEqTerm(&iEntity.sentence.term, eventTerm) {
+            iEntity.desirability = 0.0; // set desirability to 0.0 because it happened
+        }
+    }
+}
+
 
 
 
