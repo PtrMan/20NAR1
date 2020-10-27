@@ -1,0 +1,4 @@
+// check if NLP is working
+
+!.nlp2 Tom is human
+//expectTv <{Tom} --> human>. {1 0.9}
