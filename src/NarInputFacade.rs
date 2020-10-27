@@ -174,11 +174,11 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
         }
     }
     else if input == "!dt" { // debug tasks
-        return debugCreditsOfTasks(&nar.mem);
+        return debugCreditsOfTasks(&*nar.mem.read());
     }
     else if input == "!dmd" { // debug memory declarative
         // TODO< put into function and call it here >
-        return vec![format!("concept count = {}", nar.mem.mem.read().concepts.len())];
+        return vec![format!("concept count = {}", nar.mem.read().shared.read().mem.read().concepts.len())];
     }
     else if input == "!QQ" { // quit
         *quit = true;

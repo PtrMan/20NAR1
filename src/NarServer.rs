@@ -9,6 +9,7 @@ use async_std::{
 use std::net::ToSocketAddrs;
 
 use std::sync::{Arc, Mutex};
+use parking_lot::RwLock;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -108,7 +109,7 @@ pub fn run() {
     // worker thread which runs NAR
     thread::spawn(move || {
         let mut nar = createNar();
-        nar.mem.globalQaHandlers.push(Rc::new(RefCell::new(QHandlerImpl{global:Arc::clone(&global)}))); // register Q&A handler to send answers to all clients
+        nar.mem.read().globalQaHandlers.write().push(Arc::new(RwLock::new(QHandlerImpl{global:Arc::clone(&global)}))); // register Q&A handler to send answers to all clients
 
         loop {
             let received:String = rx.recv().unwrap();

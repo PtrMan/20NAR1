@@ -5,6 +5,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use parking_lot::RwLock;
 
 use crate::Nar::*;
 use crate::Term::*;
@@ -185,8 +186,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 
     // ask question directly
     let answerHandler0:NlpAnswerHandler = NlpAnswerHandler{answer:None};
-    let answerHandlerRef0 = Rc::new(RefCell::new(answerHandler0));
-    let rc0 = Rc::clone(&answerHandlerRef0);
+    let answerHandlerRef0 = Arc::new(RwLock::new(answerHandler0));
+    let rc0 = Arc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
             term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relGENERIC".to_string())) ),
@@ -197,7 +198,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
             expDt:None
         };
 
-        workerNar.mem.questionTasks.push(Box::new(Task2 {
+        workerNar.mem.read().shared.read().questionTasks.write().push(Box::new(Task2 {
             sentence:sentence,
             handler:Some(answerHandlerRef0),
             bestAnswerExp:0.0, // because has no answer yet
@@ -206,8 +207,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     }
 
     let answerHandler1:NlpAnswerHandler = NlpAnswerHandler{answer:None};
-    let answerHandlerRef1 = Rc::new(RefCell::new(answerHandler1));
-    let rc1 = Rc::clone(&answerHandlerRef1);
+    let answerHandlerRef1 = Arc::new(RwLock::new(answerHandler1));
+    let rc1 = Arc::clone(&answerHandlerRef1);
     {
         let sentence = SentenceDummy {
             term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIsQuery".to_string())) ),
@@ -218,7 +219,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
             expDt:None
         };
 
-        workerNar.mem.questionTasks.push(Box::new(Task2 {
+        workerNar.mem.read().shared.read().questionTasks.write().push(Box::new(Task2 {
             sentence:sentence,
             handler:Some(answerHandlerRef1),
             bestAnswerExp:0.0, // because has no answer yet
@@ -227,8 +228,8 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     }
 
     let answerHandler2:NlpAnswerHandler = NlpAnswerHandler{answer:None};
-    let answerHandlerRef2 = Rc::new(RefCell::new(answerHandler2));
-    let rc2 = Rc::clone(&answerHandlerRef2);
+    let answerHandlerRef2 = Arc::new(RwLock::new(answerHandler2));
+    let rc2 = Arc::clone(&answerHandlerRef2);
     {
         let sentence = SentenceDummy {
             term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs2".to_string())) ),
@@ -239,7 +240,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
             expDt:None
         };
 
-        workerNar.mem.questionTasks.push(Box::new(Task2 {
+        workerNar.mem.read().shared.read().questionTasks.write().push(Box::new(Task2 {
             sentence:sentence,
             handler:Some(answerHandlerRef2),
             bestAnswerExp:0.0, // because has no answer yet
@@ -252,21 +253,21 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     }
 
     // for debugging
-    for iLine in &debugCreditsOfTasks(&workerNar.mem) {
+    for iLine in &debugCreditsOfTasks(&*workerNar.mem.read()) {
         println!("{}", iLine);
     }
 
     // return answer of question
     
-    let res2 = rc2.borrow_mut().answer.clone(); // first because it has a higher "priority" to answer
+    let res2 = rc2.read().answer.clone(); // first because it has a higher "priority" to answer
     if res2.is_some() {
         return res2;
     }
-    let res0 = rc0.borrow_mut().answer.clone();
+    let res0 = rc0.read().answer.clone();
     if res0.is_some() {
         return res0;
     }
-    let res1 = rc1.borrow_mut().answer.clone();
+    let res1 = rc1.read().answer.clone();
     if res1.is_some() {
         return res1;
     }

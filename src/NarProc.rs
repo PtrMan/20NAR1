@@ -1,6 +1,8 @@
 use rand::Rng;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::NarStamp::*;
 use crate::NarSentence::*;

@@ -5,6 +5,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use parking_lot::RwLock;
 
 use crate::Nar::*;
 use crate::Term::*;
@@ -59,8 +60,8 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
 
     // ask question directly
     let answerHandler0:NlpAnswerHandler = NlpAnswerHandler{answer:None};
-    let answerHandlerRef0 = Rc::new(RefCell::new(answerHandler0));
-    let rc0 = Rc::clone(&answerHandlerRef0);
+    let answerHandlerRef0 = Arc::new(RwLock::new(answerHandler0));
+    let rc0 = Arc::clone(&answerHandlerRef0);
     {
         let sentence = SentenceDummy {
             term:Arc::new( s(Copula::INH, &p2(&Term::SetExt(vec![Box::new(Term::Prod(termTokens))]), &Term::QVar("0".to_string())), &Term::Name("RELrepresent".to_string())) ),
@@ -71,7 +72,7 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
             expDt:None
         };
 
-        workerNar.mem.questionTasks.push(Box::new(Task2 {
+        workerNar.mem.read().shared.read().questionTasks.write().push(Box::new(Task2 {
             sentence:sentence,
             handler:Some(answerHandlerRef0),
             bestAnswerExp:0.0, // because has no answer yet
@@ -84,13 +85,13 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
     }
 
     // for debugging
-    for iLine in &debugCreditsOfTasks(&workerNar.mem) {
+    for iLine in &debugCreditsOfTasks(&*workerNar.mem.read()) {
         println!("{}", iLine);
     }
 
     // return answer of question
     
-    let res0 = rc0.borrow_mut().answer.clone();
+    let res0 = rc0.write().answer.clone();
     if res0.is_some() {
         return res0;
     }

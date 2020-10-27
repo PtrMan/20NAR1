@@ -18,7 +18,7 @@ use crate::NarSentence::retTv;
 
 // memory system
 pub struct Concept {
-    pub name:Rc<Term>,
+    pub name:Term,
 
     pub beliefs:Vec<Arc<Mutex<SentenceDummy>>>,
 }
@@ -80,7 +80,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
                 // * insert new concept if we are here
                 
                 let concept = Arc::new(Concept {
-                    name:Rc::new(iTerm.clone()),
+                    name:iTerm.clone(),
                     beliefs:vec![Arc::new(Mutex::new((*s).clone()))],
                 });
                 
@@ -125,7 +125,7 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
 
     // put back
     for (iConcept, _rating) in &concepts {
-        let name:Term = (*iConcept.name).clone();
+        let name:Term = iConcept.name.clone();
         mem.concepts.insert(name.clone(), Arc::clone(&iConcept));
     }
 }

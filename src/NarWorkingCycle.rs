@@ -1236,32 +1236,255 @@ pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
 
 pub struct Task2 {
     pub sentence:SentenceDummy,
-    pub handler:Option< Rc<RefCell< dyn QHandler>> >, // handler which is called when a better answer is found
+    pub handler:Option< Arc<RwLock< dyn QHandler>> >, // handler which is called when a better answer is found
     pub bestAnswerExp:f64, // expectation of best answer
     pub prio:f64, // priority
+}
+
+
+/// stores the message for the actual work
+pub struct DeriverWorkMessage {
+    pub primary: Arc<Mutex<Task>>,
+    pub secondary: Vec<Arc<Mutex<Task>>>,
+    pub cycleCounter: i64,
 }
 
 use std::collections::HashMap;
 use std::cell::{RefCell};
 use parking_lot::RwLock;
+use std::thread::JoinHandle;
+use std::sync::mpsc::{SyncSender, sync_channel};
+use std::sync::atomic::{AtomicI64, Ordering};
 
-pub struct Mem2 {
+/// shared (memory) state of declarative memory, accessed and modified by worker threads
+/// all other memory is in nonshared portion!
+pub struct DeclarativeShared {
+    // TODO< put these two into one structure which is protected by one RwLock >
     pub judgementTasks:Vec<Arc<Mutex<Task>>>,
-    pub judgementTasksByTerm:HashMap<Term, Vec<Arc<Mutex<Task>>>>, // for fast lookup
-    pub questionTasks:Vec<Box<Task2>>,
+    pub judgementTasksByTerm:Arc<RwLock< HashMap<Term, Vec<Arc<Mutex<Task>>>> >>, // for fast lookup
 
-    pub globalQaHandlers: Vec<Rc<RefCell< dyn QHandler>>>, // global handlers for Q&A
+    pub questionTasks:Arc<RwLock< Vec<Box<Task2>> >>,
 
     pub mem: Arc<RwLock<NarMem::Mem>>,
-    pub stampIdCounter: i64, // counter for stamp id
-    pub taskIdCounter: i64, // counter for id of task, mainly used for fast checking if two tasks are the same!
+    pub stampIdCounter: AtomicI64, // counter for stamp id
+    pub taskIdCounter: Arc<AtomicI64>, // counter for id of task, mainly used for fast checking if two tasks are the same!
 
     pub cycleCounter: i64, // counter for done reasoning cycles
-
-    pub rng: ThreadRng,
 }
 
+pub struct Mem2 {
+    pub shared:Arc<RwLock<DeclarativeShared>>,
 
+    pub globalQaHandlers: Arc<RwLock<  Vec<Arc<RwLock< dyn QHandler>>>  >>, // global handlers for Q&A
+    pub rng: RwLock<ThreadRng>,
+
+    pub deriverWorkers: Vec<JoinHandle<()>>, // array of workers
+    pub deriverWorkersTx: Vec<SyncSender<DeriverWorkMessage>>, // sender to worker
+}
+
+pub fn createMem2()->Arc<RwLock<Mem2>> {
+    let mem0:NarMem::Mem = NarMem::Mem{
+        concepts:HashMap::new(),
+    };
+    let memArc:Arc<RwLock<NarMem::Mem>> = Arc::new(RwLock::new(mem0));
+
+    let shared = DeclarativeShared {
+        judgementTasks:vec![], 
+        judgementTasksByTerm:Arc::new(RwLock::new(HashMap::new())), 
+
+        questionTasks:Arc::new(RwLock::new(vec![])), 
+        mem:Arc::clone(&memArc),
+        stampIdCounter:AtomicI64::new(0), 
+        taskIdCounter:Arc::new(AtomicI64::new(1000)), // high number to easy debugging to prevent confusion
+        cycleCounter:0,
+    };
+
+
+    let mut res:Mem2 = Mem2{
+        shared:Arc::new(RwLock::new(shared)),
+
+        globalQaHandlers:Arc::new(RwLock::new(vec![])), 
+        rng:RwLock::new(rand::thread_rng()),
+
+        deriverWorkers:vec![],
+        deriverWorkersTx:vec![],
+    };
+    let resArc:Arc<RwLock<Mem2>> = Arc::new(RwLock::new(res));
+
+    { // create workers for derivation
+        let (tx, rx) = sync_channel(4); // create channel with fixed size, reason is that we want to limit backlog!
+        resArc.write().deriverWorkersTx.push(tx);
+
+        let sharedArc:Arc<RwLock<DeclarativeShared>> = Arc::clone(&resArc.read().shared);
+        let globalQaHandlers = Arc::clone(&resArc.read().globalQaHandlers);
+        resArc.write().deriverWorkers.push(thread::spawn(move|| {
+            let cfgEnInstrumentation = true;
+            let mut rng = rand::thread_rng();
+
+            loop {
+                let msgRes = rx.recv();
+                if !msgRes.is_ok() {
+                    break; // other side has hung up, terminate this worker
+                }
+                let msg:DeriverWorkMessage = msgRes.unwrap(); // receive message
+                println!("[WORKER] received MSG!");
+
+                /////////
+                // DERIVE
+                /////////
+                let mut concl:Vec<SentenceDummy> = vec![];
+
+                { // single premise derivation
+                    let mut concl2: Vec<SentenceDummy> = infSinglePremise2(&msg.primary.lock().unwrap().sentence);
+                    concl.append(&mut concl2);
+                }
+
+                let enInferenceSampleSecondaryByCredit = false; // do we sample secondary premise randomly by credit?
+                let enInferenceSecondaryAll = true; // do we select and process all secondary premises (like in ALANN)
+
+                if enInferenceSampleSecondaryByCredit { // sample secondary premise randomly by credit?
+                    // sample from secondaryElligable by priority
+                    let selVal:f64 = rng.gen_range(0.0,1.0);
+                    let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &msg.secondary, msg.cycleCounter);
+                    let secondarySelTask: &Arc<Mutex<Task>> = &msg.secondary[secondarySelTaskIdx];
+
+                    // debug premises
+                    {
+                        println!("TRACE do inference...");
+
+                        {
+                            let taskSentenceAsStr = convSentenceTermPunctToStr(&msg.primary.lock().unwrap().sentence, false);
+                            //println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, taskCalcCredit(&selPrimaryTask.lock().unwrap(), mem.cycleCounter));    
+                        }
+                        {
+                            let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.lock().unwrap().sentence, false);
+                            //println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, taskCalcCredit(&secondarySelTask.lock().unwrap(), mem.cycleCounter));
+                        }
+                    }
+
+                    // do inference with premises
+                    let mut wereRulesApplied = false;
+                    let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, &secondarySelTask.lock().unwrap().sentence, &mut wereRulesApplied);
+                    concl.append(&mut concl2);
+                }
+
+                let EN = false; // currently disabled because of DEADLOCK, because sentences may be the same!
+                if EN { // attention mechanism which selects the secondary task from concepts
+                    let keyTerm = msg.primary.lock().unwrap().sentence.term.clone();
+                    match sharedArc.read().mem.read().concepts.get(&keyTerm) {
+                        Some(concept) => {
+                            println!("sample concept {}", convTermToStr(&concept.name));
+        
+                            let processAllBeliefs:bool = true; // does the deriver process all beliefs?
+                            let processSampledBelief:bool = false; // does it just sample one belief?
+        
+                            if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
+                                for iBelief in &concept.beliefs {
+                                    let iBeliefGuard = iBelief.lock().unwrap();
+                                    // do inference and add conclusions to array
+                                    let mut wereRulesApplied = false;
+                                    let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
+                                    concl.append(&mut concl2);
+                                }
+                            }
+                            if processSampledBelief { // code for sampling, is faster
+                                // sample belief from concept
+                                let selVal:f64 = rng.gen_range(0.0,1.0);
+                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
+                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
+        
+                                // do inference and add conclusions to array
+                                let mut wereRulesApplied = false;
+                                let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, selBelief, &mut wereRulesApplied);
+                                concl.append(&mut concl2);
+                            }
+                        },
+                        None => {} // concept doesn't exist, ignore
+                    }
+                }
+
+
+
+                if enInferenceSecondaryAll {
+                    let timeStart = Instant::now();
+
+                    let secondaryElligablePartA = &msg.secondary[..msg.secondary.len()/2];
+                    let secondaryElligablePartB2 = msg.secondary[msg.secondary.len()/2..].to_vec();
+                    let secondaryElligablePartB:Vec<(Term,EnumPunctation,Stamp,Option<Tv>)> = msg.secondary.iter().map(|s| {
+                        let s2:&SentenceDummy = &s.lock().unwrap().sentence;
+                        ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
+                    }).collect();
+
+                    let selPrimarySentenceTuple;
+                    {
+                        let s2:&SentenceDummy = &msg.primary.lock().unwrap().sentence;
+                        selPrimarySentenceTuple = ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
+                    }
+
+                    let handleB = thread::spawn(move|| {
+                        let mut res = vec![];
+                        for iSecondarySentence in &secondaryElligablePartB {
+                            let mut wereRulesApplied = false;
+                            let mut concl2: Vec<SentenceDummy> = inference2(
+                                &selPrimarySentenceTuple.0, selPrimarySentenceTuple.1, &selPrimarySentenceTuple.2, &selPrimarySentenceTuple.3,
+                                &iSecondarySentence.0, iSecondarySentence.1, &iSecondarySentence.2, &iSecondarySentence.3, 
+                                &mut wereRulesApplied
+                            );
+                            res.append(&mut concl2);
+                        }
+                        res
+                    });
+
+                    let selPrimaryTaskSentence:&SentenceDummy = &msg.primary.lock().unwrap().sentence;
+                    for iSecondaryTask in secondaryElligablePartA {
+                        // do inference and add conclusions to array
+                        if !Arc::ptr_eq(&msg.primary, &iSecondaryTask) { // arcs must not point to same task!
+                            let mut wereRulesApplied = false;
+                            let mut concl2: Vec<SentenceDummy> = inference(selPrimaryTaskSentence, &iSecondaryTask.lock().unwrap().sentence, &mut wereRulesApplied);
+                            concl.append(&mut concl2);
+                        }
+                    }
+                    
+                    let mut conclPartB = handleB.join().unwrap();
+                    concl.append(&mut conclPartB);
+
+                    if cfgEnInstrumentation {
+                        println!("[instr] secondard inf took {}us", timeStart.elapsed().as_micros());
+                    }
+
+                }
+
+
+                ////////////
+                // write back
+                ////////////
+
+
+                // put conclusions back into memory!
+                {
+                    // Q&A - answer questions
+                    {
+                        for iConcl in &concl {
+                            if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
+                                for mut iQTask in &mut *sharedArc.read().questionTasks.write() {
+                                    qaTryAnswer(&mut iQTask, &iConcl, &globalQaHandlers.read());
+                                }
+                            }
+                        }
+                    }
+                    
+                    for iConcl in &concl {
+                        // TODO< check if task exists already, don't add if it exists >
+                        memAddTask(Arc::clone(&sharedArc), iConcl, true);
+                    }
+                }
+            }
+        }));
+    }
+    
+
+    resArc
+}
 
 /// helper to select random task by credit
 pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Arc<Mutex<Task>>>, cycleCounter:i64)->usize {
@@ -1339,28 +1562,32 @@ pub fn tasksSelHighestCreditIdx(arr: &Vec<Rc<RefCell<Task>>>, cycleCounter:i64) 
 /// stores missing entries of mem.judgementTasksByTerm by subterm of term
 ///
 /// IMPL< is actually a helper function for memAddTask, still exposed as public for code reuse >
-pub fn populateTaskByTermLookup(mem:&mut Mem2, term:&Term, task:&Arc<Mutex<Task>>) {
+pub fn populateTaskByTermLookup(judgementTasksByTerm:Arc<RwLock< HashMap<Term, Vec<Arc<Mutex<Task>>>> >>, term:&Term, task:&Arc<Mutex<Task>>) {
+    let mut judgementTasksByTermGuard = judgementTasksByTerm.write();
+    
     for iSubTerm in &retSubterms(&term) {
-        if mem.judgementTasksByTerm.contains_key(iSubTerm) {
-            let mut v = mem.judgementTasksByTerm.get(iSubTerm).unwrap().clone();
+        if judgementTasksByTermGuard.contains_key(iSubTerm) {
+            let mut v = judgementTasksByTermGuard.get(iSubTerm).unwrap().clone();
             v.push(Arc::clone(&task));
-            mem.judgementTasksByTerm.insert(iSubTerm.clone(), v);
+            judgementTasksByTermGuard.insert(iSubTerm.clone(), v);
         }
         else {
-            mem.judgementTasksByTerm.insert(iSubTerm.clone(), vec![Arc::clone(&task)]);
+            judgementTasksByTermGuard.insert(iSubTerm.clone(), vec![Arc::clone(&task)]);
         }
     }
 }
 
-/// /param calcCredit compute the credit?
-pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
+/// tries to revise the belief if possible
+///
+/// returns if it has done revision
+pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) -> bool {
     // try to revise
     let mut wasRevised = false;
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
             
             for iTerm in retSubterms(&*sentence.term) { // enumerate all terms, we need to do this to add the sentence to all relevant names
-                match mem.mem.write().concepts.get_mut(&iTerm.clone()) {
+                match mem.write().concepts.get_mut(&iTerm.clone()) {
                     Some(arcConcept) => {
                         match Arc::get_mut(arcConcept) {
                             Some(concept) => {
@@ -1409,51 +1636,67 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             }
         },
         _ => {}
-    }
+    };
+    wasRevised
+}
 
+/// /param calcCredit compute the credit?
+pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool) {
+    // try to revise
+    let wasRevised = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
     if wasRevised {
         return;
     }
     // we are here if it can't revise
     
-    NarMem::storeInConcepts(&mut mem.mem.write(), sentence); // store sentence in memory, adressed by concepts
+    NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence); // store sentence in memory, adressed by concepts
     
 
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
-            if true { // check if we should check if it already exist in the tasks
-                for ijt in &mem.judgementTasks { // ijt:iteration-judgement-task
-                    let ijt2 = ijt.lock().unwrap();
-                    if checkEqTerm(&sentence.term, &ijt2.sentence.term) && checkSame(&sentence.stamp, &ijt2.sentence.stamp) {
-                        return; // don't add if it exists already! because we would skew the fairness if we would add it
+            let task = {
+                let sharedGuard = shared.read();
+                if true { // check if we should check if it already exist in the tasks
+                    for ijt in &sharedGuard.judgementTasks { // ijt:iteration-judgement-task
+                        let ijt2 = ijt.lock().unwrap();
+                        if checkEqTerm(&sentence.term, &ijt2.sentence.term) && checkSame(&sentence.stamp, &ijt2.sentence.stamp) {
+                            return; // don't add if it exists already! because we would skew the fairness if we would add it
+                        }
                     }
                 }
-            }
 
-            let mut task = Task {
-                sentence:sentence.clone(),
-                credit:1.0,
-                qaCredit:0.0, // no question was posed!
-                id:mem.taskIdCounter,
-                derivTime:mem.cycleCounter
+                let taskId:i64 = sharedGuard.taskIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
+                let mut task = Task {
+                    sentence:sentence.clone(),
+                    credit:1.0,
+                    qaCredit:0.0, // no question was posed!
+                    id:taskId,
+                    derivTime:sharedGuard.cycleCounter
+                };
+                if calcCredit {
+                    divCreditByComplexity(&mut task); // punish more complicated terms
+                }
+
+                task
             };
-            mem.taskIdCounter+=1;
+            
 
-            if calcCredit {
-                divCreditByComplexity(&mut task); // punish more complicated terms
+            let taskArc = Arc::new(Mutex::new(task));
+            {
+                shared.write().judgementTasks.push(Arc::clone(&taskArc));    
             }
 
-            let x:Mutex<Task> = Mutex::new(task);
-            let taskArc = Arc::new(x);
-            mem.judgementTasks.push(Arc::clone(&taskArc));
+
             
             // populate hashmap lookup
-            populateTaskByTermLookup(mem, &sentence.term, &taskArc);
+            let sharedGuard = shared.read();
+            populateTaskByTermLookup(Arc::clone(&sharedGuard.judgementTasksByTerm), &sentence.term, &taskArc);
         },
         EnumPunctation::QUESTION => {
             println!("TODO - check if we should check if it already exist in the tasks");
             
-            mem.questionTasks.push(Box::new(Task2 {
+            let sharedGuard = shared.read();
+            sharedGuard.questionTasks.write().push(Box::new(Task2 {
                 sentence:sentence.clone(),
                 handler:None,
                 bestAnswerExp:0.0, // because has no answer yet
@@ -1464,7 +1707,6 @@ pub fn memAddTask(mem:&mut Mem2, sentence:&SentenceDummy, calcCredit:bool) {
             println!("ERROR: goal is not implemented!");
         },
     }
-    
 }
 
 /// helper for attention
@@ -1478,7 +1720,7 @@ pub fn divCreditByComplexity(task:&mut Task) {
 /// * `qTask` - the question task to find a answer to
 /// * `concl` - candidate answer to get evaluated
 /// * `globalQaHandlers` - 
-pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &Vec<Rc<RefCell< dyn QHandler>>>) {
+pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &Vec<Arc<RwLock< dyn QHandler>>>) {
     if concl.punct != EnumPunctation::JUGEMENT { // only jugements can answer questions!
         return;
     }
@@ -1491,14 +1733,14 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &
             if qTask.handler.is_some() {
                 // call Q&A handler for task
                 let handler1 = qTask.handler.as_ref().unwrap();
-                let mut handler2 = handler1.borrow_mut();
-                handler2.answer(&qTask.sentence.term, &concl); // call callback because we found a answer
+                let mut handlerGuard = handler1.write();
+                handlerGuard.answer(&qTask.sentence.term, &concl); // call callback because we found a answer
             }
 
             // call global Q&A handlers
             for iHandler in globalQaHandlers {
-                let mut handler2 = iHandler.borrow_mut();
-                handler2.answer(&qTask.sentence.term, &concl);
+                let mut handlerGuard = iHandler.write();
+                handlerGuard.answer(&qTask.sentence.term, &concl);
             }
 
             qTask.bestAnswerExp = calcExp(&retTv(&concl).unwrap()); // update exp of best found answer
@@ -1513,55 +1755,81 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &
 /// performs one reasoning cycle
 /// # Arguments
 /// * `mem` - memory
-pub fn reasonCycle(mem:&mut Mem2) {
+pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     let cfgEnInstrumentation:bool = true; // enable instrumentation
 
-    mem.cycleCounter+=1;
+    mem.read().shared.write().cycleCounter+=1;
 
-    // transfer credits from questionTasks to Judgement tasks
-    for iTask in &mem.questionTasks {
-        {
-            for iSubTerm in &retSubterms(&iTask.sentence.term) { // iterate over all terms
-                let optTasksBySubterm = mem.judgementTasksByTerm.get(&iSubTerm);
-                match optTasksBySubterm {
-                    Some(tasksBySubterms) => {
-                        for iIdx in 0..tasksBySubterms.len() {
-                            tasksBySubterms[iIdx].lock().unwrap().qaCredit += (*iTask).prio;
-                        }
-                    },
-                    None => {},
-                }
-            } 
-        }
-    }
-
-    // give base credit
-    // JUSTIFICATION< else the tasks die down for forward inference >
-    for iIdx in 0..mem.judgementTasks.len() {
-        mem.judgementTasks[iIdx].lock().unwrap().credit += 0.5;
-    }
     
-    // let them pay for their complexity
-    for iIdx in 0..mem.judgementTasks.len() {
-        divCreditByComplexity(&mut mem.judgementTasks[iIdx].lock().unwrap());
+    {
+        let memGuard = mem.read();
+        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        {
+            
+            // transfer credits from questionTasks to Judgement tasks
+            for iTask in &*sharedGuard.questionTasks.read() {
+                {
+                    for iSubTerm in &retSubterms(&iTask.sentence.term) { // iterate over all terms
+                        let optTasksBySubtermGuard = sharedGuard.judgementTasksByTerm.read();
+                        let optTasksBySubterm = optTasksBySubtermGuard.get(&iSubTerm);
+                        match optTasksBySubterm {
+                            Some(tasksBySubterms) => {
+                                for iIdx in 0..tasksBySubterms.len() {
+                                    tasksBySubterms[iIdx].lock().unwrap().qaCredit += (*iTask).prio;
+                                }
+                            },
+                            None => {},
+                        }
+                    } 
+                }
+            }
+        }    
+    }
+
+    {
+        let memGuard = mem.read();
+        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        //let memGuard = mem.read();
+        //let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        
+        // give base credit
+        // JUSTIFICATION< else the tasks die down for forward inference >
+        for iIdx in 0..sharedGuard.judgementTasks.len() {
+            sharedGuard.judgementTasks[iIdx].lock().unwrap().credit += 0.5;
+        }
+        
+        // let them pay for their complexity
+        for iIdx in 0..sharedGuard.judgementTasks.len() {
+            divCreditByComplexity(&mut sharedGuard.judgementTasks[iIdx].lock().unwrap());
+        }
     }
 
     // sample question to answer
     {
-        if mem.questionTasks.len() > 0 {
-            let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-            let qIdx = task2SelByCreditRandom(selVal, &mem.questionTasks);
-            let mut selTask = &mut mem.questionTasks[qIdx];
+        let memGuard = mem.read();
+        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+
+        let len = sharedGuard.questionTasks.read().len();
+        if len > 0 {
+            let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
+
+            //let memGuard = mem.read();
+            //let sharedGuard = memGuard.shared.read();
+            let mut selTask = {
+                let qIdx = task2SelByCreditRandom(selVal, &*sharedGuard.questionTasks.read());
+                &mut *(sharedGuard.questionTasks.write())[qIdx]
+            };
+            
 
             // * enumerate subterms
             for iSubTerm in &retUniqueSubterms(&(*selTask).sentence.term.clone()) {
 
                 // * retrieve concept by subterm
-                match mem.mem.read().concepts.get(&iSubTerm) {
+                match sharedGuard.mem.read().concepts.get(&iSubTerm) {
                     Some(concept) => {
                         // try to answer question with all beliefs which may be relevant
                         for iBelief in &concept.beliefs {
-                            qaTryAnswer(&mut selTask, &iBelief.lock().unwrap(), &mem.globalQaHandlers);
+                            qaTryAnswer(&mut selTask, &iBelief.lock().unwrap(), &memGuard.globalQaHandlers.read());
                         }
                     },
                     None => {} // concept doesn't exist, ignore
@@ -1571,290 +1839,177 @@ pub fn reasonCycle(mem:&mut Mem2) {
         }
     }
     
-    let mut concl: Vec<SentenceDummy> = vec![];
-
-    if mem.judgementTasks.len() > 0 { // one working cycle - select for processing
-        let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-        let selIdx = taskSelByCreditRandom(selVal, &mem.judgementTasks, mem.cycleCounter);
-
-        let selPrimaryTask = &mem.judgementTasks[selIdx];
-        let selPrimaryTaskTerm:Arc<Term>;
-        {
-            selPrimaryTaskTerm = selPrimaryTask.lock().unwrap().sentence.term.clone();
-        }
-
-        { // single premise derivation
-            let mut concl2: Vec<SentenceDummy> = infSinglePremise2(&selPrimaryTask.lock().unwrap().sentence);
-            concl.append(&mut concl2);
-        }
-
-        {
-            // attention mechanism which select the secondary task from the table 
-            
-            let mut secondaryElligable:Vec<Arc<Mutex<Task>>> = vec![]; // tasks which are eligable to get selected as the secondary
-            
+    let mut msg: Option<DeriverWorkMessage> = None; // message which we have to send to worker for derivation
+    {
+        let memGuard = mem.read();
+        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        if sharedGuard.judgementTasks.len() > 0 { // one working cycle - select for processing
+            let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
+            let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
+    
+            //let memGuard = mem.read();
+            //let sharedGuard = memGuard.shared.read();
+            let selPrimaryTask = &sharedGuard.judgementTasks[selIdx];
             let selPrimaryTaskTerm:Arc<Term>;
             {
                 selPrimaryTaskTerm = selPrimaryTask.lock().unwrap().sentence.term.clone();
             }
 
-            for iSubTerm in &retUniqueSubterms(&selPrimaryTaskTerm) {
-                if mem.judgementTasksByTerm.contains_key(iSubTerm) {
-                    let itJudgementTasksByTerm:Vec<Arc<Mutex<Task>>> = mem.judgementTasksByTerm.get(iSubTerm).unwrap().to_vec();
-                    for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
-                        let itId;
-                        {
-                            itId = it.lock().unwrap().id;
-                        }
-
-                        // code to figure out if task already exists in secondaryElligable
-                        let mut existsById = false;
-                        {
-                            for iSec in &secondaryElligable {
-                                if iSec.lock().unwrap().id == itId {
-                                    existsById = true;
-                                    break; // OPT
-                                }
-                            }
-                        }
-                        
-                        if !existsById {
-                            secondaryElligable.push(Arc::clone(&it));
-                        }
-                    }
+            {
+                // attention mechanism which select the secondary task from the table 
+                
+                let mut secondaryElligable:Vec<Arc<Mutex<Task>>> = vec![]; // tasks which are eligable to get selected as the secondary
+                
+                let selPrimaryTaskTerm:Arc<Term>;
+                {
+                    selPrimaryTaskTerm = selPrimaryTask.lock().unwrap().sentence.term.clone();
                 }
-            }
-
-            { // filter secondary elligable 
-                /*
-        the selection of secondary premise should consider the structure of the primary premise.
-        Motivation for this is a higher efficiency of the deriver by prefering to select premises which can lead to conclusions.
-        
-        cases
-        a) primary is not <=> or ==>
-           consider secondary only if
-           a.1) secondary is of form &&==> or &&<=> and sub-term of && unifies with term of primary
-                reason: deriver should prefer to unify terms to "cut down" the conj
-                ex:
-                   primary  : <a --> b>
-                   secondary: (<$0 --> b>&&<z --> Z>) ==> <Z --> B>
-           a.2) secondary is of form ==> or <=> without && and subject unfies with term of primary
-                ex:
-                   primary  : <a --> b>
-                   secondary: <$0 --> b> ==> <Z --> B>
-           a.3) secondary is not of form <=> or ==>
-                reason: non-NAL-5&6 derivation!
-
-        b) primary is <=> or ==>
-           consider secondary!
-                */
-
-                // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
-                // NOTE< 09:00 08.08.2020 : is disabled because it is not necessary with ALANN's method to select all candidates >
-                let enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
-
-                if enFunctionalityNal5PremiseFiler1 {
-
-                    let mut secondaryElligableFiltered = vec![];
-
-                    println!("TRACE  primary term = {}", convTermToStr(&selPrimaryTask.lock().unwrap().sentence.term));
     
-                    for iSecondaryElligable in &secondaryElligable {
-                        println!("TRACE   consider secondary term = {}", convTermToStr(&iSecondaryElligable.lock().unwrap().sentence.term));
-                        
-                        match *selPrimaryTask.lock().unwrap().sentence.term { // is primary <=> or ==>
-                            Term::Stmt(cop,_,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
-                                secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                println!("TRACE      ...   eligable, reason: primary is ==> or <=> !");
-                                continue;
-                            },
-                            _ => {}
-                        }
     
-                        // else special handling
-                        match (*iSecondaryElligable.lock().unwrap().sentence.term).clone() {
-                            Term::Stmt(cop,secondarySubj,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
-                                match *secondarySubj {
-                                    Term::Conj(conjterms) => {
-                                        // we need to check if conjterm unifies with primary
-                                        let mut anyUnify = false;
-                                        for iConjTerm in &conjterms {
-                                            if unify(&selPrimaryTask.lock().unwrap().sentence.term.clone(), &iConjTerm).is_some() {
-                                                anyUnify = true;
-                                                break;
-                                            }
-                                        }
+                for iSubTerm in &retUniqueSubterms(&selPrimaryTaskTerm) {
+                    if sharedGuard.judgementTasksByTerm.read().contains_key(iSubTerm) {
+                        let itJudgementTasksByTerm:Vec<Arc<Mutex<Task>>> = sharedGuard.judgementTasksByTerm.read().get(iSubTerm).unwrap().to_vec();
+                        for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
+                            let itId;
+                            {
+                                itId = it.lock().unwrap().id;
+                            }
     
-                                        if anyUnify {
-                                            secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                            println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
-                                            continue;
-                                        }
-                                    },
-                                    _ => {
-                                        // we need to check if secondarySubj unfies with primary
-                                        if unify(&selPrimaryTask.lock().unwrap().sentence.term.clone(), &secondarySubj).is_some() {
-                                            secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                            println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
-                                            continue;
-                                        }
+                            // code to figure out if task already exists in secondaryElligable
+                            let mut existsById = false;
+                            {
+                                for iSec in &secondaryElligable {
+                                    if iSec.lock().unwrap().id == itId {
+                                        existsById = true;
+                                        break; // OPT
                                     }
                                 }
-                            },
-                            _ => {
-                                secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                println!("TRACE      ...   eligable, reason: non-NAL-5&6 derivation!");
+                            }
+                            
+                            if !existsById {
+                                secondaryElligable.push(Arc::clone(&it));
                             }
                         }
                     }
-                    secondaryElligable = secondaryElligableFiltered;
-
-
-
-
                 }
-                
-            }
-
-            let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
-            if dbgSecondaryElligable {
-                println!("TRACE secondary eligable:");
-                for iSecondaryElligable in &secondaryElligable {
-                    println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.lock().unwrap().sentence, true));
-                }
-            }
-
-            if secondaryElligable.len() > 0 { // must contain any premise to get selected
-                let enInferenceSampleSecondaryByCredit = false; // do we sample secondary premise randomly by credit?
-                let enInferenceSecondaryAll = true; // do we select and process all secondary premises (like in ALANN)
-
-                if enInferenceSampleSecondaryByCredit { // sample secondary premise randomly by credit?
-                    // sample from secondaryElligable by priority
-                    let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-                    let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &secondaryElligable, mem.cycleCounter);
-                    let secondarySelTask: &Arc<Mutex<Task>> = &secondaryElligable[secondarySelTaskIdx];
-
-                    // debug premises
-                    {
-                        println!("TRACE do inference...");
-
-                        {
-                            let taskSentenceAsStr = convSentenceTermPunctToStr(&selPrimaryTask.lock().unwrap().sentence, false);
-                            println!("TRACE   primary   task  {}  credit={}", taskSentenceAsStr, taskCalcCredit(&selPrimaryTask.lock().unwrap(), mem.cycleCounter));    
-                        }
-                        {
-                            let taskSentenceAsStr = convSentenceTermPunctToStr(&secondarySelTask.lock().unwrap().sentence, false);
-                            println!("TRACE   secondary task  {}  credit={}", taskSentenceAsStr, taskCalcCredit(&secondarySelTask.lock().unwrap(), mem.cycleCounter));
-                        }
-                    }
-
-                    // do inference with premises
-                    let mut wereRulesApplied = false;
-                    let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, &secondarySelTask.lock().unwrap().sentence, &mut wereRulesApplied);
-                    concl.append(&mut concl2);
-                }
-
-                if enInferenceSecondaryAll {
-                    let timeStart = Instant::now();
-
-                    let secondaryElligablePartA = &secondaryElligable[..secondaryElligable.len()/2];
-                    let secondaryElligablePartB2 = secondaryElligable[secondaryElligable.len()/2..].to_vec();
-                    let secondaryElligablePartB:Vec<(Term,EnumPunctation,Stamp,Option<Tv>)> = secondaryElligablePartB2.iter().map(|s| {
-                        let s2:&SentenceDummy = &s.lock().unwrap().sentence;
-                        ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
-                    }).collect();
-
-                    let selPrimarySentenceTuple;
-                    {
-                        let s2:&SentenceDummy = &selPrimaryTask.lock().unwrap().sentence;
-                        selPrimarySentenceTuple = ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
-                    }
-
-                    let handleB = thread::spawn(move|| {
-                        let mut res = vec![];
-                        for iSecondarySentence in &secondaryElligablePartB {
-                            let mut wereRulesApplied = false;
-                            let mut concl2: Vec<SentenceDummy> = inference2(
-                                &selPrimarySentenceTuple.0, selPrimarySentenceTuple.1, &selPrimarySentenceTuple.2, &selPrimarySentenceTuple.3,
-                                &iSecondarySentence.0, iSecondarySentence.1, &iSecondarySentence.2, &iSecondarySentence.3, 
-                                &mut wereRulesApplied
-                            );
-                            res.append(&mut concl2);
-                        }
-                        res
-                    });
-
-                    let selPrimaryTaskSentence:&SentenceDummy = &selPrimaryTask.lock().unwrap().sentence;
-                    for iSecondaryTask in secondaryElligablePartA {
-                        // do inference and add conclusions to array
-                        if !Arc::ptr_eq(selPrimaryTask, &iSecondaryTask) { // arcs must not point to same task!
-                            let mut wereRulesApplied = false;
-                            let mut concl2: Vec<SentenceDummy> = inference(selPrimaryTaskSentence, &iSecondaryTask.lock().unwrap().sentence, &mut wereRulesApplied);
-                            concl.append(&mut concl2);
-                        }
-                    }
-                    
-                    let mut conclPartB = handleB.join().unwrap();
-                    concl.append(&mut conclPartB);
-
-                    if cfgEnInstrumentation {
-                        println!("[instr] secondard inf took {}us", timeStart.elapsed().as_micros());
-                    }
-
-                }
-            }
-        }
-
-        { // attention mechanism which selects the secondary task from concepts
-            match mem.mem.read().concepts.get(&selPrimaryTaskTerm) {
-                Some(concept) => {
-                    println!("sample concept {}", convTermToStr(&*concept.name));
-
-                    let processAllBeliefs:bool = true; // does the deriver process all beliefs?
-                    let processSampledBelief:bool = false; // does it just sample one belief?
-
-                    if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
-                        for iBelief in &concept.beliefs {
-                            let iBeliefGuard = iBelief.lock().unwrap();
-                            // do inference and add conclusions to array
-                            let mut wereRulesApplied = false;
-                            let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
-                            concl.append(&mut concl2);
-                        }
-                    }
-                    if processSampledBelief { // code for sampling, is faster
-                        // sample belief from concept
-                        let selVal:f64 = mem.rng.gen_range(0.0,1.0);
-                        let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                        let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
-
-                        // do inference and add conclusions to array
-                        let mut wereRulesApplied = false;
-                        let mut concl2: Vec<SentenceDummy> = inference(&selPrimaryTask.lock().unwrap().sentence, selBelief, &mut wereRulesApplied);
-                        concl.append(&mut concl2);
-                    }
-                },
-                None => {} // concept doesn't exist, ignore
-            }
-        }
-    }
-
-    // put conclusions back into memory!
-    {
-        // Q&A - answer questions
-        {
-            for iConcl in &concl {
-                if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
-                    for mut iQTask in &mut mem.questionTasks {
-                        qaTryAnswer(&mut iQTask, &iConcl, &mem.globalQaHandlers);
-                    }
-                }
-            }
-        }
+    
+    
+    
+    
+    
+                { // filter secondary elligable 
+                    /*
+            the selection of secondary premise should consider the structure of the primary premise.
+            Motivation for this is a higher efficiency of the deriver by prefering to select premises which can lead to conclusions.
+            
+            cases
+            a) primary is not <=> or ==>
+               consider secondary only if
+               a.1) secondary is of form &&==> or &&<=> and sub-term of && unifies with term of primary
+                    reason: deriver should prefer to unify terms to "cut down" the conj
+                    ex:
+                       primary  : <a --> b>
+                       secondary: (<$0 --> b>&&<z --> Z>) ==> <Z --> B>
+               a.2) secondary is of form ==> or <=> without && and subject unfies with term of primary
+                    ex:
+                       primary  : <a --> b>
+                       secondary: <$0 --> b> ==> <Z --> B>
+               a.3) secondary is not of form <=> or ==>
+                    reason: non-NAL-5&6 derivation!
+    
+            b) primary is <=> or ==>
+               consider secondary!
+                    */
+    
+                    // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
+                    // NOTE< 09:00 08.08.2020 : is disabled because it is not necessary with ALANN's method to select all candidates >
+                    let enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
+    
+                    if enFunctionalityNal5PremiseFiler1 {
+    
+                        let mut secondaryElligableFiltered = vec![];
+    
+                        println!("TRACE  primary term = {}", convTermToStr(&selPrimaryTask.lock().unwrap().sentence.term));
         
-        for iConcl in &concl {
-            // TODO< check if task exists already, don't add if it exists >
-            memAddTask(mem, iConcl, true);
+                        for iSecondaryElligable in &secondaryElligable {
+                            println!("TRACE   consider secondary term = {}", convTermToStr(&iSecondaryElligable.lock().unwrap().sentence.term));
+                            
+                            match *selPrimaryTask.lock().unwrap().sentence.term { // is primary <=> or ==>
+                                Term::Stmt(cop,_,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
+                                    secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                    println!("TRACE      ...   eligable, reason: primary is ==> or <=> !");
+                                    continue;
+                                },
+                                _ => {}
+                            }
+        
+                            // else special handling
+                            match (*iSecondaryElligable.lock().unwrap().sentence.term).clone() {
+                                Term::Stmt(cop,secondarySubj,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
+                                    match *secondarySubj {
+                                        Term::Conj(conjterms) => {
+                                            // we need to check if conjterm unifies with primary
+                                            let mut anyUnify = false;
+                                            for iConjTerm in &conjterms {
+                                                if unify(&selPrimaryTask.lock().unwrap().sentence.term.clone(), &iConjTerm).is_some() {
+                                                    anyUnify = true;
+                                                    break;
+                                                }
+                                            }
+        
+                                            if anyUnify {
+                                                secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                                println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
+                                                continue;
+                                            }
+                                        },
+                                        _ => {
+                                            // we need to check if secondarySubj unfies with primary
+                                            if unify(&selPrimaryTask.lock().unwrap().sentence.term.clone(), &secondarySubj).is_some() {
+                                                secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                                println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                    println!("TRACE      ...   eligable, reason: non-NAL-5&6 derivation!");
+                                }
+                            }
+                        }
+                        secondaryElligable = secondaryElligableFiltered;
+                    }
+                }
+    
+                let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
+                if dbgSecondaryElligable {
+                    println!("TRACE secondary eligable:");
+                    for iSecondaryElligable in &secondaryElligable {
+                        println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.lock().unwrap().sentence, true));
+                    }
+                }
+    
+                if secondaryElligable.len() > 0 { // must contain any premise to get selected    
+                    // build message of work
+                    msg = Some(DeriverWorkMessage {
+                        primary: Arc::clone(&selPrimaryTask),
+                        secondary: secondaryElligable.iter().map(|iv| Arc::clone(iv)).collect(), // clone
+                        cycleCounter: sharedGuard.cycleCounter,
+                    });
+                }
+            }
+        }
+    
+    }
+    
+    {
+        if msg.is_some() { // do we have a message to send to worker?
+            // submit message to worker
+            let unwrappedMsg = msg.unwrap();
+            let memGuard = mem.read();
+            memGuard.deriverWorkersTx[0].send(unwrappedMsg).unwrap();
         }
     }
 
@@ -1863,26 +2018,33 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
     // keep working tasks of judgements under AIKR
     {
-        if mem.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
+        let memGuard = mem.read();
+        let mut sharedGuard = memGuard.shared.write(); // get read guard because we need only read here
+        if sharedGuard.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
         {
-            let memCycleCounter:i64 = mem.cycleCounter;
-            mem.judgementTasks.sort_by(|a, b| 
+            let memCycleCounter:i64 = sharedGuard.cycleCounter;
+
+            //let memGuard = mem.read();
+            //let mut sharedGuard = memGuard.shared.write();
+            sharedGuard.judgementTasks.sort_by(|a, b| 
                 taskCalcCredit(&b.lock().unwrap(), memCycleCounter).partial_cmp(
                     &taskCalcCredit(&a.lock().unwrap(), memCycleCounter)
                 ).unwrap());
-            mem.judgementTasks = mem.judgementTasks[0..maxJudgementTasks.min(mem.judgementTasks.len())].to_vec(); // limit to keep under AIKR
+            sharedGuard.judgementTasks = sharedGuard.judgementTasks[0..maxJudgementTasks.min(sharedGuard.judgementTasks.len())].to_vec(); // limit to keep under AIKR
         }
     }
 
     // keep judgement tasks by term under AIKR
     {
-        if mem.cycleCounter % intervalCheckTasks == 0 {
-            mem.judgementTasksByTerm = HashMap::new(); // flush, because we will repopulate
+        let memGuard = mem.read();
+        let mut sharedGuard = memGuard.shared.write(); // get read guard because we need only read here
+        if sharedGuard.cycleCounter % intervalCheckTasks == 0 {
+            sharedGuard.judgementTasksByTerm = Arc::new(RwLock::new(HashMap::new())); // flush, because we will repopulate
 
             // repopulate judgementTasksByTerm
             // IMPL< we had to split it because mem was accessed twice! >
             let mut termAndTask = vec![];
-            for iJudgementTask in &mem.judgementTasks {
+            for iJudgementTask in &sharedGuard.judgementTasks {
                 let termRc:&Arc<Term> = &iJudgementTask.lock().unwrap().sentence.term;
                 let term:Term = (**termRc).clone();
 
@@ -1891,7 +2053,7 @@ pub fn reasonCycle(mem:&mut Mem2) {
 
             for (term, task) in &termAndTask { // iterate over prepared tuples
                 // populate hashmap lookup
-                populateTaskByTermLookup(mem, &term, &task);
+                populateTaskByTermLookup(Arc::clone(&sharedGuard.judgementTasksByTerm), &term, &task);
             }
         }
     }
@@ -1901,28 +2063,21 @@ pub fn reasonCycle(mem:&mut Mem2) {
     let nConcepts = 10000; // number of concepts
 
     { // limit number of concepts
-        if mem.cycleCounter % intervalCheckConcepts == 0 {
-            NarMem::limitMemory(&mut mem.mem.write(), nConcepts);
+        let memGuard = mem.read();
+        let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        if sharedGuard.cycleCounter % intervalCheckConcepts == 0 {
+            NarMem::limitMemory(&mut sharedGuard.mem.write(), nConcepts);
         }
     }
 }
 
-pub fn createMem2()->Mem2 {
-    let mem0:NarMem::Mem = NarMem::Mem{
-        concepts:HashMap::new(),
-    };
-    
-    Mem2{judgementTasks:vec![], judgementTasksByTerm:HashMap::new(), questionTasks:vec![], mem:Arc::new(RwLock::new(mem0)), globalQaHandlers:vec![], rng:rand::thread_rng(), stampIdCounter:0, taskIdCounter:1000, // high number to easy debugging to prevent confusion
-        cycleCounter:0,
-    }
-}
 
 pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
     let mut res = Vec::new();
     
     // debug credit of tasks
     {
-        for iTask in &mem.judgementTasks {
+        for iTask in &mem.shared.read().judgementTasks {
             let taskSentenceAsStr = convSentenceTermPunctToStr(&iTask.lock().unwrap().sentence, true);
             
             let mut taskAsStr = taskSentenceAsStr.clone();
@@ -1932,7 +2087,7 @@ pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
                 taskAsStr = format!("{} {}", taskAsStr, NarStamp::convToStr(&iTask.lock().unwrap().sentence.stamp));
             }
 
-            res.push(format!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.lock().unwrap(), mem.cycleCounter)));
+            res.push(format!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.lock().unwrap(), mem.shared.read().cycleCounter)));
         }
     }
 
@@ -1951,6 +2106,6 @@ pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
 
 
 /// called when answer is found
-pub trait QHandler {
+pub trait QHandler: Sync + Send {
     fn answer(&mut self, question:&Term, answer:&SentenceDummy);
 }
