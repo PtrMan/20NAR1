@@ -2025,15 +2025,17 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
         let mut sharedGuard = memGuard.shared.write(); // get read guard because we need only read here
         if sharedGuard.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
         {
+            //println!("[d] ENTER: keep working tasks under AIKR");
+
             let memCycleCounter:i64 = sharedGuard.cycleCounter;
 
-            //let memGuard = mem.read();
-            //let mut sharedGuard = memGuard.shared.write();
             sharedGuard.judgementTasks.sort_by(|a, b| 
                 taskCalcCredit(&b.lock().unwrap(), memCycleCounter).partial_cmp(
                     &taskCalcCredit(&a.lock().unwrap(), memCycleCounter)
                 ).unwrap());
             sharedGuard.judgementTasks = sharedGuard.judgementTasks[0..maxJudgementTasks.min(sharedGuard.judgementTasks.len())].to_vec(); // limit to keep under AIKR
+            
+            //println!("[d] EXIT: keep working tasks under AIKR");
         }
     }
 
