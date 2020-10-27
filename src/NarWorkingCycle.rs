@@ -1602,7 +1602,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
                                     let iBelief = &concept.beliefs[iBeliefIdx].lock().unwrap();
                                     if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
                                         let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
-                                        let tvA:Tv = retTv(&concept.beliefs[iBeliefIdx].lock().unwrap()).unwrap();
+                                        let tvA:Tv = retTv(&iBelief).unwrap();
                                         let tvB:Tv = retTv(&sentence).unwrap();
                                         let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
                                         
@@ -1653,7 +1653,6 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy
     // we are here if it can't revise
     
     NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence); // store sentence in memory, adressed by concepts
-    
 
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
@@ -2025,7 +2024,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
         let mut sharedGuard = memGuard.shared.write(); // get read guard because we need only read here
         if sharedGuard.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
         {
-            //println!("[d] ENTER: keep working tasks under AIKR");
+            println!("[d] ENTER: keep working tasks under AIKR");
 
             let memCycleCounter:i64 = sharedGuard.cycleCounter;
 
@@ -2035,7 +2034,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                 ).unwrap());
             sharedGuard.judgementTasks = sharedGuard.judgementTasks[0..maxJudgementTasks.min(sharedGuard.judgementTasks.len())].to_vec(); // limit to keep under AIKR
             
-            //println!("[d] EXIT: keep working tasks under AIKR");
+            println!("[d] EXIT: keep working tasks under AIKR");
         }
     }
 
