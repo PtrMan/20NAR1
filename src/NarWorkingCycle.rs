@@ -1368,42 +1368,6 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
                     concl.append(&mut concl2);
                 }
 
-                let EN = false; // currently disabled because of DEADLOCK, because sentences may be the same!
-                if EN { // attention mechanism which selects the secondary task from concepts
-                    let keyTerm = msg.primary.lock().unwrap().sentence.term.clone();
-                    match sharedArc.read().mem.read().concepts.get(&keyTerm) {
-                        Some(concept) => {
-                            println!("sample concept {}", convTermToStr(&concept.name));
-        
-                            let processAllBeliefs:bool = true; // does the deriver process all beliefs?
-                            let processSampledBelief:bool = false; // does it just sample one belief?
-        
-                            if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
-                                for iBelief in &concept.beliefs {
-                                    let iBeliefGuard = iBelief.lock().unwrap();
-                                    // do inference and add conclusions to array
-                                    let mut wereRulesApplied = false;
-                                    let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
-                                    concl.append(&mut concl2);
-                                }
-                            }
-                            if processSampledBelief { // code for sampling, is faster
-                                // sample belief from concept
-                                let selVal:f64 = rng.gen_range(0.0,1.0);
-                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
-        
-                                // do inference and add conclusions to array
-                                let mut wereRulesApplied = false;
-                                let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, selBelief, &mut wereRulesApplied);
-                                concl.append(&mut concl2);
-                            }
-                        },
-                        None => {} // concept doesn't exist, ignore
-                    }
-                }
-
-
 
                 if enInferenceSecondaryAll {
                     let timeStart = Instant::now();
@@ -1453,6 +1417,45 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
                     }
 
                 }
+
+
+
+                let EN = false; // currently disabled because of DEADLOCK, because sentences may be the same!
+                if EN { // attention mechanism which selects the secondary task from concepts
+                    let keyTerm = msg.primary.lock().unwrap().sentence.term.clone();
+                    match sharedArc.read().mem.read().concepts.get(&keyTerm) {
+                        Some(concept) => {
+                            println!("sample concept {}", convTermToStr(&concept.name));
+        
+                            let processAllBeliefs:bool = true; // does the deriver process all beliefs?
+                            let processSampledBelief:bool = false; // does it just sample one belief?
+        
+                            if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
+                                for iBelief in &concept.beliefs {
+                                    let iBeliefGuard = iBelief.lock().unwrap();
+                                    // do inference and add conclusions to array
+                                    let mut wereRulesApplied = false;
+                                    let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
+                                    concl.append(&mut concl2);
+                                }
+                            }
+                            if processSampledBelief { // code for sampling, is faster
+                                // sample belief from concept
+                                let selVal:f64 = rng.gen_range(0.0,1.0);
+                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
+                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
+        
+                                // do inference and add conclusions to array
+                                let mut wereRulesApplied = false;
+                                let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, selBelief, &mut wereRulesApplied);
+                                concl.append(&mut concl2);
+                            }
+                        },
+                        None => {} // concept doesn't exist, ignore
+                    }
+                }
+
+
 
 
                 ////////////
