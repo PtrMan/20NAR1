@@ -32,6 +32,12 @@ pub struct ProcNar {
     /// enable motor babbling?
     pub cfgEnBabbling:bool,
 
+    /// how many ops can a impl seq maximally contain, values above 1 are considered as EXPERIMENTAL
+    pub cfg__nOpsMax:i64,
+    /// how high is the proability to select multiple ops for seq impl candidates
+    pub cfg__multiOpProbability:f64,
+
+
     /// how verbose is the reasoner, mainly used for debugging
     pub cfgVerbosity:i64,
 
@@ -69,7 +75,9 @@ pub fn narInit() -> ProcNar {
         cfgNMaxEvidence: 5000,
         cfgPerceptionSamplesPerStep:4,
         cfgEnBabbling: true,
-    
+        cfg__nOpsMax: 1,
+        cfg__multiOpProbability: 0.2,
+        
         cfgVerbosity: 10, // be silent
 
         //evidence: Vec::new(),
@@ -225,12 +233,30 @@ pub fn narStep0(nar:&mut ProcNar) {
             let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &nar.trace);
             if idxsOfOps.len() > 0 { // there must be at least one op to sample
 
+
                 let selIdxOfOps: Vec<usize> = {// indices of selected ops
+                    
+                    let nSelOps = // how many ops do we try to select
+                        if nar.cfg__nOpsMax == 1 {1}
+                        else if nar.rng.gen_range(0.0, 1.0) < nar.cfg__multiOpProbability {
+                            idxsOfOps.len().min(nar.cfg__nOpsMax as usize)
+                        }
+                        else {1};
+
                     // select ops
                     let mut selIdxOfOps = vec![];
-                    let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
-                    let selIdx = idxsOfOps[idx1Idx] as usize;
-                    selIdxOfOps.push(selIdx);
+                    loop {
+                        let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
+                        let selIdx = idxsOfOps[idx1Idx] as usize;
+                        if !selIdxOfOps.contains(&selIdx) {
+                            selIdxOfOps.push(selIdx);
+                        }
+
+                        if selIdxOfOps.len() == nSelOps { // do we have selected the ops?
+                            break;
+                        }
+                    }
+
                     selIdxOfOps
                 };
                 
@@ -257,9 +283,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                             idxs.sort();
                             idxs
                         };
-    
-                        assert!(idxs.len() == 3, "only case for sequence of 3 events (as impl seq) implemented!");
-                        
+
                         idxs.iter().map(|idx| Rc::clone(&nar.trace[*idx])).collect() // select trace items
                     };
                     
