@@ -132,7 +132,7 @@ pub fn narInit() -> ProcNar {
                     break; // other side has hung up, terminate this worker
                 }
                 let evidenceSentence = msgRes.unwrap(); // receive message
-                println!("[STORAGE WORKER] received MSG!");
+                //println!("[STORAGE WORKER] received MSG!");
 
                 /////////
                 // STORE
