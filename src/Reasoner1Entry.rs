@@ -112,7 +112,7 @@ pub fn reasoner1Entry() {
 
 
 
-// ops for pong environment
+/// ops for pong environment
 pub struct OpPong {
     pub env: Rc<RefCell<EnvPong3::EnvState>>, // points at environment
     pub opDir: i64, // direction which is set when this op is called

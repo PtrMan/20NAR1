@@ -21,23 +21,30 @@ use crate::NarSentence::newEternalSentenceByTv;
 use crate::NarWorkingCycle;
 use crate::NarMem;
 
+/// structure for the goal system
 pub struct GoalSystem {
-    //pub entries: Vec<Rc<RefCell<Entry>>>, //REMOVE!!!
-    pub batchesByDepth: Vec<Rc<RefCell<BatchByDepth>>>, // we are storing the entries batched by depth
-    pub nMaxEntries: i64, // max number of entries
-    pub nMaxDepth: i64, // soft limit of depth
+    /// we are storing the entries batched by depth
+    pub batchesByDepth: Vec<Rc<RefCell<BatchByDepth>>>,
+    /// max number of entries
+    pub nMaxEntries: i64,
+    /// soft limit of depth
+    pub nMaxDepth: i64,
 }
 
-// entry for goal system
+/// entry for goal system
 pub struct Entry {
     pub sentence: Arc<SentenceDummy>,
     pub utility: f64,
-    pub evidence: Option<Arc<Mutex<SentenceDummy>>>, // evidence which was used to derive this sentence. This is used to create the anticipations
-                                                      // sentence: (a, ^b)!
-                                                      // evidence: (a, ^b) =/> c.  (actual impl seq was this)
-    pub createTime: i64, // time of the creation of this entry
-    pub depth: i64, // depth of the goal
-    pub desirability: f32, // from -1.0 to 1.0
+    /// evidence which was used to derive this sentence. This is used to create the anticipations
+    /// sentence: (a, ^b)!
+    /// evidence: (a, ^b) =/> c.  (actual impl seq was this)
+    pub evidence: Option<Arc<Mutex<SentenceDummy>>>,
+    /// time of the creation of this entry
+    pub createTime: i64,
+    /// depth of the goal
+    pub depth: i64,
+    /// from -1.0 to 1.0
+    pub desirability: f32,
 }
 
 pub struct BatchByDepth {
@@ -59,7 +66,7 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
     }
 }
 
-// return array of all entries, is a helper and shouldn't get called to often
+/// return array of all entries, is a helper and shouldn't get called to often
 pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
     let mut res: Vec<Rc<RefCell<Entry>>> = vec![];
     for iEntry in &goalSystem.batchesByDepth {
@@ -70,7 +77,7 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
     res
 }
 
-// /param t is the procedural reasoner NAR time
+/// /param t is the procedural reasoner NAR time
 pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<Mutex<SentenceDummy>>>, depth:i64) {
     if false {println!("goal system: addEntry {}", &NarSentence::convSentenceTermPunctToStr(&goal, true))}; // print goal which is tried to put into system
     
@@ -93,8 +100,8 @@ pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     chosenBatch.borrow_mut().entries.push(e);
 }
 
-// called when it has to stay under AIKR
-// /param t is the procedural reasoner NAR time
+/// called when it has to stay under AIKR
+/// /param t is the procedural reasoner NAR time
 pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     let mut arr:Vec<Rc<RefCell<Entry>>> = retEntries(goalSystem); // working array with all entries
     
@@ -131,8 +138,8 @@ pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     }
 }
 
-// sample a goal from the goal table of the goal system
-// returns (sentence, depth)
+/// sample a goal from the goal table of the goal system
+/// returns (sentence, depth)
 pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Option<(Arc<SentenceDummy>, i64)> {
     // select batch (or return)
     let selBatchRef = {
@@ -183,8 +190,8 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     return Some((Arc::clone(&selEntry.sentence), selEntry.depth));
 }
 
-// does inference of goal with a belief
-// returns derivation
+/// does inference of goal with a belief
+/// returns derivation
 pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDummy> {
     // check if term is same and inference can be done
     match &*belief.term {
@@ -229,7 +236,7 @@ pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDumm
 
 
 
-// filters belief candidates which can be used for inference with the goal
+/// filters belief candidates which can be used for inference with the goal
 pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Arc<Mutex<SentenceDummy>>> {
     let mut res = Vec::new();
 
@@ -252,8 +259,8 @@ pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Ar
 }
 
 
-// select highest ranked goal for state
-// returns entity and unified result
+/// select highest ranked goal for state
+/// returns entity and unified result
 pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, Option<(Rc<RefCell<Entry>>, Term)>) {
     let mut res:(f64, Option<(Rc<RefCell<Entry>>, Term)>) = (0.0, None);
 
@@ -282,8 +289,7 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
     res
 }
 
-// /param t is the procedural reasoner NAR time
-//pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procNar:&NarProc::ProcNar, rng: &mut rand::rngs::ThreadRng) {
+/// /param t is the procedural reasoner NAR time
 pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal
     let sampledGoalOpt: Option<(Arc<SentenceDummy>, i64)> = sample(&goalSystem, rng);
@@ -344,7 +350,7 @@ pub fn retDesire(goal: &SentenceDummy) -> Tv::Tv {
     retTv(&goal).unwrap() // interpret tv as desire
 }
 
-// helper for debugging: return all goals as text
+/// helper for debugging: return all goals as text
 pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
     let mut res:String = String::new();
 

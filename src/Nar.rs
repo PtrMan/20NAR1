@@ -29,7 +29,7 @@ pub fn createNar() -> Nar {
     }
 }
 
-// for eternal
+/// for eternal
 pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     inputT2(nar, term, punct, tv, false);
 }
@@ -79,8 +79,8 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
     }
 }
 
-// input narsese
-// return if narsese was parsed and had no error
+/// input narsese
+/// return if narsese was parsed and had no error
 pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
     match parseNarsese(narsese) {
         Some((term, tv, punct, isEvent)) => {
