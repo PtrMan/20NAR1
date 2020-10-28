@@ -16,14 +16,14 @@ use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::retTv;
 
-// memory system
+/// memory system
 pub struct Concept {
     pub name:Term,
 
     pub beliefs:Vec<Arc<Mutex<SentenceDummy>>>,
 }
 
-// memory
+/// memory
 pub struct Mem {
     pub concepts:HashMap<Term, Arc<Concept>>,
 }
@@ -36,7 +36,7 @@ pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
     storeInConcepts2(mem, s, &retSubterms(&*s.term)); // enumerate all terms, we need to do this to add the sentence to all relevant names
 }
 
-// function is a indirection for more control over which subterms are used for storage
+/// function is a indirection for more control over which subterms are used for storage
 pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
     if s.punct != EnumPunctation::JUGEMENT {
         return; // ignore everything else than JUGEMENT
@@ -91,7 +91,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
 }
 
 
-// limit size of memory
+/// limit size of memory
 pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
     if mem.concepts.len() <= nConcepts {
         return; // not enough concepts to limit
