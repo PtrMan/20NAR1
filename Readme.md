@@ -7,6 +7,8 @@ Running the program is easy. Note that `cargo test` can be omitted if the unitte
 connect to server with for example netcat: `nc 127.0.0.1 2039`<br />
 ## how to run pong
 `cargo test && cargo run --release pong3`
+## build documentation
+`cargo doc --lib`
 
 # dependencies
 ## basic
