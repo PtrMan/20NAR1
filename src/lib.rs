@@ -26,6 +26,7 @@ pub mod NarInteractive;
 pub mod Nar;
 pub mod NarProc;
 pub mod NarGoalSystem;
+pub mod NarUnify;
 
 pub mod NarModuleNlp;
 pub mod NarModuleNlp2;

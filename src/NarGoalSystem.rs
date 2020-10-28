@@ -20,6 +20,7 @@ use crate::NarSentence::retTv;
 use crate::NarSentence::newEternalSentenceByTv;
 use crate::NarWorkingCycle;
 use crate::NarMem;
+use crate::NarUnify;
 
 /// structure for the goal system
 pub struct GoalSystem {
@@ -270,13 +271,13 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
             Term::Seq(seq) if seq.len() >= 1 => {
                 // try to unify first part of sequence with observed state
                 // we can only consider if it matches!
-                let asgnmts:Option<Vec<NarWorkingCycle::Asgnment>> = NarWorkingCycle::unify(&seq[0], &state);
+                let asgnmts:Option<Vec<NarUnify::Asgnment>> = NarUnify::unify(&seq[0], &state);
 
                 if asgnmts.is_some() { // does first event of seq match to state with unification?, must unify!
                     let exp = Tv::calcExp(&retTv(&iv.borrow().sentence).unwrap());
                     let (resExp, _) = res;
                     if exp > resExp {
-                        let unifiedTerm: Term = NarWorkingCycle::unifySubst(&*(iv.borrow().sentence).term, &asgnmts.unwrap()); // unify because we need term with less or no variables!
+                        let unifiedTerm: Term = NarUnify::unifySubst(&*(iv.borrow().sentence).term, &asgnmts.unwrap()); // unify because we need term with less or no variables!
                         res = (exp, Some((Rc::clone(&iv), unifiedTerm)));
                     }
                 }
