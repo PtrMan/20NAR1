@@ -215,26 +215,24 @@ pub fn narStep0(nar:&mut ProcNar) {
                 
                 if selIdxOfOps.len() > 0 && *selIdxOfOps.iter().min().unwrap() > 0 { // is there a valid index for a op which is not the last item in the trace?
                     
-                    let rng0:i64 = nar.rng.gen_range(0, 2);
-                    
-                    let idx0 = nar.rng.gen_range(0, selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
-                    let mut idx2 = nar.trace.len()-1; // last event is last
-
-                    // TODO< rewrite to logic which scans for the first op between idxLast and selIdxOfOps, select random event as idx2 between these!
-                    
-                    // check if we can select previous event
-                    {
-                        let sel = nar.trace[nar.trace.len()-1-1].clone();
-                        if rng0 == 1 && nar.trace.len()-1-1 > *selIdxOfOps.iter().max().unwrap() && !checkIsCallableOp(&nar, &sel.name) {
-                            idx2 = nar.trace.len()-1-1;
-                        }
-                    }
-
                     let selTraceItems: Vec<Rc<SimpleSentence>> = {
+                        let idxFirst = nar.rng.gen_range(0, selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
+                        let mut idxLast = nar.trace.len()-1; // last event is last
+
+                        // TODO< rewrite to logic which scans for the first op between idxLast and selIdxOfOps, select random event as idxLast between these!
+                        
+                        // check if we can select previous event
+                        {
+                            let sel = nar.trace[nar.trace.len()-1-1].clone();
+                            let rng0:i64 = nar.rng.gen_range(0, 2);
+                            if rng0 == 1 && nar.trace.len()-1-1 > *selIdxOfOps.iter().max().unwrap() && !checkIsCallableOp(&nar, &sel.name) {
+                                idxLast = nar.trace.len()-1-1;
+                            }
+                        }
                         let idxs = { // compose indices of selected events
-                            let mut idxs = vec![idx0];
+                            let mut idxs = vec![idxFirst];
                             idxs.extend(selIdxOfOps);
-                            idxs.push(idx2);
+                            idxs.push(idxLast);
                             idxs.sort();
                             idxs
                         };
