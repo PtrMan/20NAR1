@@ -51,13 +51,13 @@ pub fn reasoner1Entry() {
                 let diff:i64 = envPong.ballX-envPong.batX;
                 let batWidth:i64 = envPong.batWidth;
                 if diff.abs() <= batWidth {
-                    nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "c")),evi:nar.procNar.t,occT:nar.procNar.t});
+                    nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "c")),evi:nar.procNar.t,occT:nar.procNar.t}));
                 }
                 else if diff < 0 {
-                    nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "l")),evi:nar.procNar.t,occT:nar.procNar.t});
+                    nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "l")),evi:nar.procNar.t,occT:nar.procNar.t}));
                 }
                 else { // diff > 0
-                    nar.procNar.trace.push(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "r")),evi:nar.procNar.t,occT:nar.procNar.t});
+                    nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(format!("{}-{}-x{}", 0, 1, "r")),evi:nar.procNar.t,occT:nar.procNar.t}));
                 }
             }
     

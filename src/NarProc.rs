@@ -39,7 +39,7 @@ pub struct ProcNar {
     pub evidenceMem: NarMem::Mem,
 
     /// trace of some past events under AIKR
-    pub trace: Vec<SimpleSentence>,
+    pub trace: Vec<Rc<SimpleSentence>>,
     /// all anticipated events "in flight"
     pub anticipatedEvents: Vec<AnticipationEvent>,
 
@@ -194,7 +194,7 @@ pub fn narStep0(nar:&mut ProcNar) {
 
     // neutralize goals which are fullfilled by current event
     if nar.trace.len() > 0 {
-        let lastEvent:&SimpleSentence = &nar.trace[nar.trace.len()-1];
+        let lastEvent:&SimpleSentence = &*nar.trace[nar.trace.len()-1];
         NarGoalSystem::event_occurred(&mut nar.goalSystem, &lastEvent.name);
     }
 
@@ -230,31 +230,34 @@ pub fn narStep0(nar:&mut ProcNar) {
                         }
                     }
 
-
-                    let idxs = { // compose indices of selected events
-                        let mut idxs = vec![idx0];
-                        idxs.extend(selIdxOfOps);
-                        idxs.push(idx2);
-                        idxs.sort();
-                        idxs
+                    let selTraceItems: Vec<Rc<SimpleSentence>> = {
+                        let idxs = { // compose indices of selected events
+                            let mut idxs = vec![idx0];
+                            idxs.extend(selIdxOfOps);
+                            idxs.push(idx2);
+                            idxs.sort();
+                            idxs
+                        };
+    
+                        assert!(idxs.len() == 3, "only case for sequence of 3 events (as impl seq) implemented!");
+                        
+                        idxs.iter().map(|idx| Rc::clone(&nar.trace[*idx])).collect() // select trace items
                     };
-
-                    assert!(idxs.len() == 3, "only case for sequence of 3 events (as impl seq) implemented!");
                     
                     // middle must be op
-                    if checkIsCallableOp(&nar, &nar.trace[idxs[1]].name) {
+                    if checkIsCallableOp(&nar, &selTraceItems[1].name) {
                         // first and last must not be op
                         if
-                            !checkIsCallableOp(&nar, &nar.trace[idxs[0]].name)  &&
-                            !checkIsCallableOp(&nar, &nar.trace[idxs[2]].name) && 
-                            nar.trace[idxs[0]].name != nar.trace[idxs[2]].name
+                            !checkIsCallableOp(&nar, &selTraceItems[0].name)  &&
+                            !checkIsCallableOp(&nar, &selTraceItems[selTraceItems.len()-1].name) && 
+                            selTraceItems[0].name != selTraceItems[selTraceItems.len()-1].name // first and last event must not be the same
                         {
                             
                             // found a potential sequence to be perceived
                             
-                            let e0 = &nar.trace[idxs[0]];
-                            let e1 = &nar.trace[idxs[1]];
-                            let e2 = &nar.trace[idxs[2]];
+                            let e0 = &selTraceItems[0];
+                            let e1 = &selTraceItems[1];
+                            let e2 = &selTraceItems[2];
                             
                             if nar.cfgVerbosity > 0 {println!("perceive ({},{})=/>{}", convTermToStr(&e0.name), convTermToStr(&e1.name), convTermToStr(&e2.name));};
                             
@@ -425,7 +428,7 @@ pub fn narStep1(nar:&mut ProcNar) {
             
             println!("{}!", &convTermToStr(&term)); // print execution
 
-            nar.trace.push(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t});
+            nar.trace.push(Rc::new(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t}));
         },
         None => {},
     }
@@ -572,7 +575,7 @@ pub struct SimpleSentence {
 }
 
 /// helper to return indices of events with OPS
-pub fn calcIdxsOfOps(nar: &ProcNar, trace:&Vec<SimpleSentence>) -> Vec<i64> {
+pub fn calcIdxsOfOps(nar: &ProcNar, trace:&Vec<Rc<SimpleSentence>>) -> Vec<i64> {
     let mut res = Vec::new();
     for idx in 0..trace.len() {
         if checkIsCallableOp(nar, &trace[idx].name) {
