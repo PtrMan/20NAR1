@@ -42,6 +42,10 @@ pub struct ProcNar {
     pub cfg__multiOpProbability:f64,
 
 
+    /// how many concepts does it store at max (soft limit)
+    pub cfg__nConcepts:i64,
+
+
     /// how verbose is the reasoner, mainly used for debugging
     pub cfgVerbosity:i64,
 
@@ -90,6 +94,9 @@ pub fn narInit() -> ProcNar {
         cfgEnBabbling: true,
         cfg__nOpsMax: 1,
         cfg__multiOpProbability: 0.2,
+
+
+        cfg__nConcepts: 1000,
         
         cfgVerbosity: 0, // be silent
 
@@ -518,8 +525,7 @@ pub fn narStep1(nar:&mut ProcNar) {
 
     // limit evidence (AIKR)
     if nar.t % 101 == 1 {
-        let nConcepts = 1000;
-        NarMem::limitMemory(&mut nar.evidenceMem.write(), nConcepts);
+        NarMem::limitMemory(&mut nar.evidenceMem.write(), nar.cfg__nConcepts as usize);
     }
 
 
