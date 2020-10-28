@@ -13,37 +13,50 @@ use crate::NarMem;
 
 /// contains all necessary variables of a procedural NAR
 pub struct ProcNar {
-    pub cfgIntervalExpBase:f64, /// base for the exponential intervals
-    pub cfgIntervalMax:i64, /// maximal interval time
+    /// base for the exponential intervals
+    pub cfgIntervalExpBase:f64,
+    /// maximal interval time
+    pub cfgIntervalMax:i64,
 
-    pub cfgPerceptWindow:i64, /// perception window for current events
-    pub cfgDescnThreshold:f64, /// decision threshold for decision making
+    /// perception window for current events
+    pub cfgPerceptWindow:i64,
+    /// decision threshold for decision making
+    pub cfgDescnThreshold:f64,
 
-    pub cfgNMaxEvidence:i64, /// maximal number of evidence
+    /// maximal number of evidence
+    pub cfgNMaxEvidence:i64,
 
-    pub cfgPerceptionSamplesPerStep:i64, /// how ofter should event-FIFO get sampled for perception in cycle?
+    /// how ofter should event-FIFO get sampled for perception in cycle?
+    pub cfgPerceptionSamplesPerStep:i64,
     
-    pub cfgEnBabbling:bool, /// enable motor babbling?
+    /// enable motor babbling?
+    pub cfgEnBabbling:bool,
 
+    /// how verbose is the reasoner, mainly used for debugging
+    pub cfgVerbosity:i64,
 
-    pub cfgVerbosity:i64, /// how verbose is the reasoner, mainly used for debugging
+    /// memory with the (procedural) evidence
+    pub evidenceMem: NarMem::Mem,
 
-    //pub evidence: Vec<Arc<Mutex<SentenceDummy>>>,
-    pub evidenceMem: NarMem::Mem, /// memory with the (procedural) evidence
+    /// trace of some past events under AIKR
+    pub trace: Vec<SimpleSentence>,
+    /// all anticipated events "in flight"
+    pub anticipatedEvents: Vec<AnticipationEvent>,
 
-    pub trace: Vec<SimpleSentence>, /// trace of some past events under AIKR
-    pub anticipatedEvents: Vec<AnticipationEvent>, /// all anticipated events "in flight"
+    /// all registered ops
+    pub ops: Vec<Box<dyn Op>>,
 
-    pub ops: Vec<Box<dyn Op>>, /// all registered ops
-
-    pub t:i64, /// NAR time
+    /// NAR time
+    pub t:i64,
 
 
     pub rng: rand::rngs::ThreadRng,
 
-    pub expIntervalsTable:Vec<i64>, /// table with exponential intervals
+    /// table with exponential intervals
+    pub expIntervalsTable:Vec<i64>,
 
-    pub goalSystem: NarGoalSystem::GoalSystem, /// "goal system" - manages goals of the procedural reasoner
+    /// "goal system" - manages goals of the procedural reasoner
+    pub goalSystem: NarGoalSystem::GoalSystem,
 }
 
 /// init and set to default values
@@ -594,8 +607,10 @@ pub fn debugEvidence(procNar: &ProcNar) {
 /// anticipated event
 #[derive(Clone)]
 pub struct AnticipationEvent {
-    pub evi:Arc<Mutex<SentenceDummy>>, /// evidence
-    pub deadline:i64, /// deadline in absolute cycles
+    /// evidence
+    pub evi:Arc<Mutex<SentenceDummy>>,
+    /// deadline in absolute cycles
+    pub deadline:i64,
 }
 
 /// trait for a op, all implementations implement a op
