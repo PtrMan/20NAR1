@@ -204,34 +204,42 @@ pub fn narStep0(nar:&mut ProcNar) {
             let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &nar.trace);
             if idxsOfOps.len() > 0 { // there must be at least one op to sample
 
-
-                let mut idx1 = 0;
-                {
+                let selIdxOfOps: Vec<usize> = {// indices of selected ops
+                    // select ops
+                    let mut selIdxOfOps = vec![];
                     let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
-                    idx1 = idxsOfOps[idx1Idx] as usize;
-                }
+                    let selIdx = idxsOfOps[idx1Idx] as usize;
+                    selIdxOfOps.push(selIdx);
+                    selIdxOfOps
+                };
                 
-                if idx1 > 0 {
+                if selIdxOfOps.len() > 0 && *selIdxOfOps.iter().min().unwrap() > 0 { // is there a valid index for a op which is not the last item in the trace?
                     
                     let rng0:i64 = nar.rng.gen_range(0, 2);
                     
-                    let idx0 = nar.rng.gen_range(0, idx1);
+                    let idx0 = nar.rng.gen_range(0, selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
                     let mut idx2 = nar.trace.len()-1; // last event is last
 
-                    // TODO< rewrite to logic which scans for the first op between idxLast and idx1, select random event as idx2 between these!
+                    // TODO< rewrite to logic which scans for the first op between idxLast and selIdxOfOps, select random event as idx2 between these!
                     
                     // check if we can select previous event
                     {
                         let sel = nar.trace[nar.trace.len()-1-1].clone();
-                        if rng0 == 1 && nar.trace.len()-1-1 > idx1 && !checkIsCallableOp(&nar, &sel.name) {
+                        if rng0 == 1 && nar.trace.len()-1-1 > *selIdxOfOps.iter().max().unwrap() && !checkIsCallableOp(&nar, &sel.name) {
                             idx2 = nar.trace.len()-1-1;
                         }
                     }
 
 
-                    let mut idxs = vec![idx0,idx1,idx2];
-                    idxs.sort();
+                    let idxs = { // compose indices of selected events
+                        let mut idxs = vec![idx0];
+                        idxs.extend(selIdxOfOps);
+                        idxs.push(idx2);
+                        idxs.sort();
+                        idxs
+                    };
 
+                    assert!(idxs.len() == 3, "only case for sequence of 3 events (as impl seq) implemented!");
                     
                     // middle must be op
                     if checkIsCallableOp(&nar, &nar.trace[idxs[1]].name) {
