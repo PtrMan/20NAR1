@@ -1,8 +1,12 @@
 use rand::Rng;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{sync_channel, SyncSender};
+use std::thread;
+use std::thread::JoinHandle;
+use parking_lot::RwLock;
 
 use crate::NarStamp::*;
 use crate::NarSentence::*;
@@ -42,7 +46,7 @@ pub struct ProcNar {
     pub cfgVerbosity:i64,
 
     /// memory with the (procedural) evidence
-    pub evidenceMem: NarMem::Mem,
+    pub evidenceMem: Arc<RwLock<NarMem::Mem>>,
 
     /// trace of some past events under AIKR
     pub trace: Vec<Rc<SimpleSentence>>,
@@ -63,6 +67,15 @@ pub struct ProcNar {
 
     /// "goal system" - manages goals of the procedural reasoner
     pub goalSystem: NarGoalSystem::GoalSystem,
+
+
+
+    // internals which are still public
+
+    /// array of workers
+    pub storeWorkers: Vec<JoinHandle<()>>,
+    /// sender to worker
+    pub storeWorkersTx: Vec<SyncSender<SentenceDummy>>,
 }
 
 /// init and set to default values
@@ -78,10 +91,10 @@ pub fn narInit() -> ProcNar {
         cfg__nOpsMax: 1,
         cfg__multiOpProbability: 0.2,
         
-        cfgVerbosity: 10, // be silent
+        cfgVerbosity: 0, // be silent
 
         //evidence: Vec::new(),
-        evidenceMem: NarMem::make(),
+        evidenceMem: Arc::new(RwLock::new(NarMem::make())),
 
         trace: Vec::new(),
         anticipatedEvents: Vec::new(),
@@ -93,7 +106,68 @@ pub fn narInit() -> ProcNar {
         expIntervalsTable: Vec::new(),
 
         goalSystem: NarGoalSystem::makeGoalSystem(20, 8),
+
+        storeWorkers: vec![],
+        storeWorkersTx: vec![],
     };
+
+
+    // create worker which stores evidence with revision
+    for _iWorker in 0..1 {
+        let (tx, rx) = sync_channel(4); // create channel with fixed size, reason is that we want to limit backlog!
+        nar.storeWorkersTx.push(tx);
+
+        let evidenceMem = Arc::clone(&nar.evidenceMem);
+        nar.storeWorkers.push(thread::spawn(move|| {
+            loop {
+                let msgRes = rx.recv();
+                if !msgRes.is_ok() {
+                    break; // other side has hung up, terminate this worker
+                }
+                let evidenceSentence = msgRes.unwrap(); // receive message
+                println!("[STORAGE WORKER] received MSG!");
+
+                /////////
+                // STORE
+                /////////
+                let addEvidenceFlag: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
+                
+                { // scope for guard
+                    let evidenceMemGuard = evidenceMem.read();
+                    for iEEArc in &NarMem::ret_beliefs_by_terms_nonunique(&evidenceMemGuard, &[retSeqCond(&evidenceSentence.term).clone(), retPred(&evidenceSentence.term).clone()]) { // iterate over evidence where seqCond and/or pred appear
+                        let mut iEE = iEEArc.lock().unwrap();
+                        
+                        if !checkOverlap(&iEE.stamp, &evidenceSentence.stamp) { // evidence must no overlap!
+                            if
+                                iEE.expDt.unwrap() >= evidenceSentence.expDt.unwrap() && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
+                                
+                                // does impl seq match?
+                                checkEqTerm(&iEE.term, &evidenceSentence.term)
+                            {
+                                iEE.stamp = merge(&iEE.stamp, &evidenceSentence.stamp);
+                                match iEE.evi.as_ref().unwrap() {
+                                    Evidence::CNT{pos,cnt} => {
+                                        iEE.evi = Some(Evidence::CNT{pos:pos+1,cnt:cnt+1}); // bump positive counter
+                                    },
+                                    _ => {panic!("expected CNT!");}
+                                }
+                                
+                                if false {println!("dbg - REV")};
+                                
+                                addEvidenceFlag.store(false, Ordering::Relaxed); // because we revised
+                            }                                
+                        }
+                    }    
+                }
+                
+                if addEvidenceFlag.load(Ordering::Relaxed) {
+                    // add evidence
+                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence);
+                }
+            }
+        }));
+    }
+
 
 
     // build table with exponential intervals
@@ -118,7 +192,7 @@ pub fn narInit() -> ProcNar {
 }
 
 /// add procedural evidence to memory
-pub fn mem_add_evidence(nar:&mut ProcNar, evidenceSentence: &SentenceDummy) {
+pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &SentenceDummy) {
     // enumerate subterms to decide concept names where we store the belief
     let subterms = {
         let mut subterms = vec![];
@@ -128,14 +202,14 @@ pub fn mem_add_evidence(nar:&mut ProcNar, evidenceSentence: &SentenceDummy) {
         subterms
     };
 
-    NarMem::storeInConcepts2(&mut nar.evidenceMem, &evidenceSentence, &subterms);
+    NarMem::storeInConcepts2(&mut evidenceMem.write(), &evidenceSentence, &subterms);
 }
 
 /// returns all evidence, can be overlapping!
 pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<Mutex<SentenceDummy>>> {
     let mut res = vec![];
-    for (ikey, _iConcept) in &procNar.evidenceMem.concepts {
-        let beliefsOfConcept = NarMem::ret_beliefs_of_concept(&procNar.evidenceMem, &ikey);
+    for (ikey, _iConcept) in &procNar.evidenceMem.read().concepts {
+        let beliefsOfConcept = NarMem::ret_beliefs_of_concept(&procNar.evidenceMem.read(), &ikey);
 
         // add to result
         for iBelief in beliefsOfConcept.iter() {
@@ -301,7 +375,6 @@ pub fn narStep0(nar:&mut ProcNar) {
                         
 
 
-                        let addEvidenceFlag: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
                         
                         let stamp:Stamp = {
                             // compute merged stamp from evidence of all events
@@ -317,39 +390,9 @@ pub fn narStep0(nar:&mut ProcNar) {
                             term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
                             evi:Some(Evidence::CNT{pos:1,cnt:1})
                         };
-
-                        {
-                            for iEEArc in &NarMem::ret_beliefs_by_terms_nonunique(&nar.evidenceMem, &[retSeqCond(&evidenceSentence.term).clone(), retPred(&evidenceSentence.term).clone()]) { // iterate over evidence where seqCond and/or pred appear
-                                let mut iEE = iEEArc.lock().unwrap();
-                                
-                                if !checkOverlap(&iEE.stamp, &evidenceSentence.stamp) { // evidence must no overlap!
-                                    if
-                                        iEE.expDt.unwrap() >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
-                                        
-                                        // does impl seq match?
-                                        checkEqTerm(&iEE.term, &evidenceSentence.term)
-                                    {
-                                        iEE.stamp = merge(&iEE.stamp, &evidenceSentence.stamp);
-                                        match iEE.evi.as_ref().unwrap() {
-                                            Evidence::CNT{pos,cnt} => {
-                                                iEE.evi = Some(Evidence::CNT{pos:pos+1,cnt:cnt+1}); // bump positive counter
-                                            },
-                                            _ => {panic!("expected CNT!");}
-                                        }
-                                        
-                                        if false {println!("dbg - REV")};
-                                        
-                                        addEvidenceFlag.store(false, Ordering::Relaxed); // because we revised
-                                    }                                
-                                }
-    
-                            }
-                        }
                         
-                        if addEvidenceFlag.load(Ordering::Relaxed) {
-                            // add evidence
-                            mem_add_evidence(nar, &evidenceSentence);
-                        }
+                        let workerIdx = nar.rng.gen_range(0, nar.storeWorkersTx.len());
+                        nar.storeWorkersTx[workerIdx].send(evidenceSentence).unwrap(); // defer actual storage to worker
                     }
                 }
             }
@@ -400,7 +443,7 @@ pub fn narStep1(nar:&mut ProcNar) {
                     let implSeqAsStr = convTermToStr(&entryAndUnfied.1); // unified
                     let actAsStr:String = convTermToStr(&opTerm);
                     let pickedExp:f64 = bestEntry.0;
-                    println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp);
+                    if nar.cfgVerbosity > 0 {println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp)};
                 }
                 
                 // try to decode op into args and name
@@ -476,7 +519,7 @@ pub fn narStep1(nar:&mut ProcNar) {
     // limit evidence (AIKR)
     if nar.t % 101 == 1 {
         let nConcepts = 1000;
-        NarMem::limitMemory(&mut nar.evidenceMem, nConcepts);
+        NarMem::limitMemory(&mut nar.evidenceMem.write(), nConcepts);
     }
 
 
@@ -484,7 +527,7 @@ pub fn narStep1(nar:&mut ProcNar) {
     if nar.t % 3 == 0 {
         let enGoalSystem = true; // DISABLED because we want to test it without deriving goals!
         if enGoalSystem {
-            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem, &mut nar.rng);
+            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem.read(), &mut nar.rng);
         }
     }
 

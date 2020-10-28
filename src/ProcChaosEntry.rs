@@ -66,7 +66,7 @@ pub fn procChaosEntry() {
     
     {
         // print number of procedural concepts
-        println!("nConcepts={}", nar.procNar.evidenceMem.concepts.len());
+        println!("nConcepts={}", nar.procNar.evidenceMem.read().concepts.len());
     }
 
     println!("[d] reasoner: DONE!");

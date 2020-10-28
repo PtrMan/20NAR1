@@ -91,7 +91,7 @@ pub fn reasoner1Entry() {
         NarProc::debugEvidence(&nar.procNar);
         println!("");
 
-        if nar.procNar.evidenceMem.concepts.len() == 0 { // check if there is no evidence, which indicates a fatal bug
+        if nar.procNar.evidenceMem.read().concepts.len() == 0 { // check if there is no evidence, which indicates a fatal bug
             panic!("no evidence after running {}", "pong3");
         }
     }
