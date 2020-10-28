@@ -11,43 +11,42 @@ use crate::TermApi::*;
 use crate::NarGoalSystem;
 use crate::NarMem;
 
-// contains all necessary variables of a procedural NAR
+/// contains all necessary variables of a procedural NAR
 pub struct ProcNar {
-    pub cfgIntervalExpBase:f64, // base for the exponential intervals
-    pub cfgIntervalMax:i64, // maximal interval time
+    pub cfgIntervalExpBase:f64, /// base for the exponential intervals
+    pub cfgIntervalMax:i64, /// maximal interval time
 
-    pub cfgPerceptWindow:i64, // perception window for current events
-    pub cfgDescnThreshold:f64,
+    pub cfgPerceptWindow:i64, /// perception window for current events
+    pub cfgDescnThreshold:f64, /// decision threshold for decision making
 
-    pub cfgNMaxEvidence:i64, // maximal number of evidence
+    pub cfgNMaxEvidence:i64, /// maximal number of evidence
 
-    pub cfgPerceptionSamplesPerStep:i64, // how ofter should event-FIFO get sampled for perception in cycle?
+    pub cfgPerceptionSamplesPerStep:i64, /// how ofter should event-FIFO get sampled for perception in cycle?
     
-    pub cfgEnBabbling:bool, // enable motor babbling?
+    pub cfgEnBabbling:bool, /// enable motor babbling?
 
 
-    pub cfgVerbosity:i64, // how verbose is the reasoner, mainly used for debugging
+    pub cfgVerbosity:i64, /// how verbose is the reasoner, mainly used for debugging
 
     //pub evidence: Vec<Arc<Mutex<SentenceDummy>>>,
-    pub evidenceMem: NarMem::Mem,
+    pub evidenceMem: NarMem::Mem, /// memory with the (procedural) evidence
 
-    pub trace: Vec<SimpleSentence>,
-    pub anticipatedEvents: Vec<AnticipationEvent>,
+    pub trace: Vec<SimpleSentence>, /// trace of some past events under AIKR
+    pub anticipatedEvents: Vec<AnticipationEvent>, /// all anticipated events "in flight"
 
-    pub ops: Vec<Box<dyn Op>>, // all registered ops
+    pub ops: Vec<Box<dyn Op>>, /// all registered ops
 
-    pub t:i64, // NAR time
+    pub t:i64, /// NAR time
 
 
     pub rng: rand::rngs::ThreadRng,
 
-    //table with exponential intervals
-    pub expIntervalsTable:Vec<i64>,
+    pub expIntervalsTable:Vec<i64>, /// table with exponential intervals
 
-    pub goalSystem: NarGoalSystem::GoalSystem,
+    pub goalSystem: NarGoalSystem::GoalSystem, /// "goal system" - manages goals of the procedural reasoner
 }
 
-// init and set to default values
+/// init and set to default values
 pub fn narInit() -> ProcNar {
     let mut nar = ProcNar {
         cfgIntervalExpBase: 1.3,
@@ -111,7 +110,7 @@ pub fn mem_add_evidence(nar:&mut ProcNar, evidenceSentence: &SentenceDummy) {
     NarMem::storeInConcepts2(&mut nar.evidenceMem, &evidenceSentence, &subterms);
 }
 
-// returns all evidence, can be overlapping!
+/// returns all evidence, can be overlapping!
 pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<Mutex<SentenceDummy>>> {
     let mut res = vec![];
     for (ikey, _iConcept) in &procNar.evidenceMem.concepts {
@@ -127,7 +126,7 @@ pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<Mutex<Sentenc
 
 
 
-// does one reasoner step
+/// does first work of one reasoner step
 pub fn narStep0(nar:&mut ProcNar) {
     if nar.cfgVerbosity > 0 {println!("ae# = {}", nar.anticipatedEvents.len());}; // debug number of anticipated events
     
@@ -302,6 +301,7 @@ pub fn narStep0(nar:&mut ProcNar) {
     
 }
 
+/// does second part of reasoner step
 pub fn narStep1(nar:&mut ProcNar) {    
     let mut pickedAction:Option<Term> = None; // complete term of op
     {
@@ -438,7 +438,7 @@ pub fn narStep1(nar:&mut ProcNar) {
 }
 
 
-// is the term a op which can be called
+/// is the term a op which can be called
 fn checkIsCallableOp(nar: &ProcNar, term:&Term) -> bool {
     let opArgsAndNameOpt: Option<(Vec<Term>,String)> = decodeOp(&term);
     if !opArgsAndNameOpt.is_some() {
@@ -458,7 +458,7 @@ fn checkIsCallableOp(nar: &ProcNar, term:&Term) -> bool {
 
 // abstraction over term
 
-// return predicate of impl seq
+/// return predicate of impl seq
 pub fn retPred(term:&Term) -> Term {
     match term {
         Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
@@ -507,9 +507,9 @@ pub fn retSeqCond(term:&Term) -> Term {
     }
 }
 
-// decodes a operator into the arguments and name
-// returns None if the term can't be decoded
-// expects term to be <{(arg0 * arg1 * ...)} --> ^opname>
+/// decodes a operator into the arguments and name
+/// returns None if the term can't be decoded
+/// expects term to be <{(arg0 * arg1 * ...)} --> ^opname>
 pub fn decodeOp(term:&Term) -> Option<(Vec<Term>,String)> {
     match term {
         Term::Stmt(Copula::INH, subj, pred) => {
@@ -534,15 +534,15 @@ pub fn decodeOp(term:&Term) -> Option<(Vec<Term>,String)> {
     }
 }
 
-// encode op, used to get called from external code
+/// encode op, used to get called from external code
 pub fn encodeOp(args:&Vec<Term>, name:&String) -> Term {
     let argProd = Term::Prod(args.iter().map(|v| Box::new(v.clone())).collect()); // build product of arg
     Term::Stmt(Copula::INH, Box::new(Term::SetExt(vec![Box::new(argProd)])), Box::new(Term::Name(name.clone())))
 }
 
-// event
-// string and evidence
-// (emulation of sentence and term)
+/// event
+/// string and evidence
+/// (emulation of sentence and term)
 #[derive(Clone)]
 pub struct SimpleSentence {
     pub name:Term,
@@ -550,7 +550,7 @@ pub struct SimpleSentence {
     pub occT:i64, // occurcence time
 }
 
-// helper to return indices of events with OPS
+/// helper to return indices of events with OPS
 pub fn calcIdxsOfOps(nar: &ProcNar, trace:&Vec<SimpleSentence>) -> Vec<i64> {
     let mut res = Vec::new();
     for idx in 0..trace.len() {
@@ -562,7 +562,7 @@ pub fn calcIdxsOfOps(nar: &ProcNar, trace:&Vec<SimpleSentence>) -> Vec<i64> {
 }
 
 
-// helper to find the minimal index of the exponential interval table
+/// helper to find the minimal index of the exponential interval table
 pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
     for idx in 1..expIntervalsTable.len() {
         if expIntervalsTable[idx] > interval {
@@ -572,7 +572,7 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
     return expIntervalsTable.len() as i64 - 1;
 }
 
-// helper to debug evidence to console
+/// helper to debug evidence to console
 pub fn debugEvidence(procNar: &ProcNar) {
     println!("EVIDENCE:");
     for iEvi in &mem_ret_evidence_all_nonunique(procNar) {
@@ -591,15 +591,15 @@ pub fn debugEvidence(procNar: &ProcNar) {
     }
 }
 
-// anticipated event
+/// anticipated event
 #[derive(Clone)]
 pub struct AnticipationEvent {
-    pub evi:Arc<Mutex<SentenceDummy>>, // evidence
-    pub deadline:i64, // deadline in absolute cycles
+    pub evi:Arc<Mutex<SentenceDummy>>, /// evidence
+    pub deadline:i64, /// deadline in absolute cycles
 }
 
-// trait for a op, all implementations implement a op
+/// trait for a op, all implementations implement a op
 pub trait Op {
-    fn retName(&self) -> String; // return name of the op
+    fn retName(&self) -> String; /// return name of the op
     fn call(&self, args:&Vec<Term>);
 }
