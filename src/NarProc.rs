@@ -137,7 +137,28 @@ pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<Mutex<Sentenc
     res
 }
 
+/// helper which tries to build a impl seq out of events
+/// ex: [a, b, c]  returns (a, b) =/> c
+pub fn try_build_implSeq(nar:&ProcNar, events:&[Term]) -> Option<Term> {
+    let middle = &events[1..events.len()-1];
+    assert!(middle.len() >= 1, ""); // check if the code to select middle is right
+    if
+        middle.iter().map(|iItem| checkIsCallableOp(&nar, &iItem)).all(|x| x == true) && // middle must be callable ops
+        // first and last must not be op
+        !checkIsCallableOp(&nar, &events[0])  &&
+        !checkIsCallableOp(&nar, &events[events.len()-1]) && 
+        !checkEqTerm(&events[0], &events[events.len()-1]) // first and last event must not be the same
+    {
+        let mut seq2:Vec<Term> = vec![events[0].clone()];
+        for i in middle {
+            seq2.push(i.clone());
+        }
 
+        let implSeq = s(Copula::PREDIMPL, &seq(&seq2), &events[events.len()-1]);
+        return Some(implSeq);
+    };
+    None
+}
 
 /// does first work of one reasoner step
 pub fn narStep0(nar:&mut ProcNar) {
@@ -242,78 +263,69 @@ pub fn narStep0(nar:&mut ProcNar) {
                         idxs.iter().map(|idx| Rc::clone(&nar.trace[*idx])).collect() // select trace items
                     };
                     
-                    // middle must be op
-                    if checkIsCallableOp(&nar, &selTraceItems[1].name) {
-                        // first and last must not be op
-                        if
-                            !checkIsCallableOp(&nar, &selTraceItems[0].name)  &&
-                            !checkIsCallableOp(&nar, &selTraceItems[selTraceItems.len()-1].name) && 
-                            selTraceItems[0].name != selTraceItems[selTraceItems.len()-1].name // first and last event must not be the same
+                    let termsOfSelVecItems:Vec<Term> = selTraceItems.iter().map(|iv| iv.name.clone()).collect();
+                    let implSeqOpt: Option<Term> = try_build_implSeq(nar, &termsOfSelVecItems); // try to build impl seq from selected trace items
+                    if implSeqOpt.is_some() { // was building of impl seq successful?
+                        let candidateTerm:Term = implSeqOpt.unwrap().clone();
+                        
+                        if nar.cfgVerbosity > 0 {println!("perceive {}", convTermToStr(&candidateTerm));};
+                        
+                        // compute time between last event and the element before the last event
+                        let dt:i64 = selTraceItems[selTraceItems.len()-1].occT - selTraceItems[selTraceItems.len()-2].occT;
+                        // compute exponential delta time
+                        let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
+                        
+
+
+                        let addEvidenceFlag: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
+                        
+                        let stamp:Stamp = {
+                            // compute merged stamp from evidence of all events
+                            let stampEvi = selTraceItems.iter().map(|iv| iv.evi).collect();
+                            newStamp(&stampEvi)
+                        };
+
+                        let evidenceSentence: SentenceDummy = SentenceDummy {
+                            punct:EnumPunctation::JUGEMENT,
+                            t:None,
+                            stamp:stamp,
+                            expDt:Some(expDt),
+                            term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
+                            evi:Some(Evidence::CNT{pos:1,cnt:1})
+                        };
+
                         {
-                            
-                            // found a potential sequence to be perceived
-                            
-                            let e0 = &selTraceItems[0];
-                            let e1 = &selTraceItems[1];
-                            let e2 = &selTraceItems[2];
-                            
-                            if nar.cfgVerbosity > 0 {println!("perceive ({},{})=/>{}", convTermToStr(&e0.name), convTermToStr(&e1.name), convTermToStr(&e2.name));};
-                            
-                            let dt:i64 = e2.occT - e1.occT;
-                            // compute exponential delta time
-                            let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
-                            
-                            let addEvidenceFlag: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // do we need to add new evidence?
-
-                            
-
-
-
-                            {
-                                for iEEArc in &NarMem::ret_beliefs_by_terms_nonunique(&nar.evidenceMem, &[e0.name.clone(), e2.name.clone()]) { // iterate over evidence where seqCond and/or pred appear
-                                    let mut iEE = iEEArc.lock().unwrap();
-                                    
-                                    if !checkOverlap(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi))) { // evidence must no overlap!
-                                        if
-                                            iEE.expDt.unwrap() >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
-                                            
-                                            // does impl seq match?
-                                            checkEqTerm(&retSeqCond(&iEE.term), &e0.name) &&
-                                            checkEqTerm(&retImplSeqOp(&iEE.term), &e1.name) &&
-                                            checkEqTerm(&retPred(&iEE.term), &e2.name)
-                                        {
-                                            iEE.stamp = merge(&iEE.stamp, &newStamp(&vec!(e0.evi,e1.evi,e2.evi)));
-                                            match iEE.evi.as_ref().unwrap() {
-                                                Evidence::CNT{pos,cnt} => {
-                                                    iEE.evi = Some(Evidence::CNT{pos:pos+1,cnt:cnt+1}); // bump positive counter
-                                                },
-                                                _ => {panic!("expected CNT!");}
-                                            }
-                                            
-                                            if false {println!("dbg - REV")};
-                                            
-                                            addEvidenceFlag.store(false, Ordering::Relaxed); // because we revised
-                                        }                                
-                                    }
-        
+                            for iEEArc in &NarMem::ret_beliefs_by_terms_nonunique(&nar.evidenceMem, &[retSeqCond(&evidenceSentence.term).clone(), retPred(&evidenceSentence.term).clone()]) { // iterate over evidence where seqCond and/or pred appear
+                                let mut iEE = iEEArc.lock().unwrap();
+                                
+                                if !checkOverlap(&iEE.stamp, &evidenceSentence.stamp) { // evidence must no overlap!
+                                    if
+                                        iEE.expDt.unwrap() >= expDt && // check for greater because we want to count evidence for longer intervals too, because longer ones are "included"
+                                        
+                                        // does impl seq match?
+                                        checkEqTerm(&iEE.term, &evidenceSentence.term)
+                                    {
+                                        iEE.stamp = merge(&iEE.stamp, &evidenceSentence.stamp);
+                                        match iEE.evi.as_ref().unwrap() {
+                                            Evidence::CNT{pos,cnt} => {
+                                                iEE.evi = Some(Evidence::CNT{pos:pos+1,cnt:cnt+1}); // bump positive counter
+                                            },
+                                            _ => {panic!("expected CNT!");}
+                                        }
+                                        
+                                        if false {println!("dbg - REV")};
+                                        
+                                        addEvidenceFlag.store(false, Ordering::Relaxed); // because we revised
+                                    }                                
                                 }
-                            }
-                            
-                            if addEvidenceFlag.load(Ordering::Relaxed) {
-                                // add evidence
-
-                                let evidenceSentence: SentenceDummy = SentenceDummy {
-                                    punct:EnumPunctation::JUGEMENT,
-                                    t:None,
-                                    stamp:newStamp(&vec!(e0.evi,e1.evi,e2.evi)),
-                                    expDt:Some(expDt),
-                                    term:Arc::new(s(Copula::PREDIMPL, &seq(&vec![e0.name.clone(), e1.name.clone()]), &e2.name.clone())), // (e0 &/ e1) =/> e2
-                                    evi:Some(Evidence::CNT{pos:1,cnt:1})
-                                };
-                                mem_add_evidence(nar, &evidenceSentence);
+    
                             }
                         }
                         
+                        if addEvidenceFlag.load(Ordering::Relaxed) {
+                            // add evidence
+                            mem_add_evidence(nar, &evidenceSentence);
+                        }
                     }
                 }
             }
