@@ -3,6 +3,7 @@ use nom::{
   IResult,
   bytes::complete::{tag, take_while_m_n},
   combinator::map_res,
+  //Err,
 //  sequence::tuple,
 //  take_while,
 //  alt,
@@ -269,6 +270,19 @@ mod tests {
   }
 
   #[test]
+  pub fn prod4() {
+    let narsese = "<(a*c*z*y) --> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, _isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a * c * z * y ) --> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
   pub fn intint2() {
     let narsese = "<(a|c) --> x>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
@@ -484,17 +498,7 @@ fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
   }
 
   {
-    let res0 = parseProd2(input);
-    match res0 {
-      Ok(term) => {
-        return Ok(term.clone())
-      },
-      Err(_) => {}, // try other choice
-    }
-  }
-
-  {
-    let res0 = parseProd3(input);
+    let res0 = parseProd(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -676,9 +680,11 @@ pub fn parseIntInt2(input: &str) -> IResult<&str, Term> {
 
 
 // parses product with two components
-pub fn parseProd2(input: &str) -> IResult<&str, Term> {
+pub fn parseProd(input: &str) -> IResult<&str, Term> {
   let (input, _) = tag("(")(input)?;
-  let (input, a) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let mut subterms = vec![];
+  let (input, a) = parseSubjOrPred(input, true)?;
+  subterms.push(a.clone());
   let (input, _) = tag("*")(input)?;
   
   /*
@@ -713,22 +719,29 @@ pub fn parseProd2(input: &str) -> IResult<&str, Term> {
   */
 
 
-  let (input, b) = parseSubjOrPred(input, true)?;//parse0(input)?;
-  let (input, _) = tag(")")(input)?;
-  Ok((input, p2(&a, &b)))
-}
+  let (mut input, b) = parseSubjOrPred(input, true)?;
+  subterms.push(b.clone());
 
-pub fn parseProd3(input: &str) -> IResult<&str, Term> {
-  let (input, _) = tag("(")(input)?;
-  let (input, a) = parseSubjOrPred(input, true)?;
-  let (input, _) = tag("*")(input)?;
-  let (input, b) = parseSubjOrPred(input, true)?;
-  let (input, _) = tag("*")(input)?;
-  let (input, c) = parseSubjOrPred(input, true)?;
-  let (input, _) = tag(")")(input)?;
-  Ok((input, p3(&a, &b, &c)))
-}
+  loop { // loop for more sub-terms
+    let res0: IResult<&str, &str> = tag("*")(input);
+    match res0 {
+      Ok((input2, _)) => {
+        input = input2;
+      },
+      Err(_) => {
+        break;
+      },
+    };
 
+    let (input2, subterm) = parseSubjOrPred(input, true)?;
+    input = input2;
+    subterms.push(subterm.clone());
+  }
+
+  let (input2, _) = tag(")")(input)?;
+  input = input2;
+  Ok((input, p(&subterms)))
+}
 
 
 // parses product with two components
