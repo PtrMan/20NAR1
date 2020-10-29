@@ -137,7 +137,7 @@ pub fn run() {
     task::block_on(future);
 }
 
-// handler to send answer to clients
+/// handler to send answer to clients
 pub struct QHandlerImpl {
     pub global:Arc<Mutex<Global>>,
 }

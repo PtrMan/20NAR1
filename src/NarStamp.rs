@@ -1,3 +1,6 @@
+/// Stamp which keeps track of the evidence.
+///
+/// is used to prevent overlap. See NARS theory
 #[derive(Debug, Clone)]
 pub struct Stamp {
     pub ids:Vec<i64>,
@@ -48,6 +51,7 @@ pub fn checkSame(a:&Stamp, b:&Stamp) -> bool {
     true
 }
 
+/// convert stamp to string
 pub fn convToStr(s:&Stamp) -> String {
     let mut res = format!("{}", s.ids[0]);
     for iid in &s.ids[1..s.ids.len()] {

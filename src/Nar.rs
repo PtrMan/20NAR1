@@ -13,12 +13,18 @@ use crate::NarWorkingCycle::*;
 use crate::NarProc;
 use crate::NarGoalSystem;
 
+/// single Non-Axiomatic Reasoner
+///
+/// every program which uses NARS must use at least one NAR for reasoning.
 pub struct Nar {
-    pub procNar:NarProc::ProcNar, // procedural NAR
+    /// procedural NAR
+    pub procNar:NarProc::ProcNar,
 
-    pub mem:Arc<RwLock<Mem2>>, // actual (declarative) memory
+    /// actual (declarative) memory
+    pub mem:Arc<RwLock<Mem2>>,
 
-    pub cfgVerbosityInput:i32, // verbosity of input
+    /// verbosity of input
+    pub cfgVerbosityInput:i32,
 }
 
 pub fn createNar() -> Nar {
@@ -29,11 +35,12 @@ pub fn createNar() -> Nar {
     }
 }
 
-/// for eternal
+/// input for eternal
 pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     inputT2(nar, term, punct, tv, false);
 }
 
+/// input for event or eternal
 pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:bool) {
     let stampId:i64 = nar.mem.read().shared.read().stampIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
     let stamp = newStamp(&vec![stampId]);
@@ -95,6 +102,10 @@ pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
     }
 }
 
+
+/// do one cycle
+///
+/// give NAR compute time in the form of one cycle
 pub fn cycle(nar:&mut Nar) {
     reasonCycle(Arc::clone(&nar.mem));
 }

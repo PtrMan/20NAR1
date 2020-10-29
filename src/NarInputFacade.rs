@@ -11,8 +11,10 @@ use crate::Tv::{Tv};
 use crate::NarProc;
 use crate::OpLib;
 
-// /param quit is used to signal if program has to get terminated
-// returns requested information as strings!
+/// gives facade a new line, which can be narsese or a command
+///
+/// /param quit is used to signal if program has to get terminated
+/// returns requested information as strings!
 pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     let mut retInfo = Vec::new();
     

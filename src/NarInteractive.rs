@@ -4,6 +4,7 @@ use std::io;
 use crate::Nar::*;
 use crate::NarInputFacade;
 
+/// run interactive loop until process is terminated by user or until the interactive session is closed
 pub fn runInteractive(nar:&mut Nar) {
     let repeatLastInput = true; // repeat command by just pressing enter with empty input?
 
