@@ -27,17 +27,8 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     if input.len() >= 2 && &input[..2] == "//" { // is commented line?
         // ignore
     }
-    else if input.len() >= 2 && &input[..2] == "!s" {
-        let mut nCycles = 1;
-        if input.len() > 2 { // parse number of cycles
-            // TODO< check if it was parsed fine! >
-            nCycles = input[2..].parse::<i64>().unwrap();
-        }
-        for _i in 0..nCycles {
-            cycle(nar);
-        }
-    }
-    else if input.len() >= 5 && &input[..5] == "!sp" { // step procedural
+    
+    else if input.len() >= 3 && &input[..3] == "!sp" { // step procedural
         //let mut nCycles = 1;
         //if input.len() > 5 && false { // parse number of cycles
         //    // TODO< check if it was parsed fine! >
@@ -47,12 +38,21 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
         NarProc::narStep0(&mut nar.procNar);
         NarProc::narStep1(&mut nar.procNar);
     }
-    else if input.len() >= 5 && &input[..5] == "!spA" { // step procedural A
-        
+    else if input == "!spA" { // step procedural A
         NarProc::narStep0(&mut nar.procNar);
     }
-    else if input.len() >= 5 && &input[..5] == "!spB" { // step procedural B
+    else if input == "!spB" { // step procedural B
         NarProc::narStep1(&mut nar.procNar);
+    }
+    else if input.len() >= 2 && &input[..2] == "!s" {
+        let mut nCycles = 1;
+        if input.len() > 2 { // parse number of cycles
+            // TODO< check if it was parsed fine! >
+            nCycles = input[2..].parse::<i64>().unwrap();
+        }
+        for _i in 0..nCycles {
+            cycle(nar);
+        }
     }
     else if input.len() >= 5 && &input[..5] == "!por " { // procedural op register --- register op, argument is type/name of op, 2nd argument is name of op
         let args:Vec<&str> = input[5..].split_whitespace().collect();
