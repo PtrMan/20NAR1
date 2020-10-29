@@ -10,6 +10,11 @@
 <(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENin*$w1)}*<($0*$1) --> RELin>) --> RELrepresent>>.
 
 
+// TODO "X is Y"
+// TODO "X is not Y"
+// TODO "X isn't Y"
+
+// TODO "X is similar to Y"
 
 // ex: "tom thinks that REL"
 //<(<{($w0*$0)} --> RELrepresent>&&<{($w1*$1)} --> RELrepresent>) ==> <({($w0*WORDENthinks*WORDENthat*$w1)}*<($0*$1) --> RELreasons>) --> RELrepresent>>.

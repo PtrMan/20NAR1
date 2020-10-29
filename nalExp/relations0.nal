@@ -5,6 +5,18 @@
 <(d*a) --> x>.
 <(d*c) --> x>.
 
-!.nlp tom is fat
-!.nlp tim is expensive
-!.nlp tim is fat
+!.nlp2 Tom is fat
+!.nlp2 Tom is programmer
+
+!.nlp2 Tim is expensive
+!.nlp2 Tim is programmer
+!.nlp2 Tim is human
+
+
+!.nlp2 Alice is human
+!.nlp2 Alice is operator
+
+// add another programmer to see if it revises something
+!.nlp2 Paul is expensive
+!.nlp2 Paul is programmer
+!.nlp2 Paul is human
