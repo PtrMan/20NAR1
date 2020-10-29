@@ -128,4 +128,5 @@ impl NarProc::Op for OpPong {
         (*self.env).borrow_mut().batVX = self.opDir;
         println!("CALL {}", &self.selfName);
     }
+    fn isBabbleable(&self) -> bool {true}
 }

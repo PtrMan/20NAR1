@@ -16,6 +16,7 @@ impl NarProc::Op for OpNop {
     }
     fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
     }
+    fn isBabbleable(&self) -> bool {true}
 }
 
 /// NAL9 operator to execute a sequence of operations and inject a event as input after doing so
@@ -64,4 +65,5 @@ impl NarProc::Op for Op_nal9__exec_and_inject {
         // * inject event
         nar.trace.push(Rc::new(NarProc::SimpleSentence {name:injEvent.clone(),evi:nar.t,occT:nar.t}));
     }
+    fn isBabbleable(&self) -> bool {false} // can't be used for babbling because it doesn't make any sense
 }

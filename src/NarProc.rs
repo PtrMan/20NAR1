@@ -485,13 +485,16 @@ pub fn narStep1(nar:&mut ProcNar) {
                 let p = nar.rng.gen_range(0, nar.ops.len()*9);
                 if p < nar.ops.len() {
                     let idx = p;
-                    let opName: &String = &nar.ops[idx].retName(); // sel op
 
-                    let callTerm:Term = encodeOp(&vec![Term::SetExt(vec![Box::new(Term::Name("SELF".to_string()))])], opName);
-                    
-                    if nar.cfgVerbosity > 5 {println!("procedural: babbling: picked act {}", &convTermToStr(&callTerm));};
-                    
-                    pickedAction = Some(callTerm.clone());
+                    if nar.ops[idx].isBabbleable() { // op must be allowed for babbling
+                        let opName: &String = &nar.ops[idx].retName(); // sel op
+
+                        let callTerm:Term = encodeOp(&vec![Term::SetExt(vec![Box::new(Term::Name("SELF".to_string()))])], opName);
+                        
+                        if nar.cfgVerbosity > 5 {println!("procedural: babbling: picked act {}", &convTermToStr(&callTerm));};
+                        
+                        pickedAction = Some(callTerm.clone());                        
+                    }
                 }
             }
         }
@@ -721,6 +724,9 @@ pub struct AnticipationEvent {
 
 /// trait for a op, all implementations implement a op
 pub trait Op {
-    fn retName(&self) -> String; /// return name of the op
+    /// return name of the op
+    fn retName(&self) -> String;
     fn call(&self, nar:&mut ProcNar, args:&Vec<Term>);
+    /// can the op be called with motor babbling?
+    fn isBabbleable(&self) -> bool;
 }

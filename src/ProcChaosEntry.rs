@@ -89,4 +89,5 @@ impl NarProc::Op for OpNop {
     fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
         println!("CALL {}", &self.selfName);
     }
+    fn isBabbleable(&self) -> bool {true}
 }
