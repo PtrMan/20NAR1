@@ -256,6 +256,33 @@ mod tests {
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
 
+
+  #[test]
+  pub fn seq2() {
+    let narsese = "(a,c).".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, _isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "( a , c )");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn seq3() {
+    let narsese = "(a,c,d).".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, _isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "( a , c , d )");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
   #[test]
   pub fn prod3() {
     let narsese = "<(a*c*z) --> x>.".to_string();
@@ -458,7 +485,7 @@ fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
   }
 
   {
-    let res0 = parseSeq2(input);
+    let res0 = parseSeq(input);
     match res0 {
       Ok(term) => {
         return Ok(term.clone())
@@ -660,13 +687,35 @@ pub fn parseNeg(input: &str) -> IResult<&str, Term> {
   Ok((input, Term::Neg(Box::new(a.clone()))))
 }
 
-pub fn parseSeq2(input: &str) -> IResult<&str, Term> {
+pub fn parseSeq(input: &str) -> IResult<&str, Term> {
+  let mut subterms = vec![];
+
   let (input, _) = tag("(")(input)?;
-  let (input, a) = parseSubjOrPred(input, true)?;//parse0(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
+  subterms.push(a.clone());
   let (input, _) = tag(",")(input)?;
-  let (input, b) = parseSubjOrPred(input, true)?;//parse0(input)?;
-  let (input, _) = tag(")")(input)?;
-  Ok((input, Term::Seq([&a,&b].iter().map(|v| Box::new((*v).clone())).collect())))
+  let (mut input, b) = parseSubjOrPred(input, true)?;
+  subterms.push(b.clone());
+
+  loop { // loop for more sub-terms
+    let res0: IResult<&str, &str> = tag(",")(input);
+    match res0 {
+      Ok((input2, _)) => {
+        input = input2;
+      },
+      Err(_) => {
+        break;
+      },
+    };
+
+    let (input2, subterm) = parseSubjOrPred(input, true)?;
+    input = input2;
+    subterms.push(subterm.clone());
+  }
+
+  let (input2, _) = tag(")")(input)?;
+  input = input2;
+  Ok((input, seq(&subterms)))
 }
 
 pub fn parseIntInt2(input: &str) -> IResult<&str, Term> {
