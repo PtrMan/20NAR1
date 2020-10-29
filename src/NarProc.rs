@@ -503,17 +503,7 @@ pub fn narStep1(nar:&mut ProcNar) {
             let (opArgs, opName) = decodeOp(&term).unwrap();
 
             // search for action with name
-            let opOpt = {
-                let mut opOpt = None;
-                for iOp in &nar.ops {
-                    if iOp.retName() == opName {
-                        opOpt = Some(Rc::clone(iOp));
-                        break;
-                    }
-                }
-                opOpt
-            };
-
+            let opOpt = ret_op_by_name(nar, &opName);
             if opOpt.is_some() { // was op found?
                 opOpt.unwrap().call(nar, &opArgs); // call op
             
@@ -556,6 +546,16 @@ pub fn narStep1(nar:&mut ProcNar) {
     nar.t+=1; // increment time of NAR
 }
 
+/// return operation by name
+pub fn ret_op_by_name(nar: &ProcNar, name: &String) -> Option<Rc<Box<dyn Op>>> {
+    for iOp in &nar.ops {
+        if iOp.retName() == *name {
+            return Some(Rc::clone(iOp));
+            break;
+        }
+    }
+    None
+}
 
 /// is the term a op which can be called
 fn checkIsCallableOp(nar: &ProcNar, term:&Term) -> bool {
