@@ -455,6 +455,7 @@ pub fn narStep1(nar:&mut ProcNar) {
                 
                 // try to decode op into args and name
                 let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
+                if nar.cfgVerbosity > 1 {println!("descnMaking: could decode op = {}", decodedOpOpt.is_some());};
                 if decodedOpOpt.is_some() { // we can only exec op if op is valid format
                     //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
 

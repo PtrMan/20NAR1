@@ -22,15 +22,17 @@ impl NarProc::Op for OpNop {
 /// NAL9 operator to execute a sequence of operations and inject a event as input after doing so
 /// 
 /// ex:
-/// `<(a, ({SELF}*(<({SELF}*dummy0) --> ^left>,<({SELF}*dummy0) --> ^top>)*b) --> ^nal9_exeAndInject>) =/> b>.`
+/// `<(a,<{({SELF}*(<{({SELF}*dummy0)} --> ^nop>,<{({SELF}*dummy0)} --> ^nop>)*b)} --> ^nal9_exeAndInject>) =/> g>..`
 /// 
 pub struct Op_nal9__exec_and_inject {
 }
 impl NarProc::Op for Op_nal9__exec_and_inject {
     fn retName(&self) -> String {
-        "nal9_exeAndInject".to_string()
+        "^nal9_exeAndInject".to_string()
     }
     fn call(&self, nar:&mut NarProc::ProcNar, args:&Vec<Term>) {
+        println!("ENTER");
+
         if args.len() != 3 {
             return; // soft error
         }
@@ -47,6 +49,9 @@ impl NarProc::Op for Op_nal9__exec_and_inject {
         
         // third parameter is event to inject
         let injEvent: Term = args[2].clone();
+
+        println!("EXEC");
+
 
         // * execute ops sequentially
         for iOpTerm in &opsSeq {

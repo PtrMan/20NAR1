@@ -71,7 +71,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
 
     if isTemporal {
         // add to temporal knowledge
-        sentence.evi = Some(Evidence::CNT{pos:1,cnt:1}); // we need to transcribe TV
+        sentence.evi = Some(Evidence::CNT{pos:10,cnt:10}); // we need to transcribe TV
                                                          // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
         
         NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence);

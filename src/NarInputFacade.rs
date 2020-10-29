@@ -58,12 +58,22 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     }
     else if input.len() >= 5 && &input[..5] == "!por " { // procedural op register --- register op, argument is type/name of op, 2nd argument is name of op
         let args:Vec<&str> = input[5..].split_whitespace().collect();
-        if args.len() == 2 { // must have two args
+        if args.len() == 1 {
+            let argOpType:String = args[0].to_string();
+            if argOpType == "execinj" { // it it a exec and inject NAL9 op to get registered
+                // add op
+                nar.procNar.ops.push(Rc::new(Box::new(OpLib::Op_nal9__exec_and_inject{})));
+                println!("added op");
+            }
+            else {} // other types aren't supported
+        }
+        else if args.len() == 2 { // must have two args
             let argOpType:String = args[0].to_string();
             let argOpName:String = args[1].to_string();
             if argOpType == "NOP" { // it it a NOP operator to get registered?
                 // add op
                 nar.procNar.ops.push(Rc::new(Box::new(OpLib::OpNop{name:argOpName})));
+                println!("added op");
             }
             else {} // other types aren't supported
         }
