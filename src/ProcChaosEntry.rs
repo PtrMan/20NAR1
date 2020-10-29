@@ -20,13 +20,13 @@ pub fn procChaosEntry() {
     let mut nar:Nar::Nar = Nar::createNar();
     nar.procNar.cfgNMaxEvidence = 1000; // only allow 5000 beliefs
 
-    nar.procNar.ops.push(Box::new( OpNop {
+    nar.procNar.ops.push(Rc::new(Box::new( OpNop {
         selfName: "^L".to_string(),
-    }));
+    })));
 
-    nar.procNar.ops.push(Box::new( OpNop {
+    nar.procNar.ops.push(Rc::new(Box::new( OpNop {
         selfName: "^R".to_string(),
-    }));
+    })));
     
     loop { // reasoner/modification mainloop
         if t % 10 == 0 {
@@ -86,7 +86,7 @@ impl NarProc::Op for OpNop {
     fn retName(&self) -> String {
         self.selfName.clone()
     }
-    fn call(&self, _args:&Vec<Term>) {
+    fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
         println!("CALL {}", &self.selfName);
     }
 }

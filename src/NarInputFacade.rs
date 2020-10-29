@@ -1,5 +1,7 @@
 // facade which consumes narse, comments, empty lines and commands
 
+use std::rc::Rc;
+
 use crate::Nar::*;
 use crate::NarWorkingCycle::{debugCreditsOfTasks};
 use crate::NarModuleNlp;
@@ -61,7 +63,7 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
             let argOpName:String = args[1].to_string();
             if argOpType == "NOP" { // it it a NOP operator to get registered?
                 // add op
-                nar.procNar.ops.push(Box::new(OpLib::OpNop{name:argOpName}));
+                nar.procNar.ops.push(Rc::new(Box::new(OpLib::OpNop{name:argOpName})));
             }
             else {} // other types aren't supported
         }

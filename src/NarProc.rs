@@ -58,7 +58,7 @@ pub struct ProcNar {
     pub anticipatedEvents: Vec<AnticipationEvent>,
 
     /// all registered ops
-    pub ops: Vec<Box<dyn Op>>,
+    pub ops: Vec<Rc<Box<dyn Op>>>,
 
     /// NAR time
     pub t:i64,
@@ -502,17 +502,29 @@ pub fn narStep1(nar:&mut ProcNar) {
         Some(term) => {
             let (opArgs, opName) = decodeOp(&term).unwrap();
 
-            // scan for action
-            for iOp in &nar.ops {
-                if iOp.retName() == opName.clone() {
-                    iOp.call(&opArgs); // call op
-                    break;
+            // search for action with name
+            let opOpt = {
+                let mut opOpt = None;
+                for iOp in &nar.ops {
+                    if iOp.retName() == opName {
+                        opOpt = Some(Rc::clone(iOp));
+                        break;
+                    }
                 }
-            }
-            
-            println!("{}!", &convTermToStr(&term)); // print execution
+                opOpt
+            };
 
-            nar.trace.push(Rc::new(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t}));
+            if opOpt.is_some() { // was op found?
+                opOpt.unwrap().call(nar, &opArgs); // call op
+            
+                println!("{}!", &convTermToStr(&term)); // print execution
+    
+                nar.trace.push(Rc::new(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t}));
+            }
+            else {
+                // op which was searched was not registered
+                println!("[WARN] op {} was not registered!", opName);
+            }
         },
         None => {},
     }
@@ -710,5 +722,5 @@ pub struct AnticipationEvent {
 /// trait for a op, all implementations implement a op
 pub trait Op {
     fn retName(&self) -> String; /// return name of the op
-    fn call(&self, args:&Vec<Term>);
+    fn call(&self, nar:&mut ProcNar, args:&Vec<Term>);
 }

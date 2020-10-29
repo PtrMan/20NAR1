@@ -26,17 +26,17 @@ pub fn reasoner1Entry() {
     let envPong:RefCell<EnvPong3::EnvState> = RefCell::new(EnvPong3::makeEnvState());
     let envPongRc = Rc::new(envPong);
 
-    nar.procNar.ops.push(Box::new( OpPong {
+    nar.procNar.ops.push(Rc::new(Box::new( OpPong {
         env: Rc::clone(&envPongRc),
         opDir: 1,
         selfName: "^L".to_string(),
-    }));
+    })));
 
-    nar.procNar.ops.push(Box::new( OpPong {
+    nar.procNar.ops.push(Rc::new(Box::new( OpPong {
         env: Rc::clone(&envPongRc),
         opDir: -1,
         selfName: "^R".to_string(),
-    }));
+    })));
     
     loop { // reasoner/modification mainloop
         if t % 10 == 0 {
@@ -124,7 +124,7 @@ impl NarProc::Op for OpPong {
     fn retName(&self) -> String {
         self.selfName.clone()
     }
-    fn call(&self, _args:&Vec<Term>) {
+    fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
         (*self.env).borrow_mut().batVX = self.opDir;
         println!("CALL {}", &self.selfName);
     }
