@@ -254,8 +254,7 @@ for i in range(100000000):
 
     # procedural step for NAR
     if i % 40 == 0:
-        b.ps0()
-        b.ps1()
+        b.sp()
 
     while True:
         narLine = b.tryRead() # try to read from binding to NAR

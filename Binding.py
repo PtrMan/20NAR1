@@ -36,13 +36,9 @@ class Binding(object):
         self.proc.stdin.write(text+"\n")
         self.proc.stdin.flush()
     
-    # procedural step0
-    def ps0(self):
-        self.i("!ps0s")
-
-    # procedural step1
-    def ps1(self):
-        self.i("!ps1s")
+    # procedural step
+    def sp(self):
+        self.i("!sp")
     
     def s(self):
         self.i("!s")
