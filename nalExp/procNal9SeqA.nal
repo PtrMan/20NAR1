@@ -1,0 +1,6 @@
+// example to show how to use ^nal9_exeAndInject to call a sequence of ops
+!por execinj
+!por NOP ^nop
+<(a,<{({SELF}*(<{({SELF}*dummy0)} --> ^nop>,<{({SELF}*dummy0)} --> ^nop>)*b)} --> ^nal9_exeAndInject>) =/> g>.
+a. :|:
+g! {1.0 0.998} :|:
