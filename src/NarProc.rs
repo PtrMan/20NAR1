@@ -142,7 +142,7 @@ pub fn narInit() -> ProcNar {
                 { // scope for guard
                     let evidenceMemGuard = evidenceMem.read();
                     for iEEArc in &NarMem::ret_beliefs_by_terms_nonunique(&evidenceMemGuard, &[retSeqCond(&evidenceSentence.term).clone(), retPred(&evidenceSentence.term).clone()]) { // iterate over evidence where seqCond and/or pred appear
-                        let mut iEE = iEEArc.lock().unwrap();
+                        let mut iEE = iEEArc.write();
                         
                         if !checkOverlap(&iEE.stamp, &evidenceSentence.stamp) { // evidence must no overlap!
                             if
@@ -213,7 +213,7 @@ pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence:
 }
 
 /// returns all evidence, can be overlapping!
-pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<Mutex<SentenceDummy>>> {
+pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<RwLock<SentenceDummy>>> {
     let mut res = vec![];
     for (ikey, _iConcept) in &procNar.evidenceMem.read().concepts {
         let beliefsOfConcept = NarMem::ret_beliefs_of_concept(&procNar.evidenceMem.read(), &ikey);
@@ -260,7 +260,7 @@ pub fn narStep0(nar:&mut ProcNar) {
             
             let mut newanticipatedEvents = Vec::new();
             for iDeadline in &nar.anticipatedEvents {
-                let evi = iDeadline.evi.lock().unwrap();
+                let evi = iDeadline.evi.read();
                 if !checkEqTerm( &retPred(& evi.term), &curEvent) { // is predicted event not current event?
                     newanticipatedEvents.push(iDeadline.clone());
                 }
@@ -273,7 +273,7 @@ pub fn narStep0(nar:&mut ProcNar) {
     { // neg confirm for anticipated events
         {
             for iDeadlineViolated in nar.anticipatedEvents.iter().filter(|v| v.deadline <= nar.t) {
-                let mut mutEviGuard = iDeadlineViolated.evi.lock().unwrap();
+                let mut mutEviGuard = iDeadlineViolated.evi.write();
                 
                 // KEYWORD< neg-confirm >
                 if false {match mutEviGuard.evi.as_ref().unwrap() {
@@ -437,10 +437,10 @@ pub fn narStep1(nar:&mut ProcNar) {
         if bestEntry.0 > nar.cfgDescnThreshold && bestEntry.1.is_some() {
             let entryAndUnfied:&(Rc<RefCell<NarGoalSystem::Entry>>, Term) = &bestEntry.1.unwrap();
             let entity:&Rc<RefCell<NarGoalSystem::Entry>> = &entryAndUnfied.0;
-            let pickedEvidenceOpt: &Option<Arc<Mutex<SentenceDummy>>> = &entity.borrow().evidence;
+            let pickedEvidenceOpt: &Option<Arc<RwLock<SentenceDummy>>> = &entity.borrow().evidence;
             
             if pickedEvidenceOpt.is_some() {
-                let pickedEvidence: Arc<Mutex<SentenceDummy>> = Arc::clone(&pickedEvidenceOpt.as_ref().unwrap());
+                let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&pickedEvidenceOpt.as_ref().unwrap());
 
                 // extract op of seq
                 let opTerm:Term = retSeqOp(&entryAndUnfied.1);
@@ -462,8 +462,8 @@ pub fn narStep1(nar:&mut ProcNar) {
                     
                     // add anticipated event
                     let expIntervalIdx:i64 =
-                        if pickedEvidence.lock().unwrap().expDt.is_some() {
-                            pickedEvidence.lock().unwrap().expDt.unwrap()
+                        if pickedEvidence.read().expDt.is_some() {
+                            pickedEvidence.read().expDt.unwrap()
                         }
                         else {0}; // else it needs a default interval
                     let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
@@ -683,17 +683,17 @@ pub fn findMinTableIdx(interval:i64, expIntervalsTable:&Vec<i64>) -> i64 {
 pub fn debugEvidence(procNar: &ProcNar) {
     println!("EVIDENCE:");
     for iEvi in &mem_ret_evidence_all_nonunique(procNar) {
-        let iEvi2 = iEvi.lock().unwrap();
+        let iEviGuard = iEvi.read();
 
-        let implSeqAsStr = convTermToStr(&iEvi2.term);
+        let implSeqAsStr = convTermToStr(&iEviGuard.term);
 
-        let evi:&Evidence = &iEvi2.evi.as_ref().unwrap();
+        let evi:&Evidence = &iEviGuard.evi.as_ref().unwrap();
         let (pos,cnt) = match evi {
             Evidence::CNT{pos,cnt} => {(pos,cnt)},
             _ => {panic!("expected CNT");}
         };
 
-        let expDtAsStr = if iEvi2.expDt.is_some() {format!("+EXPDT{}", iEvi2.expDt.unwrap())} else {"".to_string()}; // convert expDt to string if it exists
+        let expDtAsStr = if iEviGuard.expDt.is_some() {format!("+EXPDT{}", iEviGuard.expDt.unwrap())} else {"".to_string()}; // convert expDt to string if it exists
         println!("{} {} {}/{}", &implSeqAsStr, expDtAsStr, pos, cnt);
     }
 }
@@ -702,7 +702,7 @@ pub fn debugEvidence(procNar: &ProcNar) {
 #[derive(Clone)]
 pub struct AnticipationEvent {
     /// evidence
-    pub evi:Arc<Mutex<SentenceDummy>>,
+    pub evi:Arc<RwLock<SentenceDummy>>,
     /// deadline in absolute cycles
     pub deadline:i64,
 }

@@ -1113,7 +1113,7 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
         
                             if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
                                 for iBelief in &concept.beliefs {
-                                    let iBeliefGuard = iBelief.lock().unwrap();
+                                    let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
                                     let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.lock().unwrap().sentence, &iBeliefGuard, &mut wereRulesApplied);
@@ -1124,7 +1124,7 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
                                 // sample belief from concept
                                 let selVal:f64 = rng.gen_range(0.0,1.0);
                                 let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].lock().unwrap();
+                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].read();
         
                                 // do inference and add conclusions to array
                                 let mut wereRulesApplied = false;
@@ -1203,16 +1203,16 @@ pub fn task2SelByCreditRandom(selVal:f64, arr: &Vec<Box<Task2>>)->usize {
 
 /// helper to select random belief by AV
 /// expect that the arr isn't question!
-pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<Mutex<SentenceDummy>>>)->usize {
+pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<RwLock<SentenceDummy>>>)->usize {
     let sum:f64 = arr.iter().map(|iv| {
-        let ivGuard = iv.lock().unwrap();
+        let ivGuard = iv.read();
         if ivGuard.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
         retTv(&ivGuard).unwrap().c
     }).sum();
     let mut acc = 0.0;
     let mut idx = 0;
     for iv in arr {
-        let ivGuard = iv.lock().unwrap();
+        let ivGuard = iv.read();
         if ivGuard.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
 
         acc += retTv(&ivGuard).unwrap().c;
@@ -1280,7 +1280,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
                                 let mut additionalBelief:Option<SentenceDummy> = None; // stores the additional belief
                                 
                                 for iBeliefIdx in 0..concept.beliefs.len() {
-                                    let iBelief = &concept.beliefs[iBeliefIdx].lock().unwrap();
+                                    let iBelief = &concept.beliefs[iBeliefIdx].read();
                                     if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
                                         let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
                                         let tvA:Tv = retTv(&iBelief).unwrap();
@@ -1307,7 +1307,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
                                 }
 
                                 if additionalBelief.is_some() {
-                                    concept.beliefs.push(Arc::new(Mutex::new(additionalBelief.unwrap())));
+                                    concept.beliefs.push(Arc::new(RwLock::new(additionalBelief.unwrap())));
                                 }
                             }
                             None => {
@@ -1512,7 +1512,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                     Some(concept) => {
                         // try to answer question with all beliefs which may be relevant
                         for iBelief in &concept.beliefs {
-                            qaTryAnswer(&mut selTask, &iBelief.lock().unwrap(), &memGuard.globalQaHandlers.read());
+                            qaTryAnswer(&mut selTask, &iBelief.read(), &memGuard.globalQaHandlers.read());
                         }
                     },
                     None => {} // concept doesn't exist, ignore

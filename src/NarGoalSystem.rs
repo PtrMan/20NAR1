@@ -4,6 +4,7 @@ use std::rc::Rc;
 use core::cell::RefCell;
 use std::sync::{Arc, Mutex};
 use rand::Rng;
+use parking_lot::RwLock;
 
 use crate::Term::*;
 
@@ -39,7 +40,7 @@ pub struct Entry {
     /// evidence which was used to derive this sentence. This is used to create the anticipations
     /// sentence: (a, ^b)!
     /// evidence: (a, ^b) =/> c.  (actual impl seq was this)
-    pub evidence: Option<Arc<Mutex<SentenceDummy>>>,
+    pub evidence: Option<Arc<RwLock<SentenceDummy>>>,
     /// time of the creation of this entry
     pub createTime: i64,
     /// depth of the goal
@@ -79,7 +80,7 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
 }
 
 /// /param t is the procedural reasoner NAR time
-pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<Mutex<SentenceDummy>>>, depth:i64) {
+pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<RwLock<SentenceDummy>>>, depth:i64) {
     if false {println!("goal system: addEntry {}", &NarSentence::convSentenceTermPunctToStr(&goal, true))}; // print goal which is tried to put into system
     
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
@@ -238,7 +239,7 @@ pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDumm
 
 
 /// filters belief candidates which can be used for inference with the goal
-pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Arc<Mutex<SentenceDummy>>> {
+pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
     let mut res = Vec::new();
 
     // query memory for potential evidence which we can use
@@ -246,7 +247,7 @@ pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Ar
     
     // filter
     for iBelief in &potentialEvidence {
-        match &*(iBelief.lock().unwrap()).term {
+        match &*(iBelief.read()).term {
             Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
                 if checkEqTerm(&goal.term, &pred) {
                     res.push(Arc::clone(iBelief));
@@ -300,7 +301,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
     }
     let (sampledGoal, sampledDepth): (Arc<SentenceDummy>, i64) = sampledGoalOpt.unwrap();
 
-    let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<Mutex<SentenceDummy>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
+    let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<RwLock<SentenceDummy>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
     
     // * try to do goal detachment
     match &*sampledGoal.term {
@@ -311,11 +312,11 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
         },
         _ => {
             // * try to find candidates for inference
-            let envidenceCandidates: Vec<Arc<Mutex<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, procMem);
+            let envidenceCandidates: Vec<Arc<RwLock<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, procMem);
 
             // * try to do inference
             for iBelief in &envidenceCandidates {
-                let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &iBelief.lock().unwrap());
+                let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &iBelief.read());
                 if conclOpt.is_some() {
                     concls.push((Arc::new(conclOpt.unwrap()), Some(Arc::clone(iBelief)), sampledDepth+1));
                 }
