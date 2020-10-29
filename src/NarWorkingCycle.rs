@@ -1101,8 +1101,7 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
 
 
 
-                let EN = false; // currently disabled because of DEADLOCK, because sentences may be the same!
-                if EN { // attention mechanism which selects the secondary task from concepts
+                { // attention mechanism which selects the secondary task from concepts
                     let keyTerm = msg.primary.lock().unwrap().sentence.term.clone();
                     match sharedArc.read().mem.read().concepts.get(&keyTerm) {
                         Some(concept) => {
