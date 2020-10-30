@@ -1,5 +1,10 @@
-// goal system
-
+//! goal system
+//!
+//! #Mechanism
+//! Stores a set of goals which are considered active.
+//! #Mechanism sampling strategy
+//! Samples goals currently by a uniform distribution.
+//! Sampling is made more fair by biasing the sampling by the depth of the goal (which is stored in the goal).
 use std::rc::Rc;
 use core::cell::RefCell;
 use std::sync::{Arc, Mutex};
