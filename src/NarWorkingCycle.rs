@@ -1,3 +1,4 @@
+//! implementation of basic working cycle (for declarative reasoner)
 
 // TODO< select highest ranked task, remove it from array, select other task by priority distribution, do inference, put results into memory >
 //     TODO< put processed task into randomly sampled bag-table! >
@@ -895,13 +896,17 @@ pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
     concl
 }
 
-
+/// judgement task
 pub struct Task {
     pub sentence:SentenceDummy,
+    /// how much "worth" is the task for the system
     pub credit:f64,
-    pub qaCredit:f64, // create assigned for Q&A
-    pub id:i64, // unique id to quickly find unique tasks
-    pub derivTime:i64, // time when this task was put into the working table
+    /// create assigned for Q&A
+    pub qaCredit:f64,
+    /// unique id to quickly find unique tasks
+    pub id:i64,
+    /// time when this task was put into the working table
+    pub derivTime:i64,
 }
 
 /// compute "real" credit of task by insertion based time decay
@@ -915,11 +920,15 @@ pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
     (qaCredit + task.credit)*decayFactor // multiply because we want to decay the actual "base credit"
 }
 
+/// task for a question
 pub struct Task2 {
     pub sentence:SentenceDummy,
-    pub handler:Option< Arc<RwLock< dyn QHandler>> >, // handler which is called when a better answer is found
-    pub bestAnswerExp:f64, // expectation of best answer
-    pub prio:f64, // priority
+    /// handler which is called when a better answer is found
+    pub handler:Option< Arc<RwLock< dyn QHandler>> >,
+    /// expectation of best answer
+    pub bestAnswerExp:f64,
+    /// priority
+    pub prio:f64,
 }
 
 
@@ -947,20 +956,27 @@ pub struct DeclarativeShared {
     pub questionTasks:Arc<RwLock< Vec<Box<Task2>> >>,
 
     pub mem: Arc<RwLock<NarMem::Mem>>,
-    pub stampIdCounter: AtomicI64, // counter for stamp id
-    pub taskIdCounter: Arc<AtomicI64>, // counter for id of task, mainly used for fast checking if two tasks are the same!
-
-    pub cycleCounter: i64, // counter for done reasoning cycles
+    /// counter for stamp id
+    pub stampIdCounter: AtomicI64,
+    /// counter for id of task, mainly used for fast checking if two tasks are the same!
+    pub taskIdCounter: Arc<AtomicI64>,
+    
+    /// counter for done reasoning cycles
+    pub cycleCounter: i64,
 }
 
+/// memory of NAR for eternal beliefs
 pub struct Mem2 {
     pub shared:Arc<RwLock<DeclarativeShared>>,
 
-    pub globalQaHandlers: Arc<RwLock<  Vec<Arc<RwLock< dyn QHandler>>>  >>, // global handlers for Q&A
+    /// global handlers for Q&A
+    pub globalQaHandlers: Arc<RwLock<  Vec<Arc<RwLock< dyn QHandler>>>  >>,
     pub rng: RwLock<ThreadRng>,
-
-    pub deriverWorkers: Vec<JoinHandle<()>>, // array of workers
-    pub deriverWorkersTx: Vec<SyncSender<DeriverWorkMessage>>, // sender to worker
+    
+    /// array of workers
+    pub deriverWorkers: Vec<JoinHandle<()>>,
+    /// sender to worker
+    pub deriverWorkersTx: Vec<SyncSender<DeriverWorkMessage>>,
 }
 
 pub fn createMem2()->Arc<RwLock<Mem2>> {
