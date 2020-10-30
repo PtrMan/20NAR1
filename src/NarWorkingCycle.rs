@@ -1127,6 +1127,10 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
                             let processSampledBelief:bool = false; // does it just sample one belief?
         
                             if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
+                                // MECHANISM<
+                                // process of all revelant beliefs of a concept as the first premise with a selected belief as the second premise
+                                // >
+                                // TODO< limit secondary beliefs to keep reasoning strictly under AIKR >
                                 for iBelief in &concept.beliefs {
                                     let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
@@ -1136,7 +1140,10 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
                                 }
                             }
                             if processSampledBelief { // code for sampling, is faster
+                                // MECHANISM<
                                 // sample belief from concept
+                                // This has the advantage that it's super cheap, but it can "hit" not fruitful premises
+                                // >
                                 let selVal:f64 = rng.gen_range(0.0,1.0);
                                 let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
                                 let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].read();
@@ -1161,7 +1168,7 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
 
                 // put conclusions back into memory!
                 {
-                    // Q&A - answer questions
+                    // MECHANISM< Q&A - answer questions >
                     {
                         for iConcl in &concl {
                             if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
@@ -1280,6 +1287,10 @@ pub fn populateTaskByTermLookup(judgementTasksByTerm:Arc<RwLock< HashMap<Term, V
 ///
 /// returns if it has done revision
 pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) -> bool {
+    // MECHANISM< belief revision
+    // revises beliefs if the term matches and if the stamps don't overlap
+    // >
+    
     // try to revise
     let mut wasRevised = false;
     match sentence.punct {
