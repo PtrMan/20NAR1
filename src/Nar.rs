@@ -1,3 +1,6 @@
+//! Non-Axiomatic Reasoner
+//! is exposing a NAR as one "unit" which can be instantiated
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc};
@@ -13,9 +16,11 @@ use crate::NarWorkingCycle::*;
 use crate::NarProc;
 use crate::NarGoalSystem;
 
+
 /// single Non-Axiomatic Reasoner
 ///
 /// every program which uses NARS must use at least one NAR for reasoning.
+// PUBLICAPI
 pub struct Nar {
     /// procedural NAR
     pub procNar:NarProc::ProcNar,
@@ -27,6 +32,8 @@ pub struct Nar {
     pub cfgVerbosityInput:i32,
 }
 
+/// creates a new NAR with a default configuration
+// PUBLICAPI
 pub fn createNar() -> Nar {
     Nar{
         procNar:NarProc::narInit(),
@@ -36,11 +43,13 @@ pub fn createNar() -> Nar {
 }
 
 /// input for eternal
+// PUBLICAPI
 pub fn inputT(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv) {
     inputT2(nar, term, punct, tv, false);
 }
 
 /// input for event or eternal
+// PUBLICAPI
 pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:bool) {
     let stampId:i64 = nar.mem.read().shared.read().stampIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
     let stamp = newStamp(&vec![stampId]);
@@ -88,6 +97,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
 
 /// input narsese
 /// return if narsese was parsed and had no error
+// PUBLICAPI
 pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
     match parseNarsese(narsese) {
         Some((term, tv, punct, isEvent)) => {
@@ -106,6 +116,7 @@ pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
 /// do one cycle
 ///
 /// give NAR compute time in the form of one cycle
+// PUBLICAPI
 pub fn cycle(nar:&mut Nar) {
     reasonCycle(Arc::clone(&nar.mem));
 }
