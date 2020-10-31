@@ -1,4 +1,4 @@
-// facade which consumes narse, comments, empty lines and commands
+//! facade which consumes narse, comments, empty lines and commands
 
 use std::rc::Rc;
 
@@ -17,6 +17,7 @@ use crate::OpLib;
 ///
 /// /param quit is used to signal if program has to get terminated
 /// returns requested information as strings!
+// PUBLICAPI
 pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     let mut retInfo = Vec::new();
     
