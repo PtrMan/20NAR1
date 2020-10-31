@@ -38,6 +38,16 @@ pub struct GoalSystem {
     pub nMaxDepth: i64,
 }
 
+/// we need to fold entries by term to get deeper plans
+///
+/// this is because sampling has to be done by term, not by dt
+pub struct EntryFoldedByTerm {
+    /// folded term
+    pub term:Term,
+    /// entries which all have the same term
+    pub entries:Vec<Rc<RefCell<Entry>>>,
+}
+
 /// entry for goal system
 pub struct Entry {
     pub sentence: Arc<SentenceDummy>,
@@ -54,8 +64,9 @@ pub struct Entry {
     pub desirability: f32,
 }
 
+/// used to group entries by depth
 pub struct BatchByDepth {
-    pub entries: Vec<Rc<RefCell<Entry>>>,
+    pub entries: Vec<EntryFoldedByTerm>,
     pub depth: i64,
 }
 
@@ -64,7 +75,6 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
     for iDepth in 0..nMaxDepth {
         batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{entries: vec![], depth:iDepth,})));
     }
-    //println!("XXX {}", batchesByDepth.len());
     
     GoalSystem {
         batchesByDepth: batchesByDepth,
@@ -77,8 +87,10 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
 pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
     let mut res: Vec<Rc<RefCell<Entry>>> = vec![];
     for iEntry in &goalSystem.batchesByDepth {
-        for iVal in &iEntry.borrow().entries {
-            res.push(Rc::clone(iVal));
+        for iGroup in &iEntry.borrow().entries {
+            for iVal in &iGroup.entries {
+                res.push(Rc::clone(&iVal));
+            }
         }
     }
     res
@@ -103,8 +115,31 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
 }
 
 pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
-    let chosenBatch:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize]);
-    chosenBatch.borrow_mut().entries.push(e);
+    let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize]);
+    let mut chosenBatch = chosenBatchRc.borrow_mut();
+    
+    // now we need to add the entry to the batch
+    //
+    // a small problem is that the actual entries are stored by term of the sentence
+    // * so we have to find the group with the same term if the group exists and add it there or
+    // * add it as a new group
+    
+    { // try to search for group by e.sentence.term
+        for iGroup in &mut chosenBatch.entries { // iterate over groups by term
+            if checkEqTerm(&iGroup.term, &e.borrow().sentence.term) { // found entry?
+                iGroup.entries.push(Rc::clone(&e)); // add entry
+                return;
+            }
+        }
+    }
+
+    { // case to add it as a new group
+        chosenBatch.entries.push(EntryFoldedByTerm {
+                term:(*(e.borrow().sentence.term)).clone(),
+                entries:vec![Rc::clone(&e)],
+            }
+        );
+    }
 }
 
 /// called when it has to stay under AIKR
@@ -177,7 +212,12 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
         return None;
     }
     
-    let sumPriorities:f64 = selBatch.entries.iter().map(|iv| (iv.borrow().desirability as f64).max(0.0)).sum();
+    let entriesOfSelBatch: &Vec<EntryFoldedByTerm> = &selBatch.entries;
+    let sumPriorities:f64 = entriesOfSelBatch.iter()
+        .map(|iEntriesByTerm| { // map over entries-by-term
+            let entries:&Vec<Rc<RefCell<Entry>>> = &iEntriesByTerm.entries;
+            entries.iter().map(|iv| (iv.borrow().desirability as f64).max(0.0)).sum::<f64>() // compute inner sum
+        }).sum();
     
     let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
 
@@ -185,16 +225,18 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     let mut sum:f64 = 0.0;
     for iv in &selBatch.entries {
         assert!(sum <= sumPriorities); // priorities are summed in the wrong way in this loop if this invariant is violated
-        sum += (iv.borrow().desirability as f64).max(0.0); // desired goals should be favored to get sampled
-        if sum >= selPriority {
-            let selEntry = iv.borrow();
-            return Some((Arc::clone(&selEntry.sentence), selEntry.depth));
-        }
+        
+        for iEntry in &iv.entries {
+            sum += (iEntry.borrow().desirability as f64).max(0.0); // desired goals should be favored to get sampled
+            if sum >= selPriority {
+                let selEntry = iEntry.borrow();
+                return Some((Arc::clone(&selEntry.sentence), selEntry.depth));
+            }
+        }        
     }
 
     // shouldn't happen
-    let selEntry = selBatch.entries[selBatch.entries.len()-1].borrow();
-    return Some((Arc::clone(&selEntry.sentence), selEntry.depth));
+    None // we just return none, is the simplest
 }
 
 /// does inference of goal with a belief
