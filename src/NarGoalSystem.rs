@@ -66,14 +66,14 @@ pub struct Entry {
 
 /// used to group entries by depth
 pub struct BatchByDepth {
-    pub entries: Vec<EntryFoldedByTerm>,
+    pub groups: Vec<EntryFoldedByTerm>,
     pub depth: i64,
 }
 
 pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
     let mut batchesByDepth: Vec<Rc<RefCell<BatchByDepth>>> = vec![];
     for iDepth in 0..nMaxDepth {
-        batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{entries: vec![], depth:iDepth,})));
+        batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{groups: vec![], depth:iDepth,})));
     }
     
     GoalSystem {
@@ -87,7 +87,7 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
 pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
     let mut res: Vec<Rc<RefCell<Entry>>> = vec![];
     for iEntry in &goalSystem.batchesByDepth {
-        for iGroup in &iEntry.borrow().entries {
+        for iGroup in &iEntry.borrow().groups {
             for iVal in &iGroup.entries {
                 res.push(Rc::clone(&iVal));
             }
@@ -125,7 +125,7 @@ pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     // * add it as a new group
     
     { // try to search for group by e.sentence.term
-        for iGroup in &mut chosenBatch.entries { // iterate over groups by term
+        for iGroup in &mut chosenBatch.groups { // iterate over groups by term
             if checkEqTerm(&iGroup.term, &e.borrow().sentence.term) { // found entry?
                 iGroup.entries.push(Rc::clone(&e)); // add entry
                 return;
@@ -134,7 +134,7 @@ pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     }
 
     { // case to add it as a new group
-        chosenBatch.entries.push(EntryFoldedByTerm {
+        chosenBatch.groups.push(EntryFoldedByTerm {
                 term:(*(e.borrow().sentence.term)).clone(),
                 entries:vec![Rc::clone(&e)],
             }
@@ -171,7 +171,7 @@ pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     goalSystem.batchesByDepth = vec![]; // flush
     // rebuild
     for iDepth in 0..goalSystem.nMaxDepth {
-        goalSystem.batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{entries: vec![], depth:iDepth,})));
+        goalSystem.batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{groups: vec![], depth:iDepth,})));
     }
 
     // fill
@@ -208,11 +208,11 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     
     
     
-    if selBatch.entries.len() == 0 {
+    if selBatch.groups.len() == 0 {
         return None;
     }
     
-    let entriesOfSelBatch: &Vec<EntryFoldedByTerm> = &selBatch.entries;
+    let entriesOfSelBatch: &Vec<EntryFoldedByTerm> = &selBatch.groups;
     let sumPriorities:f64 = entriesOfSelBatch.iter()
         .map(|iEntriesByTerm| { // map over entries-by-term
             let entries:&Vec<Rc<RefCell<Entry>>> = &iEntriesByTerm.entries;
@@ -223,7 +223,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 
     // select
     let mut sum:f64 = 0.0;
-    for iv in &selBatch.entries {
+    for iv in &selBatch.groups {
         assert!(sum <= sumPriorities); // priorities are summed in the wrong way in this loop if this invariant is violated
         
         for iEntry in &iv.entries {
