@@ -2,7 +2,8 @@
 This is a NARS+ General Machine Intelligence (GMI) system.
 
 # commands
-The system accepts either Narsese or commands as inputs. Commands are used to give the reasoner compute in the form of cycles. Commands also can be used to change parameters of the input/output and/or the reasoner itself. Commands also allow to invoke special functionality of the NARS+ implementation, for example for the NLP module.
+The system accepts either Narsese or commands as inputs. Commands are used to give the reasoner compute in the form of cycles. Commands also can be used to change parameters of the input/output and/or the reasoner itself. Commands also allow to invoke special functionality of the NARS+ implementation, for example for the NLP module.<br />
+See in source file [NarInputFacade.rs](https://github.com/PtrMan/20NAR1/blob/master/src/NarInputFacade.rs#L34) for a list of all implemented commands.
 ## modules
 This implementation provides a NLP/NLU "module" which is exposed with the `!nlp` command. See NAL experiments which are related to NLP on how to use it. The reasoning for the module is done with a NAR.
 
