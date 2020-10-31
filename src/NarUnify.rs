@@ -1,3 +1,5 @@
+//! Logic unifier for Terms for (any) NARS
+
 use crate::Term::Term;
 use crate::Term::Copula;
 use crate::Term::retSubterms;
@@ -5,6 +7,7 @@ use crate::Term::retUniqueSubterms;
 use crate::Term::checkEqTerm;
 
 /// structure to store assignment of var
+// PUBLICAPI
 pub struct Asgnment {
     pub var:Term,
     pub val:Term,
@@ -218,6 +221,7 @@ fn checkSameVal(var:&Term, val:&Term, assignments:&Vec<Asgnment>) -> bool {
 }
 
 /// tries to unify terms
+// PUBLICAPI
 pub fn unify(a: &Term, b: &Term) -> Option<Vec<Asgnment>> {
     let mut assignments:Vec<Asgnment> = vec![];
     if unify2(&a,&b,&mut assignments) {
@@ -227,6 +231,7 @@ pub fn unify(a: &Term, b: &Term) -> Option<Vec<Asgnment>> {
 }
 
 // substitute variables with values
+// PUBLICAPI
 pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
     match t {
         Term::QVar(_name) => {
