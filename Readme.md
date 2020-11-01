@@ -26,3 +26,16 @@ connect to server with for example netcat: `nc 127.0.0.1 2039`<br />
 * python 3.X, recommended 3.5 and up
 ## robotics
 Robot examples need pybullet, install with `pip install pybullet`
+
+# what is implemented
+## temporal
+* unification of =/> by subj
+* goals
+* decision making
+## non-temporal
+* Q&A
+# what is missing?
+* unification of =/> by pred
+* Q&A for temporal, ex: <(a,^x) =/> b>?
+* use of non-temporal knowledge for temporal inference
+* quests
