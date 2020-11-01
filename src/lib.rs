@@ -12,6 +12,7 @@ pub mod expRepresent0;
 pub mod Misc;
 pub mod Classifier;
 pub mod EnvPong3;
+pub mod ProcTicTacToe;
 pub mod Nn;
 pub mod NnTrain;
 pub mod NarseseParser;
