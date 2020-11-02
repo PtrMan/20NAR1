@@ -31,7 +31,7 @@ pub fn run() {
     let mut rng: ThreadRng = rand::thread_rng();
 
     let mut nar:Nar::Nar = Nar::createNar();
-    nar.procNar.cfg__eviCnt = 20000; // almost axiomatic
+    nar.procNar.cfg__eviCnt = 10000; // almost axiomatic
     nar.procNar.goalSystem.nMaxEntries = 5000; // give more resources (memory - goals)
     nar.procNar.goalSystem.cfg__enGoalSatisfaction = false; // disable because we want goals to persist
     nar.procNar.cfg__nConcepts = 10000;
