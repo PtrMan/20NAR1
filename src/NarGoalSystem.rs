@@ -366,7 +366,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
         Term::Seq(seq) if seq.len() >= 1 => {
             let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&sampledGoal).unwrap(),sampledGoal.stamp.clone());
             //dbg(format!("dbg: detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
-            concls.push((Arc::new(detachedGoal), None, sampledDepth));
+            concls.push((Arc::new(detachedGoal), None, sampledDepth+1));
         },
         _ => {
             // * try to find candidates for inference
