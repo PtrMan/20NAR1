@@ -31,10 +31,12 @@ pub fn run() {
     let mut rng: ThreadRng = rand::thread_rng();
 
     let mut nar:Nar::Nar = Nar::createNar();
+    nar.procNar.goalSystem.nMaxEntries = 5000; // give more resources (memory - goals)
+    nar.procNar.goalSystem.cfg__enGoalSatisfaction = false; // disable because we want goals to persist
+    nar.procNar.cfg__nConcepts = 10000;
+
     nar.procNar.cfgEnBabbling = false; // disable by default
 
-    nar.procNar.goalSystem.nMaxEntries = 200; // give more resources (memory - goals)
-    nar.procNar.cfg__nConcepts = 10000;
 
     let move_:RefCell<Option<i64>> = RefCell::new(None);
     let moveRc = Rc::new(move_);
@@ -49,12 +51,11 @@ pub fn run() {
         })));
     }
     
+    Nar::inputN(&mut nar, &"w! :|:".to_string()); // add goal
 
     loop { // loop over individual game "epochs"
         //let mut gamestate = envRc.borrow_mut();
         let mut gamestate = Gamestate{field: vec![' '; 9], player:true,}; // create(reset) gamestate
-
-        Nar::inputN(&mut nar, &"w! :|:".to_string()); // add goal
 
         loop { // loop as long as this game is going
 

@@ -36,6 +36,11 @@ pub struct GoalSystem {
     pub nMaxEntries: i64,
     /// soft limit of depth
     pub nMaxDepth: i64,
+
+    /// is a goal satisfied if a event happens when the terms match up?
+    ///
+    /// is "true" for natural environments, but can be set to "false" to specialize the reasoner for "crisp" tasks such as playing board games or solving logic problems(?)
+    pub cfg__enGoalSatisfaction: bool,
 }
 
 /// we need to fold entries by term to get deeper plans
@@ -80,6 +85,8 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
         batchesByDepth: batchesByDepth,
         nMaxEntries: nMaxEntries,
         nMaxDepth: nMaxDepth,
+
+        cfg__enGoalSatisfaction: true, // enable for natural environments
     }
 }
 
@@ -385,7 +392,9 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
 pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
     for iEntityRc in retEntries(goalSystem) {
         let mut iEntity = iEntityRc.borrow_mut();
-        if checkEqTerm(&iEntity.sentence.term, eventTerm) {
+        if goalSystem.cfg__enGoalSatisfaction && // do we want to satisfy goals?
+           checkEqTerm(&iEntity.sentence.term, eventTerm) // terms must of course to match up that a event can satify the goal
+        {
             iEntity.desirability = 0.0; // set desirability to 0.0 because it happened
         }
     }
