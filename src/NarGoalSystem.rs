@@ -41,6 +41,9 @@ pub struct GoalSystem {
     ///
     /// is "true" for natural environments, but can be set to "false" to specialize the reasoner for "crisp" tasks such as playing board games or solving logic problems(?)
     pub cfg__enGoalSatisfaction: bool,
+
+    /// is debugging of adding of goal entry enabled?
+    pub cfg__dbg_enAddEntry: bool,
 }
 
 /// we need to fold entries by term to get deeper plans
@@ -87,6 +90,7 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
         nMaxDepth: nMaxDepth,
 
         cfg__enGoalSatisfaction: true, // enable for natural environments
+        cfg__dbg_enAddEntry: true, // for debugging
     }
 }
 
@@ -105,7 +109,7 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
 
 /// /param t is the procedural reasoner NAR time
 pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<RwLock<SentenceDummy>>>, depth:i64) {
-    if false {println!("goal system: addEntry {}", &NarSentence::convSentenceTermPunctToStr(&goal, true))}; // print goal which is tried to put into system
+    if goalSystem.cfg__dbg_enAddEntry {println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true))}; // print goal which is tried to put into system
     
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &retEntries(goalSystem) {
