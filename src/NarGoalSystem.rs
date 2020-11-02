@@ -109,13 +109,18 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
 
 /// /param t is the procedural reasoner NAR time
 pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<RwLock<SentenceDummy>>>, depth:i64) {
-    if goalSystem.cfg__dbg_enAddEntry {println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true))}; // print goal which is tried to put into system
+    if goalSystem.cfg__dbg_enAddEntry { // print goal which is tried to put into system
+        if depth > 2 {
+            println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true));
+            //panic!("DEBUGGING SHOULD BE FINISHED BECAUSE WE HIT DEVGOAL");
+        }
+    };
     
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in &retEntries(goalSystem) {
         if 
             // optimization< checking term first is faster! >
-            //checkEqTerm(&iv.sentence.term, &goal.term) &&
+            checkEqTerm(&iv.borrow().sentence.term, &goal.term) && // is necessary, else we don't accept detached goals!
             NarStamp::checkSame(&iv.borrow().sentence.stamp, &goal.stamp)
         {
             return;
@@ -126,7 +131,10 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
 }
 
 pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
-    let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize]);
+    let chosenDepthIdx:usize = e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize;
+    dbg(&format!("addEntry depth = {} chosenDepthIdx = {}", e.borrow().depth, chosenDepthIdx));
+
+    let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[chosenDepthIdx]);
     let mut chosenBatch = chosenBatchRc.borrow_mut();
     
     // now we need to add the entry to the batch
@@ -197,20 +205,43 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     // select batch (or return)
     let selBatchRef = {
 
-        let sumPriorities:f64 = goalSystem.batchesByDepth.iter().map(|iv| 1.0).sum();
+        let sumPriorities:f64 = goalSystem.batchesByDepth.iter().map(|iv| 
+            if iv.borrow().groups.len() > 0 {1.0} else {0.0} // only consider batches which have groups
+        ).sum();
+
+        //println!("DBG  sum prio {}", sumPriorities);
     
         let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
     
         // select
-        let mut selBatch:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[0]); // default, should never be used
+        /* commented because it is old buggy code
+        let mut selBatch:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[goalSystem.batchesByDepth.len()-1]); // default, should never be used
         let mut sum:f64 = 0.0;
         for iv in &goalSystem.batchesByDepth {
-            sum += 1.0;
+            sum += iv.groups.len() > 0 {1.0} else {0.0};
             if sum >= selPriority {
                 selBatch = Rc::clone(iv);
                 break;
             }
         }
+        */
+        let mut selBatch:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[0]); // default, should never be used
+        let mut sum:f64 = 0.0;
+        let mut idx=0;
+        for iv in &goalSystem.batchesByDepth {
+            if sum >= selPriority {
+                break;
+            }
+            if iv.borrow().groups.len() > 0 {
+                sum+=1.0;
+                selBatch = Rc::clone(iv);
+
+                //println!("DBG500 sel idx {}", idx);
+            };
+            
+            idx+=1;
+        }
+
         selBatch
     };
     let selBatch = selBatchRef.borrow();
@@ -234,20 +265,21 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 
     // select
     let mut sum:f64 = 0.0;
+    let mut selEntry = None;
     for iv in &selBatch.groups {
         assert!(sum <= sumPriorities); // priorities are summed in the wrong way in this loop if this invariant is violated
         
         for iEntry in &iv.entries {
             sum += (iEntry.borrow().desirability as f64).max(0.0); // desired goals should be favored to get sampled
+            let selEntry2 = iEntry.borrow();
+            selEntry = Some((Arc::clone(&selEntry2.sentence), selEntry2.depth));
             if sum >= selPriority {
-                let selEntry = iEntry.borrow();
-                return Some((Arc::clone(&selEntry.sentence), selEntry.depth));
+                break;
             }
-        }        
+        }
     }
 
-    // shouldn't happen
-    None // we just return none, is the simplest
+    selEntry
 }
 
 /// does inference of goal with a belief
@@ -365,7 +397,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
     match &*sampledGoal.term {
         Term::Seq(seq) if seq.len() >= 1 => {
             let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&sampledGoal).unwrap(),sampledGoal.stamp.clone());
-            //dbg(format!("dbg: detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
+            dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
             concls.push((Arc::new(detachedGoal), None, sampledDepth+1));
         },
         _ => {
@@ -422,4 +454,15 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
     }
 
     res
+}
+
+
+
+/// helper for debugging
+pub fn dbg(str2:&String) {
+    if true { // don't we want to debug?
+        return;
+    }
+
+    println!("DBG {}", str2);
 }
