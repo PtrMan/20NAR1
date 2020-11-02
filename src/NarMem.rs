@@ -69,7 +69,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
                             concept.beliefs = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
                             
                             // keep under AIKR
-                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(20)].to_vec();
+                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(200)].to_vec();
                         }
                     }
                     None => {

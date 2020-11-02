@@ -34,7 +34,7 @@ pub fn run() {
     nar.procNar.cfgEnBabbling = false; // disable by default
 
     nar.procNar.goalSystem.nMaxEntries = 200; // give more resources (memory - goals)
-
+    nar.procNar.cfg__nConcepts = 10000;
 
     let move_:RefCell<Option<i64>> = RefCell::new(None);
     let moveRc = Rc::new(move_);

@@ -389,13 +389,14 @@ pub fn narStep0(nar:&mut ProcNar) {
                             newStamp(&stampEvi)
                         };
 
+                        let eviCnt:i64 = 1; // almost axiomatic
                         let evidenceSentence: SentenceDummy = SentenceDummy {
                             punct:EnumPunctation::JUGEMENT,
                             t:None,
                             stamp:stamp,
                             expDt:Some(expDt),
                             term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
-                            evi:Some(Evidence::CNT{pos:1,cnt:1})
+                            evi:Some(Evidence::CNT{pos:eviCnt,cnt:eviCnt})
                         };
                         
                         let workerIdx = nar.rng.gen_range(0, nar.storeWorkersTx.len());
