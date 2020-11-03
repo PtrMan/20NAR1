@@ -64,7 +64,11 @@ pub fn run() {
     
     Nar::inputN(&mut nar, &"w! :|:".to_string()); // add goal
 
+    let mut cntGames:i64 = -1;
+
     loop { // loop over individual game "epochs"
+        cntGames+=1;
+
         //let mut gamestate = envRc.borrow_mut();
         let mut gamestate = Gamestate{field: vec![' '; 9], player:true,}; // create(reset) gamestate
 
@@ -155,7 +159,7 @@ pub fn run() {
                             // remember NARS about current gamestate
                             {
                                 let stimulusVec: String = retFieldAsString(&gamestate.field);
-                                println!("NARS stimulus: {}  w/l ratio {}", stimulusVec, (wins as f64)/(losses as f64));
+                                println!("NARS stimulus: {}  w/l ratio = {}   games = {}", stimulusVec, (wins as f64)/(losses as f64), cntGames);
     
                                 //NarProc::narStep0(&mut nar.procNar);
                                 nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
