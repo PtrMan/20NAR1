@@ -48,6 +48,9 @@ pub struct ProcNar {
     /// how many concepts does it store at max (soft limit)
     pub cfg__nConcepts:i64,
 
+    /// how many beliefs are stored in a concept
+    pub cfg__nConceptBeliefs:usize,
+
     /// how many samples are done for goal derivation (per timed cycle)
     pub cfg__nGoalDeriverSamples:i64,
 
@@ -103,6 +106,7 @@ pub fn narInit() -> ProcNar {
         cfg__eviCnt: 3, // non-axiomatic
 
         cfg__nConcepts: 1000,
+        cfg__nConceptBeliefs: 100,
         cfg__nGoalDeriverSamples: 3, // 3 is enough for pong
         
         cfgVerbosity: 0, // be silent
@@ -132,6 +136,7 @@ pub fn narInit() -> ProcNar {
         nar.storeWorkersTx.push(tx);
 
         let evidenceMem = Arc::clone(&nar.evidenceMem);
+        let cfg__nConceptBeliefs = nar.cfg__nConceptBeliefs;
         nar.storeWorkers.push(thread::spawn(move|| {
             loop {
                 let msgRes = rx.recv();
@@ -176,7 +181,7 @@ pub fn narInit() -> ProcNar {
                 
                 if addEvidenceFlag.load(Ordering::Relaxed) {
                     // add evidence
-                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence);
+                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence, cfg__nConceptBeliefs);
                 }
             }
         }));
@@ -206,7 +211,7 @@ pub fn narInit() -> ProcNar {
 }
 
 /// add procedural evidence to memory
-pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &SentenceDummy) {
+pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &SentenceDummy, nBeliefs:usize) {
     // enumerate subterms to decide concept names where we store the belief
     let subterms = {
         let mut subterms = vec![];
@@ -216,7 +221,7 @@ pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence:
         subterms
     };
 
-    NarMem::storeInConcepts2(&mut evidenceMem.write(), &evidenceSentence, &subterms);
+    NarMem::storeInConcepts2(&mut evidenceMem.write(), &evidenceSentence, &subterms, nBeliefs);
 }
 
 /// returns all evidence, can be overlapping!

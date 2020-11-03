@@ -462,7 +462,7 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
 
 /// helper for debugging
 pub fn dbg(str2:&String) {
-    if true { // don't we want to debug?
+    if false { // don't we want to debug?
         return;
     }
 

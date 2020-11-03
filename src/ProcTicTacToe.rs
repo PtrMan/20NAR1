@@ -36,6 +36,7 @@ pub fn run() {
     
     // resources
     nar.procNar.cfg__nConcepts = 10000;
+    nar.procNar.cfg__nConceptBeliefs = 1000;
     nar.procNar.goalSystem.nMaxEntries = 5000; // give more resources (memory - goals)
     nar.procNar.cfg__nGoalDeriverSamples = 100; // give a lot of samples so that it builds the tree fast
 

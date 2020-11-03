@@ -30,15 +30,21 @@ pub struct Nar {
 
     /// verbosity of input
     pub cfgVerbosityInput:i32,
+
+    /// number of beliefs of concept
+    pub cfg__nConceptBeliefs: usize,
 }
 
 /// creates a new NAR with a default configuration
 // PUBLICAPI
 pub fn createNar() -> Nar {
+    let cfg__nConceptBeliefs = 20;
+
     Nar{
         procNar:NarProc::narInit(),
-        mem:createMem2(),
+        mem:createMem2(cfg__nConceptBeliefs),
         cfgVerbosityInput:1, // enable verbose input by default
+        cfg__nConceptBeliefs:cfg__nConceptBeliefs,
     }
 }
 
@@ -83,14 +89,14 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
         sentence.evi = Some(Evidence::CNT{pos:10,cnt:10}); // we need to transcribe TV
                                                          // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
         
-        NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence);
+        NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence, nar.cfg__nConceptBeliefs);
     }
     else {
         if punct == EnumPunctation::GOAL {
             println!("ERR : eternal goals are not supported!");
         }
         else {
-            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true);
+            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__nConceptBeliefs);
         }
     }
 }

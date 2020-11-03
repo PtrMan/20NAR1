@@ -33,12 +33,12 @@ pub fn make() -> Mem {
     Mem{concepts:HashMap::new(),}
 }
 
-pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy) {
-    storeInConcepts2(mem, s, &retSubterms(&*s.term)); // enumerate all terms, we need to do this to add the sentence to all relevant names
+pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy, nBeliefs: usize) {
+    storeInConcepts2(mem, s, &retSubterms(&*s.term), nBeliefs); // enumerate all terms, we need to do this to add the sentence to all relevant names
 }
 
 /// function is a indirection for more control over which subterms are used for storage
-pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
+pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>, nBeliefs: usize) {
     if s.punct != EnumPunctation::JUGEMENT {
         return; // ignore everything else than JUGEMENT
     }
@@ -69,7 +69,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>) {
                             concept.beliefs = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
                             
                             // keep under AIKR
-                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(200)].to_vec();
+                            concept.beliefs = concept.beliefs[..concept.beliefs.len().min(nBeliefs)].to_vec();
                         }
                     }
                     None => {

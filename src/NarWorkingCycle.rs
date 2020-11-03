@@ -979,7 +979,7 @@ pub struct Mem2 {
     pub deriverWorkersTx: Vec<SyncSender<DeriverWorkMessage>>,
 }
 
-pub fn createMem2()->Arc<RwLock<Mem2>> {
+pub fn createMem2(cfg__nConceptBeliefs:usize)->Arc<RwLock<Mem2>> {
     let mem0:NarMem::Mem = NarMem::Mem{
         concepts:HashMap::new(),
     };
@@ -1014,6 +1014,7 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
 
         let sharedArc:Arc<RwLock<DeclarativeShared>> = Arc::clone(&resArc.read().shared);
         let globalQaHandlers = Arc::clone(&resArc.read().globalQaHandlers);
+        let cfg__nConceptBeliefs = cfg__nConceptBeliefs;
         resArc.write().deriverWorkers.push(thread::spawn(move|| {
             let cfgEnInstrumentation = true;
             let mut rng = rand::thread_rng();
@@ -1181,7 +1182,7 @@ pub fn createMem2()->Arc<RwLock<Mem2>> {
                     
                     for iConcl in &concl {
                         // TODO< check if task exists already, don't add if it exists >
-                        memAddTask(Arc::clone(&sharedArc), iConcl, true);
+                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__nConceptBeliefs);
                     }
                 }
             }
@@ -1351,7 +1352,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
 }
 
 /// /param calcCredit compute the credit?
-pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool) {
+pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool, cfg__nConceptBeliefs:usize) {
     // try to revise
     let wasRevised = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
     if wasRevised {
@@ -1359,7 +1360,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy
     }
     // we are here if it can't revise
     
-    NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence); // store sentence in memory, adressed by concepts
+    NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence, cfg__nConceptBeliefs); // store sentence in memory, adressed by concepts
 
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
