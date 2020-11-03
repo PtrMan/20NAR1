@@ -23,7 +23,11 @@ pub struct Gamestate {
 
 
 pub fn run() {
-    let isHumanPlayer = false; // is human playing?, for testing
+    // who plays?
+    // 'h' human - for testing
+    // 'r' random
+    // 'a' AI (nars)
+    let player:char = 'a';
 
     let mut wins:i64 = 0;
     let mut losses:i64 = 0;
@@ -93,7 +97,7 @@ pub fn run() {
 
 
 
-                    if isHumanPlayer {
+                    if player == 'h' { // is human playing?
                         let mut input2 = String::new();
                         match io::stdin().read_line(&mut input2) {
                             Ok(_) => {
@@ -138,6 +142,12 @@ pub fn run() {
                             Err(error) => println!("error: {}", error),
                         }
                     }
+                    if player == 'r' { // random agent?
+                        let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
+                        if isValidMove {
+                            break;
+                        }
+                    }
                     else if moveCnt == 0 { // let first move be a random move for more exploration!
                         let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
                         if isValidMove {
@@ -159,7 +169,7 @@ pub fn run() {
                             // remember NARS about current gamestate
                             {
                                 let stimulusVec: String = retFieldAsString(&gamestate.field);
-                                println!("NARS stimulus: {}  w/l ratio = {}   games = {}", stimulusVec, (wins as f64)/(losses as f64), cntGames);
+                                println!("NARS stimulus: {}", stimulusVec);
     
                                 //NarProc::narStep0(&mut nar.procNar);
                                 nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
@@ -246,10 +256,12 @@ pub fn run() {
             if winner.is_some() { // did someone win?
                 println!("WINNER: {}", winner.unwrap());
 
+                println!("w/l ratio = {}   games = {}", (wins as f64)/(losses as f64), cntGames);
+
                 if winner.unwrap() == 'a' {
                     wins+=1;
                 }
-                else {
+                else if winner.unwrap() == 'b' {
                     losses+=1;
                 }
 
