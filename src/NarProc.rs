@@ -48,6 +48,9 @@ pub struct ProcNar {
     /// how many concepts does it store at max (soft limit)
     pub cfg__nConcepts:i64,
 
+    /// how many samples are done for goal derivation (per timed cycle)
+    pub cfg__nGoalDeriverSamples:i64,
+
 
     /// how verbose is the reasoner, mainly used for debugging
     pub cfgVerbosity:i64,
@@ -100,6 +103,7 @@ pub fn narInit() -> ProcNar {
         cfg__eviCnt: 3, // non-axiomatic
 
         cfg__nConcepts: 1000,
+        cfg__nGoalDeriverSamples: 3, // 3 is enough for pong
         
         cfgVerbosity: 0, // be silent
 
@@ -540,8 +544,7 @@ pub fn narStep1(nar:&mut ProcNar) {
 
     // give goal system resources
     if nar.t % 3 == 0 {
-        let enGoalSystem = true; // DISABLED because we want to test it without deriving goals!
-        if enGoalSystem {
+        for _iSample in 0..nar.cfg__nGoalDeriverSamples {
             NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem.read(), &mut nar.rng);
         }
     }

@@ -166,6 +166,8 @@ pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
 pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     let mut arr:Vec<Rc<RefCell<Entry>>> = retEntries(goalSystem); // working array with all entries
     
+    dbg(&format!("nEntries={}", arr.len()));
+
     // * recalc utility
     for iv in &arr {
         let mut iv2 = iv.borrow_mut();
@@ -208,10 +210,10 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
         let sumPriorities:f64 = goalSystem.batchesByDepth.iter().map(|iv| 
             if iv.borrow().groups.len() > 0 {1.0} else {0.0} // only consider batches which have groups
         ).sum();
-
-        //println!("DBG  sum prio {}", sumPriorities);
     
         let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
+
+        dbg(&format!("sample sum prio={} selPrio={}", sumPriorities, selPriority));
     
         // select
         /* commented because it is old buggy code
@@ -235,12 +237,12 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
             if iv.borrow().groups.len() > 0 {
                 sum+=1.0;
                 selBatch = Rc::clone(iv);
-
-                //println!("DBG500 sel idx {}", idx);
             };
             
             idx+=1;
         }
+
+        dbg(&format!("sel byDepthIdx={}", idx));
 
         selBatch
     };
@@ -460,7 +462,7 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
 
 /// helper for debugging
 pub fn dbg(str2:&String) {
-    if true { // don't we want to debug?
+    if false { // don't we want to debug?
         return;
     }
 
