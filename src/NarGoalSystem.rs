@@ -213,7 +213,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     
         let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
 
-        dbg(&format!("sample sum prio={} selPrio={}", sumPriorities, selPriority));
+        //dbg(&format!("sample sum prio={} selPrio={}", sumPriorities, selPriority));
     
         // select
         /* commented because it is old buggy code
@@ -242,7 +242,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
             idx+=1;
         }
 
-        dbg(&format!("sel byDepthIdx={}", idx));
+        //dbg(&format!("sel byDepthIdx={}", idx));
 
         selBatch
     };
@@ -395,6 +395,8 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
 
     let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<RwLock<SentenceDummy>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
     
+    //dbg(&format!("sampleAndInference() sampled goal = {}", &NarSentence::convSentenceTermPunctToStr(&sampledGoal, true)));
+
     // * try to do goal detachment
     match &*sampledGoal.term {
         Term::Seq(seq) if seq.len() >= 1 => {
@@ -404,10 +406,12 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
         },
         _ => {
             // * try to find candidates for inference
-            let envidenceCandidates: Vec<Arc<RwLock<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, procMem);
+            let evidenceCandidates: Vec<Arc<RwLock<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, procMem);
+
+            //dbg(&format!("sampleAndInference() found belief candidates #={}", evidenceCandidates.len()));
 
             // * try to do inference
-            for iBelief in &envidenceCandidates {
+            for iBelief in &evidenceCandidates {
                 let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &iBelief.read());
                 if conclOpt.is_some() {
                     concls.push((Arc::new(conclOpt.unwrap()), Some(Arc::clone(iBelief)), sampledDepth+1));
@@ -452,7 +456,7 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
 
     for iv in &retEntries(goalSystem) {
         let sentenceAsStr = NarSentence::convSentenceTermPunctToStr(&(*iv).borrow().sentence, true);
-        res += &format!("{}   util={}\n", &sentenceAsStr, &(*iv).borrow().utility);
+        res += &format!("{}   util={} depth={}\n", &sentenceAsStr, &(*iv).borrow().utility, iv.borrow().depth);
     }
 
     res

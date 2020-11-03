@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::Nar;
 use crate::NarProc;
+use crate::NarGoalSystem;
 use crate::Term::*;
 //use crate::NarInputFacade;
 
@@ -40,6 +41,11 @@ pub fn run() {
     nar.procNar.goalSystem.nMaxEntries = 5000; // give more resources (memory - goals)
     nar.procNar.cfg__nGoalDeriverSamples = 100; // give a lot of samples so that it builds the tree fast
 
+    // debugging
+    nar.procNar.cfgVerbosity = 1; // debug perceptions
+
+
+
     nar.procNar.cfgEnBabbling = false; // disable by default
 
 
@@ -62,12 +68,14 @@ pub fn run() {
         //let mut gamestate = envRc.borrow_mut();
         let mut gamestate = Gamestate{field: vec![' '; 9], player:true,}; // create(reset) gamestate
 
+        // flush trace  because it shouldn't confuse moves
+        nar.procNar.trace = vec![];
+
         loop { // loop as long as this game is going
 
             
 
-            // flush trace  because it shouldn't confuse moves
-            nar.procNar.trace = vec![];
+
             // flush anticipations   because anticipations don't matter, and because the moves can happen in fast succession to NARS
             nar.procNar.anticipatedEvents = vec![];
 
@@ -240,6 +248,24 @@ pub fn run() {
                         NarProc::narStep0(&mut nar.procNar);
                         NarProc::narStep1(&mut nar.procNar);
                     }    
+
+
+
+                    // TESTING - for testing - see if reasoner finds a plan to the goal 
+                    loop { // give reasoner infinite amount of time
+                        
+                        for _iStep in 0..50 {
+                            NarProc::narStep0(&mut nar.procNar);
+                            NarProc::narStep1(&mut nar.procNar);
+                        }
+
+                        println!("DBG goals:");
+                        println!("{}", &NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem));
+
+
+                        panic!("TROUBLESHOOTING - DONE"); // terminate for trouble shooting
+
+                    }    
                 }
 
 
@@ -252,14 +278,15 @@ pub fn run() {
                 break;
             }
 
+            if !gamestate.player { // was the enemy active, then let NARS perceive the outcome of the enemy action too
+                // compute stimulus vector for NARS
+                let stimulusVec: String = retFieldAsString(&gamestate.field);
+                println!("NARS stimulus: {}", stimulusVec);
 
-            // compute stimulus vector for NARS
-            let stimulusVec: String = retFieldAsString(&gamestate.field);
-            println!("NARS stimulus: {}", stimulusVec);
-
-            NarProc::narStep0(&mut nar.procNar);
-            nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
-            NarProc::narStep1(&mut nar.procNar);
+                NarProc::narStep0(&mut nar.procNar);
+                nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
+                NarProc::narStep1(&mut nar.procNar);
+            }
 
             for _iStep in 0..50 { // give reasoner time
                 NarProc::narStep0(&mut nar.procNar);
