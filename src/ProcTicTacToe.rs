@@ -71,6 +71,8 @@ pub fn run() {
         // flush trace  because it shouldn't confuse moves
         nar.procNar.trace = vec![];
 
+        let mut moveCnt:i64 = 0;
+
         loop { // loop as long as this game is going
 
             
@@ -132,6 +134,12 @@ pub fn run() {
                             Err(error) => println!("error: {}", error),
                         }
                     }
+                    else if moveCnt == 0 { // let first move be a random move for more exploration!
+                        let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
+                        if isValidMove {
+                            break;
+                        }
+                    }
                     else { // let NARS pick action
                         
                         let mut narMove:Option<i64> = None;
@@ -184,7 +192,7 @@ pub fn run() {
 
                     }
 
-
+                    moveCnt+=1;
                 }
                 else {
                     
