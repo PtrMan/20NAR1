@@ -111,8 +111,7 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
 pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<RwLock<SentenceDummy>>>, depth:i64) {
     if goalSystem.cfg__dbg_enAddEntry { // print goal which is tried to put into system
         if depth > 2 {
-            println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true));
-            //panic!("DEBUGGING SHOULD BE FINISHED BECAUSE WE HIT DEVGOAL");
+            //println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true));
         }
     };
     
@@ -132,7 +131,7 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
 
 pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     let chosenDepthIdx:usize = e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize;
-    dbg(&format!("addEntry depth = {} chosenDepthIdx = {}", e.borrow().depth, chosenDepthIdx));
+    //dbg(&format!("addEntry depth = {} chosenDepthIdx = {}", e.borrow().depth, chosenDepthIdx));
 
     let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[chosenDepthIdx]);
     let mut chosenBatch = chosenBatchRc.borrow_mut();
@@ -401,7 +400,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
     match &*sampledGoal.term {
         Term::Seq(seq) if seq.len() >= 1 => {
             let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&sampledGoal).unwrap(),sampledGoal.stamp.clone());
-            dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
+            //dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
             concls.push((Arc::new(detachedGoal), None, sampledDepth+1));
         },
         _ => {

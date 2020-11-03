@@ -42,7 +42,7 @@ pub fn run() {
     nar.procNar.cfg__nGoalDeriverSamples = 100; // give a lot of samples so that it builds the tree fast
 
     // debugging
-    nar.procNar.cfgVerbosity = 1; // debug perceptions
+    //nar.procNar.cfgVerbosity = 1; // debug perceptions
 
 
 
@@ -252,6 +252,7 @@ pub fn run() {
 
 
                     // TESTING - for testing - see if reasoner finds a plan to the goal 
+                    /*
                     loop { // give reasoner infinite amount of time
                         
                         for _iStep in 0..50 {
@@ -265,7 +266,8 @@ pub fn run() {
 
                         panic!("TROUBLESHOOTING - DONE"); // terminate for trouble shooting
 
-                    }    
+                    }
+                    */
                 }
 
 
