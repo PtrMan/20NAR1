@@ -285,7 +285,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 
 /// does inference of goal with a belief
 /// returns derivation
-pub fn infer(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDummy> {
+pub fn infGoalBelief(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDummy> {
     // check if term is same and inference can be done
     match &*belief.term {
         Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
@@ -411,7 +411,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
 
             // * try to do inference
             for iBelief in &evidenceCandidates {
-                let conclOpt:Option<SentenceDummy> = infer(&sampledGoal, &iBelief.read());
+                let conclOpt:Option<SentenceDummy> = infGoalBelief(&sampledGoal, &iBelief.read());
                 if conclOpt.is_some() {
                     concls.push((Arc::new(conclOpt.unwrap()), Some(Arc::clone(iBelief)), sampledDepth+1));
                 }
