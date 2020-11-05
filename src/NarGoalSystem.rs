@@ -327,6 +327,22 @@ pub fn infGoalBelief(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<Sent
     }
 }
 
+/// goal detachment rule
+///
+/// ex: (a, b)! |- a!
+pub fn infGoalDetach(premise: &SentenceDummy) -> Option<SentenceDummy> {
+    // TODO< assert that premise is a goal
+
+    // * try to do goal detachment
+    match &*premise.term {
+        Term::Seq(seq) if seq.len() >= 1 => {
+            let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&premise).unwrap(),premise.stamp.clone());
+            //dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
+            Some(detachedGoal)
+        },
+        _ => {None}
+    }
+}
 
 
 /// filters belief candidates which can be used for inference with the goal
@@ -397,11 +413,9 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
     //dbg(&format!("sampleAndInference() sampled goal = {}", &NarSentence::convSentenceTermPunctToStr(&sampledGoal, true)));
 
     // * try to do goal detachment
-    match &*sampledGoal.term {
-        Term::Seq(seq) if seq.len() >= 1 => {
-            let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&sampledGoal).unwrap(),sampledGoal.stamp.clone());
-            //dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
-            concls.push((Arc::new(detachedGoal), None, sampledDepth+1));
+    match infGoalDetach(&sampledGoal) {
+        Some(concl) => {
+            concls.push((Arc::new(concl), None, sampledDepth+1));
         },
         _ => {
             // * try to find candidates for inference
