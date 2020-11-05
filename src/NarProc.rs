@@ -44,6 +44,9 @@ pub struct ProcNar {
     /// how many pieces of evidence are assigned to an observation, usually low numbers, high numbers make the observation more axiomatic
     pub cfg__eviCnt:i64,
 
+    /// is anticipation enabled? disable for specialized functionality
+    pub cfg__enAnticipation: bool,
+
 
     /// how many concepts does it store at max (soft limit)
     pub cfg__nConcepts:i64,
@@ -104,6 +107,7 @@ pub fn narInit() -> ProcNar {
         cfg__nOpsMax: 1,
         cfg__multiOpProbability: 0.2,
         cfg__eviCnt: 3, // non-axiomatic
+        cfg__enAnticipation: true, // by default
 
         cfg__nConcepts: 1000,
         cfg__nConceptBeliefs: 100,
@@ -481,10 +485,13 @@ pub fn narStep1(nar:&mut ProcNar) {
                         else {0}; // else it needs a default interval
                     let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
                     let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
-                    nar.anticipatedEvents.push(AnticipationEvent {
-                        evi:Arc::clone(&pickedEvidence),
-                        deadline:deadline,
-                    });
+                    
+                    if nar.cfg__enAnticipation { // is anticipation enabled?
+                        nar.anticipatedEvents.push(AnticipationEvent {
+                            evi:Arc::clone(&pickedEvidence),
+                            deadline:deadline,
+                        });
+                    }
                 }
             }
         }

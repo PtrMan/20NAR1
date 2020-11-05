@@ -47,7 +47,7 @@ pub fn run() {
 
     // debugging
     //nar.procNar.cfgVerbosity = 1; // debug perceptions
-
+    nar.procNar.cfg__enAnticipation = false; // disable for testing
 
 
     nar.procNar.cfgEnBabbling = false; // disable by default
