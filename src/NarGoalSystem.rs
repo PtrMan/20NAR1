@@ -27,6 +27,7 @@ use crate::NarSentence::newEternalSentenceByTv;
 use crate::NarWorkingCycle;
 use crate::NarMem;
 use crate::NarUnify;
+use crate::NarInfProcedural;
 
 /// structure for the goal system
 pub struct GoalSystem {
@@ -283,67 +284,6 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     selEntry
 }
 
-/// does inference of goal with a belief
-/// returns derivation
-pub fn infGoalBelief(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDummy> {
-    // check if term is same and inference can be done
-    match &*belief.term {
-        Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
-            if !checkEqTerm(&goal.term, &pred) {
-                return None; // can't do inference because terms have to be equal
-            }
-        },
-        _ => {
-            // don't do anything here
-            return None;
-        }
-    }
-    
-    if NarStamp::checkOverlap(&goal.stamp, &belief.stamp) {
-        return None; // overlap -> can't derive anything
-    }
-
-
-    
-    // we need to derive goals from matching implSeqs by goal deduction
-    // a =/> b.
-    // b!
-    // |- ded
-    // a!
-    let tvCompound = retTv(&belief).unwrap();
-    let tvComponent = retDesire(&goal);
-    let tvConcl = Tv::ded(&tvCompound, &tvComponent);
-    
-    let stamp = NarStamp::merge(&goal.stamp, &belief.stamp);
-
-    match &*belief.term {
-        Term::Stmt(Copula::PREDIMPL, subj, _) => {
-            return Some(newEternalSentenceByTv(&subj,EnumPunctation::GOAL,&tvConcl,stamp));
-        },
-        _ => {
-            // don't do anything here
-            return None;
-        }
-    }
-}
-
-/// goal detachment rule
-///
-/// ex: (a, b)! |- a!
-pub fn infGoalDetach(premise: &SentenceDummy) -> Option<SentenceDummy> {
-    // TODO< assert that premise is a goal
-
-    // * try to do goal detachment
-    match &*premise.term {
-        Term::Seq(seq) if seq.len() >= 1 => {
-            let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&premise).unwrap(),premise.stamp.clone());
-            //dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
-            Some(detachedGoal)
-        },
-        _ => {None}
-    }
-}
-
 
 /// filters belief candidates which can be used for inference with the goal
 pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
@@ -413,7 +353,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
     //dbg(&format!("sampleAndInference() sampled goal = {}", &NarSentence::convSentenceTermPunctToStr(&sampledGoal, true)));
 
     // * try to do goal detachment
-    match infGoalDetach(&sampledGoal) {
+    match NarInfProcedural::infGoalDetach(&sampledGoal) {
         Some(concl) => {
             concls.push((Arc::new(concl), None, sampledDepth+1));
         },
@@ -425,7 +365,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
 
             // * try to do inference
             for iBelief in &evidenceCandidates {
-                let conclOpt:Option<SentenceDummy> = infGoalBelief(&sampledGoal, &iBelief.read());
+                let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &iBelief.read());
                 if conclOpt.is_some() {
                     concls.push((Arc::new(conclOpt.unwrap()), Some(Arc::clone(iBelief)), sampledDepth+1));
                 }
@@ -458,10 +398,6 @@ pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
 
 
 
-// helper
-pub fn retDesire(goal: &SentenceDummy) -> Tv::Tv {
-    retTv(&goal).unwrap() // interpret tv as desire
-}
 
 /// helper for debugging: return all goals as text
 pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
