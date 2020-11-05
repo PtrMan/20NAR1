@@ -338,24 +338,23 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
     res
 }
 
-/// /param t is the procedural reasoner NAR time
-pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
-    // * sample goal
-    let sampledGoalOpt: Option<(Arc<SentenceDummy>, i64)> = sample(&goalSystem, rng);
+/// helper struct for deriver
+/// carries goal with evidence and the depth of the goal
+struct H {
+    goal: Arc<SentenceDummy>,
+    evidence: Option<Arc<RwLock<SentenceDummy>>>,
+    depth: i64,
+}
 
-    if !sampledGoalOpt.is_some() {
-        return; // no goal was sampled -> give up
-    }
-    let (sampledGoal, sampledDepth): (Arc<SentenceDummy>, i64) = sampledGoalOpt.unwrap();
 
-    let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<RwLock<SentenceDummy>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
-    
-    //dbg(&format!("sampleAndInference() sampled goal = {}", &NarSentence::convSentenceTermPunctToStr(&sampledGoal, true)));
+// private because helper for sampleAndInference()
+/// sampledDepth: depth of sampled goal
+fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, procMem:&NarMem::Mem)->Vec<H> {
+    let mut concls:Vec<H> = Vec::new(); // conclusions
 
-    // * try to do goal detachment
     match NarInfProcedural::infGoalDetach(&sampledGoal) {
         Some(concl) => {
-            concls.push((Arc::new(concl), None, sampledDepth+1));
+            concls.push(H{goal:Arc::new(concl), evidence:None, depth:sampledDepth+1});
         },
         _ => {
             // * try to find candidates for inference
@@ -367,11 +366,91 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
             for iBelief in &evidenceCandidates {
                 let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &iBelief.read());
                 if conclOpt.is_some() {
-                    concls.push((Arc::new(conclOpt.unwrap()), Some(Arc::clone(iBelief)), sampledDepth+1));
+                    concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(iBelief)), depth:sampledDepth+1});
                 }
             }
         }
     }
+
+    concls
+}
+
+
+/// /param t is the procedural reasoner NAR time
+pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
+    // * sample goal from set of goals
+    let sampledGoalOpt: Option<(Arc<SentenceDummy>, i64)> = sample(&goalSystem, rng);
+
+    if !sampledGoalOpt.is_some() {
+        return; // no goal was sampled -> give up
+    }
+    let (sampledGoal, sampledDepth): (Arc<SentenceDummy>, i64) = sampledGoalOpt.unwrap();
+
+    let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<RwLock<SentenceDummy>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
+    
+    //dbg(&format!("sampleAndInference() sampled goal = {}", &NarSentence::convSentenceTermPunctToStr(&sampledGoal, true)));
+
+    {
+        // we need a structure to store goals in the working set with some meta-information
+        struct WsEntry { // working set entry
+            pub goal: Arc<SentenceDummy>, // goal
+            pub sampledDepth: i64, // the depth of the goal
+        }
+
+        // put sampled goal into working set
+        let mut workingSet: Vec<Rc<WsEntry>> = vec![];
+        workingSet.push(Rc::new(WsEntry {
+            goal: Arc::clone(&sampledGoal),
+            sampledDepth: sampledDepth,
+        }));
+
+        // MECHANISM "sub working cycle"<
+        //    we sample a goal from the global set of goals and put it as the "entry" goal into the working set
+        //    
+        //    we then derive goals in the working set until we run out of (compute) time.
+        //    this way it's possible to deeply examine some sub-goals of goals
+        //
+        //    all conclusions are immediatly put back into the global set of goals!
+        // >
+
+        let cfg__subworkingCycle_rounds:i64 = 15; // how many times are goals sample in the sub-working-cycle?
+
+        for _iRound in 0..cfg__subworkingCycle_rounds {
+            if workingSet.len() == 0 {
+                break; // no more goals -> we are done
+            }
+
+            // sample goal from workingSet
+
+            let sampledWsEntry: Rc<WsEntry> = {
+                let selIdx = rng.gen_range(0, workingSet.len());
+                workingSet.swap_remove(selIdx) // select and remove element
+            };
+
+            // do actual derivations!
+
+            // TODO TODO TODO TODO< pick in deriveGoalsHelper() only two beliefs! >
+            for iconcl in deriveGoalsHelper(&sampledWsEntry.goal, sampledWsEntry.sampledDepth, &procMem) {
+                workingSet.push(Rc::new(WsEntry{goal:iconcl.goal.clone(), sampledDepth:iconcl.depth})); // add to working set for processing
+                concls.push((iconcl.goal, iconcl.evidence, iconcl.depth)); // add to conclusions
+            }
+        }
+    }
+
+
+
+
+
+    
+    { // old mechanism
+      // process only sampled goal
+      // we need to do this additional to the other mechanism, because the other mechanism doesn't process all belief candidates!
+        for iconcl in deriveGoalsHelper(&sampledGoal, sampledDepth, procMem) {
+            concls.push((iconcl.goal, iconcl.evidence, iconcl.depth));
+        }
+    }
+
+
 
     // * try to add goals
     for (iGoal, iEvidence, iDepth) in &concls {
