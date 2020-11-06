@@ -285,18 +285,50 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 }
 
 
-/// filters belief candidates which can be used for inference with the goal
-pub fn retBeliefCandidates(goal: &SentenceDummy, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
+
+/// filters belief candidates by antecedent
+/// ex:
+/// queryterm: a
+/// belief (a, x) =/> b
+/// belief (b, x) =/> b
+/// returns
+/// belief (a, x) =/> b
+pub fn query_by_antecedent(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
     let mut res = Vec::new();
 
     // query memory for potential evidence which we can use
-    let potentialEvidence = NarMem::ret_beliefs_by_terms_nonunique(procMem, &[(*goal.term).clone()]);
+    let potentialEvidence = NarMem::ret_beliefs_by_terms_nonunique(procMem, &[(*queryTerm).clone()]);
+    
+    // filter
+    for iBelief in &potentialEvidence {
+        match &*(iBelief.read()).term {
+            Term::Stmt(Copula::PREDIMPL, subj, _pred) => {
+                match &**subj {
+                    Term::Seq(seq) if checkEqTerm(&queryTerm, &seq[0]) => {
+                        res.push(Arc::clone(iBelief));
+                    },
+                    _ => {}
+                }
+            },
+            _ => {}
+        }
+    }
+
+    res
+}
+
+/// filters belief candidates which can be used for inference with the goal
+pub fn query_by_consequence(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
+    let mut res = Vec::new();
+
+    // query memory for potential evidence which we can use
+    let potentialEvidence = NarMem::ret_beliefs_by_terms_nonunique(procMem, &[(*queryTerm).clone()]);
     
     // filter
     for iBelief in &potentialEvidence {
         match &*(iBelief.read()).term {
             Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
-                if checkEqTerm(&goal.term, &pred) {
+                if checkEqTerm(&queryTerm, &pred) {
                     res.push(Arc::clone(iBelief));
                 }
             },
@@ -358,7 +390,7 @@ fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, procMem:&Nar
         },
         _ => {
             // * try to find candidates for inference
-            let evidenceCandidates: Vec<Arc<RwLock<SentenceDummy>>> = retBeliefCandidates(&sampledGoal, procMem);
+            let evidenceCandidates: Vec<Arc<RwLock<SentenceDummy>>> = query_by_consequence(&sampledGoal.term, procMem);
 
             //dbg(&format!("sampleAndInference() found belief candidates #={}", evidenceCandidates.len()));
 
