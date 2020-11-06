@@ -426,6 +426,8 @@ pub fn narStep0(nar:&mut ProcNar) {
 }
 
 /// does second part of reasoner step
+///
+/// usually after events were put into the FIFO
 pub fn narStep1(nar:&mut ProcNar) {    
     let mut pickedAction:Option<Term> = None; // complete term of op
     {
