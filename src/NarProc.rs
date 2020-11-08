@@ -438,6 +438,14 @@ pub fn narStep1(nar:&mut ProcNar) {
             evidence: Option<Arc<RwLock<SentenceDummy>>>, // evidence, used for anticipation
         };
 
+        // helper to clone evidence
+        fn cloneEvidence(v: &Option<Arc<RwLock<SentenceDummy>>>) -> Option<Arc<RwLock<SentenceDummy>>> {
+            match v {
+                Some(vv) => {Some(Arc::clone(vv))},
+                None => None
+            }
+        }
+
         let mut bestEntry2: Option<BestEntry> = None;
 
         // * search if we can satisfy goal
@@ -453,13 +461,6 @@ pub fn narStep1(nar:&mut ProcNar) {
                 match thisEntry.1 {
                     Some(e) => { // was a candidate found?
 
-                        // helper to clone evidence
-                        fn cloneEvidence(v: &Option<Arc<RwLock<SentenceDummy>>>) -> Option<Arc<RwLock<SentenceDummy>>> {
-                            match v {
-                                Some(vv) => {Some(Arc::clone(vv))},
-                                None => None
-                            }
-                        }
 
                         match bestEntry2 { // is there best entry?
                             Some(ref bestEntry4) => {
@@ -496,14 +497,51 @@ pub fn narStep1(nar:&mut ProcNar) {
                 let checkedState:Term = nar.trace[nar.trace.len()-1].name.clone();
 
                 // build predicated event with term and TV
-                let mut predTerm: Term = checkedState.clone();
-                let mut predTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
+                let mut predictedTerm: Term = checkedState.clone();
+                let mut predictedTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
+
+                let mut firstExecEvidence: Option<Arc<RwLock<SentenceDummy>>> = None; // used to remember evidence of first impl seq
 
                 let cfg__forwardPredication_steps:i64 = 3; // how many steps are maximaly utilized for forward planning with prediction?, set to 0 to disable feature, IS EXPERIMENTAL
                 for iStep in 0..cfg__forwardPredication_steps {
-                    let queryResult: Vec<Arc<RwLock<SentenceDummy>>> = NarGoalSystem::query_by_antecedent(&predTerm, &nar.evidenceMem.read());
+                    
+                    // check if prediction did hit a goal
+                    if iStep > 0 {
+                        let isAnyGoalHit = NarGoalSystem::check_isGoal(&nar.goalSystem, &predictedTerm);
+                        if isAnyGoalHit && firstExecEvidence.is_some() {
+                            // build enactable decision
+                            
+                            let exp: f64 = Tv::calcExp(&predictedTv);
+                            // TODO< unify! >
+                            let unifiedSeq: Term = retSubj(&cloneEvidence(&firstExecEvidence).unwrap().read().term); // sequence which has unified vars
+
+                            match bestEntry2 { // is there best entry?
+                                Some(ref bestEntry4) => {
+                                    if exp > bestEntry4.exp {
+                                        bestEntry2 = Some(BestEntry{
+                                            unifiedSeq: unifiedSeq,
+                                            exp:exp,
+                                            evidence:cloneEvidence(&firstExecEvidence)});
+                                    }
+                                },
+                                None => {
+                                    bestEntry2 = Some(BestEntry{
+                                        unifiedSeq: unifiedSeq,
+                                        exp:exp,
+                                        evidence:cloneEvidence(&firstExecEvidence)});
+                                }
+                            }
+
+                            break; // break because we found a goal which was hit
+                        }
+                    }
+
+                    
+                    let queryResult: Vec<Arc<RwLock<SentenceDummy>>> = NarGoalSystem::query_by_antecedent(&predictedTerm, &nar.evidenceMem.read());
                     if queryResult.len() == 0 {
                         // no result for query of chain, give up
+
+                        firstExecEvidence = None; // discard decision because it didn't hit goal
                         break;
                     }
 
@@ -514,22 +552,18 @@ pub fn narStep1(nar:&mut ProcNar) {
                     };
 
                     if iStep == 0 { // we need to remember op of first impl seq
-
-                        // remember first op
-                        let firstExecOpTerm: Term = retImplSeqOp(&sel.read().term);
-                        let firstExecEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(sel);
-
-                        // TODO< really remember it ! >
+                        // remember first impl seq
+                        firstExecEvidence = Some(Arc::clone(sel));
                     }
 
                     let tvOfSelEvidence: Tv::Tv = retTv(&sel.read()).unwrap();
 
-                    let conclTv: Tv::Tv = Tv::ded(&predTv, &tvOfSelEvidence); // TODO< check if math for TV checks out >
+                    let conclTv: Tv::Tv = Tv::ded(&predictedTv, &tvOfSelEvidence); // TODO< check if math for TV checks out >
 
                     // ** set predicted TV as TV of concl
-                    predTv = conclTv;
+                    predictedTv = conclTv;
                     // ** extract consequent of belief
-                    // TODO TODO TODO
+                    predictedTerm = retPred(&sel.read().term);
                 }
             }
         }
@@ -588,63 +622,6 @@ pub fn narStep1(nar:&mut ProcNar) {
             },
             None => {}
         }
-
-        /*
-        // * pick action and expected event to anticipations
-        if bestEntry2.is_some() && bestEntry2.unwrap().exp > nar.cfgDescnThreshold {
-            ///////let entryAndUnfied:&(Rc<RefCell<NarGoalSystem::Entry>>, Term) = &bestEntry.1.unwrap();
-            //let entity:&Rc<RefCell<NarGoalSystem::Entry>> = &entryAndUnfied.0;
-            //let pickedEvidenceOpt: &Option<Arc<RwLock<SentenceDummy>>> = &entity.borrow().evidence;
-
-            let pickedEvidenceOpt: &Option<Arc<RwLock<SentenceDummy>>> = &bestEntry2.unwrap().evidence;
-
-            if pickedEvidenceOpt.is_some() {
-
-                let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&pickedEvidenceOpt.as_ref().unwrap());
-
-                // extract op of seq
-                //enforce(is_seq(&bestEntry2.unwrap().unifiedSeq)); // must be sequence
-                //enforce(is_seqAnd2ndOp(&bestEntry2.unwrap().unifiedSeq)); // 2nd must be op!
-                let opTerm:Term = retSeqOp(&bestEntry2.unwrap().unifiedSeq);
-                
-                
-                { // info
-                    let implSeqAsStr = convSentenceTermPunctToStr(&pickedEvidence.read(), true); // unified
-                    let actAsStr:String = convTermToStr(&opTerm);
-                    let pickedExp:f64 = bestEntry2.unwrap().exp;
-                    if nar.cfgVerbosity > 0 {println!("descnMaking: found best act = {}   implSeq={}    exp = {}", &actAsStr, &implSeqAsStr, pickedExp)};
-                }
-                
-                // try to decode op into args and name
-                let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
-                if nar.cfgVerbosity > 1 {println!("descnMaking: could decode op = {}", decodedOpOpt.is_some());};
-                if decodedOpOpt.is_some() { // we can only exec op if op is valid format
-                    //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
-    
-                    pickedAction = Some(opTerm.clone());
-                    
-                    // add anticipated event
-                    let expIntervalIdx:i64 =
-                        if pickedEvidence.read().expDt.is_some() {
-                            pickedEvidence.read().expDt.unwrap()
-                        }
-                        else {0}; // else it needs a default interval
-                    let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
-                    let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
-                    
-                    if nar.cfg__enAnticipation { // is anticipation enabled?
-                        nar.anticipatedEvents.push(AnticipationEvent {
-                            evi:Arc::clone(&pickedEvidence),
-                            deadline:deadline,
-                        });
-                    }
-                }
-
-
-            }
-
-
-        }*/
     }
     
     match &pickedAction {
@@ -754,6 +731,18 @@ pub fn retPred(term:&Term) -> Term {
     match term {
         Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
             (**pred).clone()
+        },
+        _ => {
+            panic!("expected pred impl!");
+        }
+    }
+}
+
+/// return subject of impl seq
+pub fn retSubj(term:&Term) -> Term {
+    match term {
+        Term::Stmt(Copula::PREDIMPL, subj, _pred) => {
+            (**subj).clone()
         },
         _ => {
             panic!("expected pred impl!");

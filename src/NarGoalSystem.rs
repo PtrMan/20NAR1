@@ -506,7 +506,16 @@ pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
     }
 }
 
-
+/// returns if the event is a goal
+pub fn check_isGoal(goalSystem: &GoalSystem, eventTerm:&Term) -> bool {
+    for iEntityRc in retEntries(goalSystem) {
+        let iEntity = iEntityRc.borrow_mut();
+        if checkEqTerm(&iEntity.sentence.term, eventTerm) { // terms must of course to match up
+            return true;
+        }
+    }
+    false
+}
 
 
 
