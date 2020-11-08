@@ -491,7 +491,7 @@ pub fn narStep1(nar:&mut ProcNar) {
         // >
         {
             if nar.trace.len() > 0 {
-                // TODO< don't plan forward if term is a goal! >
+                // TODO< don't plan forward if term is a op! >
 
                 // sel last event
                 let checkedState:Term = nar.trace[nar.trace.len()-1].name.clone();
