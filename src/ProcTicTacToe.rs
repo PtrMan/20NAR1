@@ -148,12 +148,13 @@ pub fn run() {
                             break;
                         }
                     }
+                    /*
                     else if moveCnt == 0 { // let first move be a random move for more exploration!
                         let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
                         if isValidMove {
                             break;
                         }
-                    }
+                    }*/
                     else { // let NARS pick action
                         
                         let mut narMove:Option<i64> = None;
