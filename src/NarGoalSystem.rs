@@ -378,10 +378,18 @@ struct H {
     depth: i64,
 }
 
+/// enum to tell the strategy of deriving goals
+enum EnumGoalDerivationStrategy {
+    /// derive from all beliefs
+    ALL_BELIEFS,
+
+    /// sample two random beliefs
+    SAMPLE_2,
+}
 
 // private because helper for sampleAndInference()
 /// sampledDepth: depth of sampled goal
-fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, procMem:&NarMem::Mem)->Vec<H> {
+fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, strategy:EnumGoalDerivationStrategy, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng)->Vec<H> {
     let mut concls:Vec<H> = Vec::new(); // conclusions
 
     match NarInfProcedural::infGoalDetach(&sampledGoal) {
@@ -395,12 +403,28 @@ fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, procMem:&Nar
             //dbg(&format!("sampleAndInference() found belief candidates #={}", evidenceCandidates.len()));
 
             // * try to do inference
-            for iBelief in &evidenceCandidates {
-                let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &iBelief.read());
-                if conclOpt.is_some() {
-                    concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(iBelief)), depth:sampledDepth+1});
+            match strategy {
+                ALL_BELIEFS => {
+                    for iBelief in &evidenceCandidates {
+                        let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &iBelief.read());
+                        if conclOpt.is_some() {
+                            concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(iBelief)), depth:sampledDepth+1});
+                        }
+                    }
+                },
+                SAMPLE_2 => {
+                    for _it in 0..2 {
+                        if evidenceCandidates.len() > 0 {
+                            let idx = rng.gen_range(0, evidenceCandidates.len());
+                            let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &evidenceCandidates[idx].read());
+                            if conclOpt.is_some() {
+                                concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(&evidenceCandidates[idx])), depth:sampledDepth+1});
+                            }
+                        }
+                    }
                 }
             }
+
         }
     }
 
@@ -460,9 +484,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
             };
 
             // do actual derivations!
-
-            // TODO TODO TODO TODO< pick in deriveGoalsHelper() only two beliefs! >
-            for iconcl in deriveGoalsHelper(&sampledWsEntry.goal, sampledWsEntry.sampledDepth, &procMem) {
+            for iconcl in deriveGoalsHelper(&sampledWsEntry.goal, sampledWsEntry.sampledDepth, /* pick in deriveGoalsHelper() only two beliefs */ EnumGoalDerivationStrategy::SAMPLE_2, &procMem, rng) {
                 workingSet.push(Rc::new(WsEntry{goal:iconcl.goal.clone(), sampledDepth:iconcl.depth})); // add to working set for processing
                 concls.push((iconcl.goal, iconcl.evidence, iconcl.depth)); // add to conclusions
             }
@@ -477,7 +499,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
     { // old mechanism
       // process only sampled goal
       // we need to do this additional to the other mechanism, because the other mechanism doesn't process all belief candidates!
-        for iconcl in deriveGoalsHelper(&sampledGoal, sampledDepth, procMem) {
+        for iconcl in deriveGoalsHelper(&sampledGoal, sampledDepth, EnumGoalDerivationStrategy::ALL_BELIEFS, procMem, rng) {
             concls.push((iconcl.goal, iconcl.evidence, iconcl.depth));
         }
     }
