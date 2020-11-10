@@ -70,7 +70,13 @@ pub fn run() {
 
     let mut cntGames:i64 = -1;
 
+    let maxEpochs:i64 = 500; // maximum number of tried epochs, thest is interrupted after this number is reached
+
     loop { // loop over individual game "epochs"
+        if cntGames >= maxEpochs {
+            break; // terminate test because time limit reached
+        }
+    
         cntGames+=1;
 
         //let mut gamestate = envRc.borrow_mut();
