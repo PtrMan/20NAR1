@@ -515,6 +515,11 @@ pub fn narStep1(nar:&mut ProcNar) {
                             // TODO< unify! >
                             let unifiedSeq: Term = retSubj(&cloneEvidence(&firstExecEvidence).unwrap().read().term); // sequence which has unified vars
 
+                            let dbg__verbosity_predictionDescMkgn = 0; // verbosity of prediction based decision making
+                            if dbg__verbosity_predictionDescMkgn > 0 {
+                                println!("DBG pred: made prediction based descn {}  exp={}", convTermToStr(&unifiedSeq), exp);
+                            }
+
                             match bestEntry2 { // is there best entry?
                                 Some(ref bestEntry4) => {
                                     if exp > bestEntry4.exp {
