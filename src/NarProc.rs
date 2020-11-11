@@ -15,6 +15,7 @@ use crate::TermApi::*;
 use crate::NarGoalSystem;
 use crate::NarMem;
 use crate::Tv;
+use crate::NarInfProcedural;
 
 /// contains all necessary variables of a procedural NAR
 pub struct ProcNar {
@@ -495,49 +496,83 @@ pub fn narStep1(nar:&mut ProcNar) {
 
                 // sel last event
                 let checkedState:Term = nar.trace[nar.trace.len()-1].name.clone();
+                //let mut carriedGoalTerm:Term = checkedState.clone();
 
                 // build predicated event with term and TV
                 let mut predictedTerm: Term = checkedState.clone();
-                let mut predictedTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
+                //let mut predictedTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
 
-                let mut firstExecEvidence: Option<Arc<RwLock<SentenceDummy>>> = None; // used to remember evidence of first impl seq
+                //let mut firstExecEvidence: Option<Arc<RwLock<SentenceDummy>>> = None; // used to remember evidence of first impl seq
+
+                let mut execEvidence: Vec<Arc<RwLock<SentenceDummy>>> = vec![]; // used to remember chain till hit goal, necessary for correct TV/desire computation
 
                 let cfg__forwardPredication_steps:i64 = 3; // how many steps are maximaly utilized for forward planning with prediction?, set to 0 to disable feature, IS EXPERIMENTAL
                 for iStep in 0..cfg__forwardPredication_steps {
                     
                     // check if prediction did hit a goal
                     if iStep > 0 {
-                        let isAnyGoalHit = NarGoalSystem::check_isGoal(&nar.goalSystem, &predictedTerm);
-                        if isAnyGoalHit && firstExecEvidence.is_some() {
-                            // build enactable decision
-                            
-                            let exp: f64 = Tv::calcExp(&predictedTv);
-                            // TODO< unify! >
-                            let unifiedSeq: Term = retSubj(&cloneEvidence(&firstExecEvidence).unwrap().read().term); // sequence which has unified vars
+                        let hitGoalEntryOpt: Option<Rc<RefCell<NarGoalSystem::Entry>>> = NarGoalSystem::query(&nar.goalSystem, &predictedTerm);
+                        match hitGoalEntryOpt {
+                            Some(hitGoalEntry) => {
+                                if execEvidence.len() > 0 {
+                                    // build decision by deriving goal
 
-                            let dbg__verbosity_predictionDescMkgn = 0; // verbosity of prediction based decision making
-                            if dbg__verbosity_predictionDescMkgn > 0 {
-                                println!("DBG pred: made prediction based descn {}  exp={}", convTermToStr(&unifiedSeq), exp);
-                            }
+                                    let mut carriedGoalTv: Tv::Tv = retTv(&hitGoalEntry.borrow().sentence).unwrap();
+                                    let mut carriedGoalTerm: Term = predictedTerm.clone();
 
-                            match bestEntry2 { // is there best entry?
-                                Some(ref bestEntry4) => {
-                                    if exp > bestEntry4.exp {
-                                        bestEntry2 = Some(BestEntry{
-                                            unifiedSeq: unifiedSeq,
-                                            exp:exp,
-                                            evidence:cloneEvidence(&firstExecEvidence)});
+                                    let mut unifiedSeqOpt: Option<Term> = None; // uified last sequence
+
+                                    for iBelief in execEvidence.iter().rev() { // iterate from back becaue we have to derive from goal to goal
+                                        // create synthetic sentence for the current goal
+                                        let goal:SentenceDummy = newEternalSentenceByTv(&carriedGoalTerm, EnumPunctation::GOAL, &carriedGoalTv, newStamp(&vec![-1]));
+                                        //println!("DBG X {}", convSentenceTermPunctToStr(&goal, true));
+                                        //println!("DBG Y {}", convSentenceTermPunctToStr(&iBelief.read(), true));
+
+                                        let iConcl:SentenceDummy = NarInfProcedural::infGoalBelief(&goal, &iBelief.read()).unwrap();
+
+                                        // return subj of iConcl and carry over carriedGoalTerm and TV
+                                        // TODO< unify somehow ! >
+                                        let unifiedSeqTerm: Term = (*(iConcl.term)).clone(); // sequence which has unified vars
+                                        carriedGoalTv = retTv(&iConcl).unwrap();
+                                        //println!("DBG Z {}", &convTermToStr(&unifiedSeqTerm));
+                                        carriedGoalTerm = retSeqCond2(&unifiedSeqTerm);
+                                        unifiedSeqOpt = Some(unifiedSeqTerm.clone()); // remember
                                     }
-                                },
-                                None => {
-                                    bestEntry2 = Some(BestEntry{
-                                        unifiedSeq: unifiedSeq,
-                                        exp:exp,
-                                        evidence:cloneEvidence(&firstExecEvidence)});
-                                }
-                            }
 
-                            break; // break because we found a goal which was hit
+                                    match unifiedSeqOpt {
+                                        Some(unifiedSeq) => { // must always have a value!
+                                            let firstExecEvidence = Arc::clone(&execEvidence[0]);
+                                            let exp: f64 = Tv::calcExp(&carriedGoalTv);
+
+                                            let dbg__verbosity_predictionDescMkgn = 1; // verbosity of prediction based decision making
+                                            if dbg__verbosity_predictionDescMkgn > 0 {
+                                                println!("DBG pred: made prediction based descn {}  exp={}", convTermToStr(&unifiedSeq), exp);
+                                            }
+                                            
+                                            match bestEntry2 { // is there best entry?
+                                                Some(ref bestEntry4) => {
+                                                    if exp > bestEntry4.exp {
+                                                        bestEntry2 = Some(BestEntry{
+                                                            unifiedSeq: unifiedSeq,
+                                                            exp:exp,
+                                                            evidence:Some(Arc::clone(&firstExecEvidence))});
+                                                    }
+                                                },
+                                                None => {
+                                                    bestEntry2 = Some(BestEntry{
+                                                        unifiedSeq: unifiedSeq,
+                                                        exp:exp,
+                                                        evidence:Some(Arc::clone(&firstExecEvidence))});
+                                                }
+                                            }
+                                        },
+                                        None => {}
+                                    }
+
+                                    break; // break because we found a goal which was hit
+                                }
+                            },
+                            None => {}
                         }
                     }
 
@@ -546,7 +581,8 @@ pub fn narStep1(nar:&mut ProcNar) {
                     if queryResult.len() == 0 {
                         // no result for query of chain, give up
 
-                        firstExecEvidence = None; // discard decision because it didn't hit goal
+                        //firstExecEvidence = None; // discard decision because it didn't hit goal
+                        execEvidence = vec![];
                         break;
                     }
 
@@ -556,19 +592,22 @@ pub fn narStep1(nar:&mut ProcNar) {
                         &queryResult[selIdx]
                     };
 
+                    /*
                     if iStep == 0 { // we need to remember op of first impl seq
                         // remember first impl seq
                         firstExecEvidence = Some(Arc::clone(sel));
-                    }
+                    }*/
 
-                    let tvOfSelEvidence: Tv::Tv = retTv(&sel.read()).unwrap();
+                    //let tvOfSelEvidence: Tv::Tv = retTv(&sel.read()).unwrap();
 
-                    let conclTv: Tv::Tv = Tv::ded(&predictedTv, &tvOfSelEvidence); // TODO< check if math for TV checks out >
+                    //let conclTv: Tv::Tv = Tv::ded(&predictedTv, &tvOfSelEvidence); // TODO< check if math for TV checks out >
 
                     // ** set predicted TV as TV of concl
-                    predictedTv = conclTv;
+                    //predictedTv = conclTv;
                     // ** extract consequent of belief
                     predictedTerm = retPred(&sel.read().term);
+
+                    execEvidence.push(Arc::clone(sel)); // record the part of the chain!
                 }
             }
         }
@@ -789,6 +828,15 @@ pub fn retSeqCond(term:&Term) -> Term {
             }
         },
         _ => {panic!("expected pred impl!");}
+    }
+}
+
+pub fn retSeqCond2(term:&Term) -> Term {
+    match &term {
+        Term::Seq(seq) => {
+            *seq[0].clone()
+        },
+        _ => {panic!("expected seq!");}
     }
 }
 

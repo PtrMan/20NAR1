@@ -528,15 +528,17 @@ pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
     }
 }
 
-/// returns if the event is a goal
-pub fn check_isGoal(goalSystem: &GoalSystem, eventTerm:&Term) -> bool {
+/// returns the goal which matches with the term
+pub fn query(goalSystem: &GoalSystem, eventTerm:&Term) -> Option<Rc<RefCell<Entry>>> {
+    // TODO< select goal with highest exp! >
+
     for iEntityRc in retEntries(goalSystem) {
         let iEntity = iEntityRc.borrow_mut();
         if checkEqTerm(&iEntity.sentence.term, eventTerm) { // terms must of course to match up
-            return true;
+            return Some(Rc::clone(&iEntityRc));
         }
     }
-    false
+    None
 }
 
 
