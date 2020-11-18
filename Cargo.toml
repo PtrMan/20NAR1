@@ -1,6 +1,6 @@
 [package]
 name = "nar20_1"
-version = "0.0.15"
+version = "0.0.16"
 authors = ["PtrMan rt09@protonmail.com"]
 edition = "2018"
 
