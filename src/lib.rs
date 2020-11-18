@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 // NARS
+pub mod BinSearch;
 pub mod AeraishPerceptionComp;
 pub mod Misc;
 pub mod NarseseParser;

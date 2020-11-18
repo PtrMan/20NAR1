@@ -60,7 +60,7 @@ pub struct EntryFoldedByTerm {
 /// entry for goal system
 pub struct Entry {
     pub sentence: Arc<SentenceDummy>,
-    pub utility: f64,
+    
     /// evidence which was used to derive this sentence. This is used to create the anticipations
     /// sentence: (a, ^b)!
     /// evidence: (a, ^b) =/> c.  (actual impl seq was this)
@@ -71,6 +71,11 @@ pub struct Entry {
     pub depth: i64,
     /// from -1.0 to 1.0
     pub desirability: f32,
+
+
+    pub utility: f64,
+    /// helper used to keep track of the accumulated selection criteria up to this item in the array
+    pub accDesirability: f64,
 }
 
 /// used to group entries by depth
@@ -127,7 +132,7 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
         }
     }
 
-    addEntry2(goalSystem, Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth, desirability:1.0})));
+    addEntry2(goalSystem, Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth, desirability:1.0, accDesirability:0.0})));
 }
 
 pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
@@ -146,6 +151,9 @@ pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     { // try to search for group by e.sentence.term
         for iGroup in &mut chosenBatch.groups { // iterate over groups by term
             if checkEqTerm(&iGroup.term, &e.borrow().sentence.term) { // found entry?
+                let newAcc:f64 = iGroup.entries[iGroup.entries.len()-1].borrow().accDesirability+iGroup.entries[iGroup.entries.len()-1].borrow().desirability.max(0.0) as f64; // compute acc utility for this item
+                e.borrow_mut().accDesirability = newAcc; // update
+
                 iGroup.entries.push(Rc::clone(&e)); // add entry
                 return;
             }
@@ -257,10 +265,12 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     }
     
     let entriesOfSelBatch: &Vec<EntryFoldedByTerm> = &selBatch.groups;
+    
     let sumPriorities:f64 = entriesOfSelBatch.iter()
         .map(|iEntriesByTerm| { // map over entries-by-term
-            let entries:&Vec<Rc<RefCell<Entry>>> = &iEntriesByTerm.entries;
-            entries.iter().map(|iv| (iv.borrow().desirability as f64).max(0.0)).sum::<f64>() // compute inner sum
+            let lastEntry = &iEntriesByTerm.entries[iEntriesByTerm.entries.len()-1].borrow();
+            let des2:f64 = lastEntry.accDesirability+lastEntry.desirability as f64;
+            des2 // return inner sum
         }).sum();
     
     let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
@@ -271,13 +281,31 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     for iv in &selBatch.groups {
         assert!(sum <= sumPriorities); // priorities are summed in the wrong way in this loop if this invariant is violated
         
-        for iEntry in &iv.entries {
-            sum += (iEntry.borrow().desirability as f64).max(0.0); // desired goals should be favored to get sampled
-            let selEntry2 = iEntry.borrow();
+        let lastEntry = &iv.entries[iv.entries.len()-1].borrow();
+        let des2:f64 = lastEntry.accDesirability+lastEntry.desirability as f64;
+
+        if des2+sum > selPriority { // is the range of the selection inside this "group"?
+
+            use crate::BinSearch::binSearch;
+            let selEntry3: Rc<RefCell<Entry>> = binSearch(&iv.entries, selPriority);
+            let selEntry2 = selEntry3.borrow();
             selEntry = Some((Arc::clone(&selEntry2.sentence), selEntry2.depth));
-            if sum >= selPriority {
-                break;
+            break;
+
+            /* old slow loop
+            for iEntry in &iv.entries {
+                sum += (iEntry.borrow().desirability as f64).max(0.0); // desired goals should be favored to get sampled
+                let selEntry2 = iEntry.borrow();
+                
+                if sum >= selPriority {
+                    break;
+                }
             }
+            */
+
+        }
+        else {
+            sum+=des2;
         }
     }
 
