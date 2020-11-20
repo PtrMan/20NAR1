@@ -1692,6 +1692,16 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                         secondaryElligable = secondaryElligableFiltered;
                     }
                 }
+
+                // sort secondary elligable by complexity
+                // limit to max length to keep under holy AIKR
+                {
+                    let mut arr:Vec<(u64, Arc<Mutex<Task>>)> = secondaryElligable.iter().map(|v| (calcComplexity(&v.lock().unwrap().sentence.term), Arc::clone(&v))).collect();
+
+                    arr.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                    arr = arr[0..arr.len().min(300)].to_vec(); // keep under AIKR
+                    secondaryElligable = arr.iter().map(|(_,v)| Arc::clone(v)).collect();
+                }
     
                 let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
                 if dbgSecondaryElligable {
