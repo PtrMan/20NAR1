@@ -40,9 +40,9 @@ pub fn run() {
     nar.procNar.goalSystem.cfg__enGoalSatisfaction = false; // disable because we want goals to persist
     
     // resources
-    nar.procNar.cfg__nConcepts = 10000;
-    nar.procNar.cfg__nConceptBeliefs = 1000;
-    nar.procNar.goalSystem.nMaxEntries = 5000; // give more resources (memory - goals)
+    nar.procNar.cfg__nConcepts = 1000; // 10000;
+    nar.procNar.cfg__nConceptBeliefs = 100; // 1000;
+    nar.procNar.goalSystem.nMaxEntries = 2000; // 5000; // give more resources (memory - goals)
     nar.procNar.cfg__nGoalDeriverSamples = 100; // give a lot of samples so that it builds the tree fast
 
     // debugging
@@ -66,8 +66,6 @@ pub fn run() {
         })));
     }
     
-    Nar::inputN(&mut nar, &"w! :|:".to_string()); // add goal
-
     let mut cntGames:i64 = -1;
 
     let maxEpochs:i64 = 500; // maximum number of tried epochs, thest is interrupted after this number is reached
@@ -77,6 +75,22 @@ pub fn run() {
             break; // terminate test because time limit reached
         }
     
+        // check if super goal is known, remind system if it has forgotten it
+        {
+            let mut found = false;
+            for iEntry in &NarGoalSystem::retEntries(&nar.procNar.goalSystem) {
+                if checkEqTerm(&iEntry.borrow().sentence.term, &Term::Name("w".to_string())) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                Nar::inputN(&mut nar, &"w! :|:".to_string()); // add goal
+            }
+        }
+
+
         cntGames+=1;
 
         //let mut gamestate = envRc.borrow_mut();
