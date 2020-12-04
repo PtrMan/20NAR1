@@ -40,9 +40,9 @@ pub fn run() {
     nar.procNar.goalSystem.cfg__enGoalSatisfaction = false; // disable because we want goals to persist
     
     // resources
-    nar.procNar.cfg__nConcepts = 1000; // 10000;
+    nar.procNar.cfg__nConcepts = 500; // 10000;
     nar.procNar.cfg__nConceptBeliefs = 100; // 1000;
-    nar.procNar.goalSystem.nMaxEntries = 2000; // 5000; // give more resources (memory - goals)
+    nar.procNar.goalSystem.nMaxEntries = 1000; // 5000; // give more resources (memory - goals)
     nar.procNar.cfg__nGoalDeriverSamples = 100; // give a lot of samples so that it builds the tree fast
 
     // debugging
