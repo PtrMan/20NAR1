@@ -11,3 +11,7 @@ rand = "0.7.3"
 nom = "5"
 
 parking_lot = "0.11.0"
+
+
+[profile.release]
+debug = true
