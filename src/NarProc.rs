@@ -645,37 +645,6 @@ pub fn narStep1(nar:&mut ProcNar) {
 
                                 NarGoalSystem::addEntry(&mut nar.goalSystem, nar.t, Arc::new(sentence), Some(pickedEvidence), 0); 
                             }
-                            
-                            /*
-                            if false {
-
-                                // try to decode op into args and name
-                                let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
-                                if nar.cfgVerbosity > 1 {println!("descnMaking: could decode op = {}", decodedOpOpt.is_some());};
-                                if decodedOpOpt.is_some() { // we can only exec op if op is valid format
-                                    //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
-                    
-                                    pickedAction = Some(opTerm.clone());
-                                    
-                                    // add anticipated event
-                                    let expIntervalIdx:i64 =
-                                        if pickedEvidence.read().expDt.is_some() {
-                                            pickedEvidence.read().expDt.unwrap()
-                                        }
-                                        else {0}; // else it needs a default interval
-                                    let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
-                                    let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
-                                    
-                                    if nar.cfg__enAnticipation { // is anticipation enabled?
-                                        nar.anticipatedEvents.push(AnticipationEvent {
-                                            evi:Arc::clone(&pickedEvidence),
-                                            deadline:deadline,
-                                        });
-                                    }
-                                }
-
-                            }*/
-                            
                         },
                         None => {}
                     }
@@ -686,7 +655,7 @@ pub fn narStep1(nar:&mut ProcNar) {
     }
 
     // select best desired goal from goal system
-    if true{
+    {
         let mut bestExp:f64 = 0.0;
         let mut bestEntry4: Option<Rc<RefCell<NarGoalSystem::Entry>>> = None;
         let mut bestEntryIdx: Option<usize> = None; // used to remove goal after exec
