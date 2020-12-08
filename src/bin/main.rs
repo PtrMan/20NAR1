@@ -34,7 +34,7 @@ pub fn main() {
         nar20_1::ProcTicTacToe::run(500);
     }
     else if runEnv == "envTTTprof" { // run environment for profiling
-        nar20_1::ProcTicTacToe::run(50);
+        nar20_1::ProcTicTacToe::run(10);
     }
     else if runEnv == "chaos" { // run chaos environment to stresstest NAR
         nar20_1::ProcChaosEntry::procChaosEntry();
