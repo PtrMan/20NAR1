@@ -6,3 +6,5 @@ Cargo.lock
 
 TODO.txt
 logx.txt
+
+callgrind.out.*
