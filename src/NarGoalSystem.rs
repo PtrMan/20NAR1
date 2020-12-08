@@ -54,6 +54,9 @@ pub struct GoalSystem {
 
     /// is debugging of adding of goal entry enabled?
     pub cfg__dbg_enAddEntry: bool,
+
+    /// how many times are goals sample in the sub-working-cycle?
+    pub cfg__subworkingCycle_rounds:i64,
 }
 
 /// we need to fold entries by term to get deeper plans
@@ -113,6 +116,8 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
 
         cfg__enGoalSatisfaction: true, // enable for natural environments
         cfg__dbg_enAddEntry: true, // for debugging
+
+        cfg__subworkingCycle_rounds:15,
     }
 }
 
@@ -556,10 +561,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
         //
         //    all conclusions are immediatly put back into the global set of goals!
         // >
-
-        let cfg__subworkingCycle_rounds:i64 = 15; // how many times are goals sample in the sub-working-cycle?
-
-        for _iRound in 0..cfg__subworkingCycle_rounds {
+        for _iRound in 0..goalSystem.cfg__subworkingCycle_rounds {
             if workingSet.len() == 0 {
                 break; // no more goals -> we are done
             }

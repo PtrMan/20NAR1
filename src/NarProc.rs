@@ -116,7 +116,7 @@ pub fn narInit() -> ProcNar {
 
         cfg__nConcepts: 1000,
         cfg__nConceptBeliefs: 100,
-        cfg__nGoalDeriverSamples: 3, // 3 is enough for pong
+        cfg__nGoalDeriverSamples: 1, // 3 is enough for pong
         
         cfgVerbosity: 0, // be silent
 
