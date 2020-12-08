@@ -31,7 +31,10 @@ pub fn main() {
         nar20_1::Reasoner1Entry::reasoner1Entry();
     }
     else if runEnv == "envTTT2" { // run environment
-        nar20_1::ProcTicTacToe::run();
+        nar20_1::ProcTicTacToe::run(500);
+    }
+    else if runEnv == "envTTTprof" { // run environment for profiling
+        nar20_1::ProcTicTacToe::run(50);
     }
     else if runEnv == "chaos" { // run chaos environment to stresstest NAR
         nar20_1::ProcChaosEntry::procChaosEntry();

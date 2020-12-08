@@ -22,7 +22,8 @@ pub struct Gamestate {
 }
 
 
-pub fn run() {
+// /param maxEpochs // maximum number of tried epochs, thest is interrupted after this number is reached
+pub fn run(maxEpochs:i64) {
     // who plays?
     // 'h' human - for testing
     // 'r' random
@@ -67,8 +68,6 @@ pub fn run() {
     }
     
     let mut cntGames:i64 = -1;
-
-    let maxEpochs:i64 = 500; // maximum number of tried epochs, thest is interrupted after this number is reached
 
     loop { // loop over individual game "epochs"
         if cntGames >= maxEpochs {
