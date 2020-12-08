@@ -1,8 +1,11 @@
-target/*
+target
 
 *.code-workspace
 
 Cargo.lock
+
+__pycache__
+reports
 
 TODO.txt
 logx.txt
