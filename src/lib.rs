@@ -13,6 +13,7 @@ pub mod NarStamp;
 pub mod Tv;
 pub mod Term;
 pub mod TermApi;
+pub mod TermUtils;
 pub mod Nar;
 pub mod NarUnify;
 pub mod NarProc;
@@ -37,6 +38,7 @@ pub mod OpLib;
 
 // utils
 pub mod map2d;
+pub mod Utils;
 
 // ML
 pub mod Nn;

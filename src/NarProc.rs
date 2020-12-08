@@ -11,11 +11,14 @@ use parking_lot::RwLock;
 use crate::NarStamp::*;
 use crate::NarSentence::*;
 use crate::Term::*;
+use crate::TermUtils::*;
 use crate::TermApi::*;
 use crate::NarGoalSystem;
 use crate::NarMem;
 use crate::Tv;
 use crate::NarInfProcedural;
+use crate::Utils::{enforce};
+
 
 /// contains all necessary variables of a procedural NAR
 pub struct ProcNar {
@@ -621,8 +624,8 @@ pub fn narStep1(nar:&mut ProcNar) {
                             let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&evidence);
 
                             // extract op of seq
-                            //enforce(is_seq(&bestEntry3.unifiedSeq)); // must be sequence
-                            //enforce(is_seqAnd2ndOp(&bestEntry3.unifiedSeq)); // 2nd must be op!
+                            enforce(is_seq(&bestEntry3.unifiedSeq)); // must be sequence
+                            enforce(is_seqAnd2ndOp(&bestEntry3.unifiedSeq)); // 2nd must be op!
                             let opTerm:Term = retSeqOp(&bestEntry3.unifiedSeq);
                             
                             
@@ -634,30 +637,44 @@ pub fn narStep1(nar:&mut ProcNar) {
                             }
 
 
-                            // try to decode op into args and name
-                            let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
-                            if nar.cfgVerbosity > 1 {println!("descnMaking: could decode op = {}", decodedOpOpt.is_some());};
-                            if decodedOpOpt.is_some() { // we can only exec op if op is valid format
-                                //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
-                
-                                pickedAction = Some(opTerm.clone());
-                                
-                                // add anticipated event
-                                let expIntervalIdx:i64 =
-                                    if pickedEvidence.read().expDt.is_some() {
-                                        pickedEvidence.read().expDt.unwrap()
-                                    }
-                                    else {0}; // else it needs a default interval
-                                let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
-                                let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
-                                
-                                if nar.cfg__enAnticipation { // is anticipation enabled?
-                                    nar.anticipatedEvents.push(AnticipationEvent {
-                                        evi:Arc::clone(&pickedEvidence),
-                                        deadline:deadline,
-                                    });
-                                }
+                            // put back into goal system as goal
+                            // (a, b) a! |- b!
+                            {
+                                let conclTerm:Term = opTerm.clone();
+                                let sentence = newEternalSentenceByTv(&conclTerm,EnumPunctation::GOAL,&retTv(&pickedEvidence.read()).unwrap(),pickedEvidence.read().stamp.clone());
+
+                                NarGoalSystem::addEntry(&mut nar.goalSystem, nar.t, Arc::new(sentence), Some(pickedEvidence), 0); 
                             }
+                            
+                            /*
+                            if false {
+
+                                // try to decode op into args and name
+                                let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
+                                if nar.cfgVerbosity > 1 {println!("descnMaking: could decode op = {}", decodedOpOpt.is_some());};
+                                if decodedOpOpt.is_some() { // we can only exec op if op is valid format
+                                    //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
+                    
+                                    pickedAction = Some(opTerm.clone());
+                                    
+                                    // add anticipated event
+                                    let expIntervalIdx:i64 =
+                                        if pickedEvidence.read().expDt.is_some() {
+                                            pickedEvidence.read().expDt.unwrap()
+                                        }
+                                        else {0}; // else it needs a default interval
+                                    let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
+                                    let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
+                                    
+                                    if nar.cfg__enAnticipation { // is anticipation enabled?
+                                        nar.anticipatedEvents.push(AnticipationEvent {
+                                            evi:Arc::clone(&pickedEvidence),
+                                            deadline:deadline,
+                                        });
+                                    }
+                                }
+
+                            }*/
                             
                         },
                         None => {}
@@ -667,6 +684,83 @@ pub fn narStep1(nar:&mut ProcNar) {
             None => {}
         }
     }
+
+    // select best desired goal from goal system
+    if true{
+        let mut bestExp:f64 = 0.0;
+        let mut bestEntry4: Option<Rc<RefCell<NarGoalSystem::Entry>>> = None;
+        let mut bestEntryIdx: Option<usize> = None; // used to remove goal after exec
+        let mut idx = 0;
+        for iActiveGoalEntry in &nar.goalSystem.activeSet.set {
+            if NarGoalSystem::is_desired(&iActiveGoalEntry.borrow()) { // only consider desired goals!
+                let exp:f64 = Tv::calcExp(&retTv(&iActiveGoalEntry.borrow().sentence).unwrap());
+                if exp > bestExp && exp > nar.cfgDescnThreshold { // is the goal a better goal?
+                    bestExp = exp;
+                    bestEntry4 = Some(Rc::clone(&iActiveGoalEntry));
+                    bestEntryIdx = Some(idx);
+                } 
+            }
+            idx+=1;
+        }
+
+        
+        match bestEntry4 {
+            Some(bestEntry3) => {
+                let exp:f64 = Tv::calcExp(&retTv(&bestEntry3.borrow().sentence).unwrap());
+                if exp > nar.cfgDescnThreshold {
+                    let mut bestEntry5 = bestEntry3.borrow_mut();
+                    match &bestEntry5.evidence {
+                        Some(evidence) => {
+                            let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&evidence);
+
+                            let opTerm:Term = (*bestEntry5.sentence.term).clone();
+                            //let opTerm:Term = opTerm.clone();
+
+                            // must be op, else something is wrong
+                            if !decodeOp(&opTerm).is_some() {
+                                println!("[warning] descnMaking: sel goal is not a op!");
+                            }
+                            // must be op, else something is wrong
+                            if decodeOp(&opTerm).is_some() {
+
+                                // try to decode op into args and name
+                                let decodedOpOpt: Option<(Vec<Term>,String)> = decodeOp(&opTerm);
+                                if nar.cfgVerbosity > 1 {println!("descnMaking: could decode op = {}", decodedOpOpt.is_some());};
+                                if decodedOpOpt.is_some() { // we can only exec op if op is valid format
+                                    //let decodedOpArgsAndName:(Vec<Term>,String) = decodedOpOpt.unwrap();
+                    
+                                    pickedAction = Some(opTerm.clone());
+                                    
+                                    bestEntry5.desirability = 0.0; // we executed action which reduces desirability of goal!
+                                    nar.goalSystem.activeSet.set.remove(bestEntryIdx.unwrap()); // remove immediatly, else pong3 score suffers!
+
+                                    // add anticipated event
+                                    let expIntervalIdx:i64 =
+                                        if pickedEvidence.read().expDt.is_some() {
+                                            pickedEvidence.read().expDt.unwrap()
+                                        }
+                                        else {0}; // else it needs a default interval
+                                    let interval:i64 = nar.expIntervalsTable[expIntervalIdx as usize];
+                                    let deadline:i64 = nar.t + interval; // compute real deadline by exponential interval
+                                    
+                                    if nar.cfg__enAnticipation { // is anticipation enabled?
+                                        nar.anticipatedEvents.push(AnticipationEvent {
+                                            evi:Arc::clone(&pickedEvidence),
+                                            deadline:deadline,
+                                        });
+                                    }
+                                }
+                            }
+                        },
+                        None => {}
+                    }
+                }
+            },
+            None => {}
+        }
+    }
+
+
     
     match &pickedAction {
         Some(_) => {},
@@ -840,38 +934,27 @@ pub fn retSeqCond2(term:&Term) -> Term {
     }
 }
 
-/// decodes a operator into the arguments and name
-/// returns None if the term can't be decoded
-/// expects term to be <{(arg0 * arg1 * ...)} --> ^opname>
-pub fn decodeOp(term:&Term) -> Option<(Vec<Term>,String)> {
-    match term {
-        Term::Stmt(Copula::INH, subj, pred) => {
-            match &**pred {
-                Term::Name(predName) => {
-                    match &**subj {
-                        Term::SetExt(subj2) if subj2.len() == 1 => {
-                            match &*subj2[0] {
-                                Term::Prod(args) if args.len() >= 1 => {
-                                    return Some((args.iter().map(|v| (**v).clone()).collect(), predName.clone()));
-                                },
-                                _ => {return None;}
-                            }
-                        },
-                        _ => {return None;}
-                    }
-                },
-                _ => {return None;}
-            }
+// helper
+pub fn is_seq(term:&Term) -> bool {
+    return match &term {
+        Term::Seq(seq) => {
+            true
         },
-        _ => {return None;}
+        _ => {false}
     }
 }
 
-/// encode op, used to get called from external code
-pub fn encodeOp(args:&Vec<Term>, name:&String) -> Term {
-    let argProd = Term::Prod(args.iter().map(|v| Box::new(v.clone())).collect()); // build product of arg
-    Term::Stmt(Copula::INH, Box::new(Term::SetExt(vec![Box::new(argProd)])), Box::new(Term::Name(name.clone())))
+// helper
+pub fn is_seqAnd2ndOp(term:&Term) -> bool {
+    return match &term {
+        Term::Seq(seq) => {
+            let isOp = decodeOp(&*seq[1]).is_some();
+            isOp
+        },
+        _ => {false}
+    }
 }
+
 
 /// event
 /// string and evidence

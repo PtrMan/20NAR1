@@ -28,9 +28,18 @@ use crate::NarWorkingCycle;
 use crate::NarMem;
 use crate::NarUnify;
 use crate::NarInfProcedural;
+use crate::Utils::{enforce};
+
+pub struct ActiveSet {
+	pub set: Vec< Rc<RefCell<Entry>> >,
+}
+
 
 /// structure for the goal system
 pub struct GoalSystem {
+    /// we store op goals seperatly as a optimization
+    pub activeSet: ActiveSet,
+
     /// we are storing the entries batched by depth
     pub batchesByDepth: Vec<Rc<RefCell<BatchByDepth>>>,
     /// max number of entries
@@ -78,6 +87,11 @@ pub struct Entry {
     pub accDesirability: f64,
 }
 
+/// returns if goal is desired
+pub fn is_desired(e:&Entry) -> bool {
+    e.desirability > 0.0001 // is bigger than theshold, where threshold is epsilon
+}
+
 /// used to group entries by depth
 pub struct BatchByDepth {
     pub groups: Vec<EntryFoldedByTerm>,
@@ -91,6 +105,8 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
     }
     
     GoalSystem {
+        activeSet: ActiveSet{set: vec![]},
+
         batchesByDepth: batchesByDepth,
         nMaxEntries: nMaxEntries,
         nMaxDepth: nMaxDepth,
@@ -110,11 +126,18 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
             }
         }
     }
+
+    for iVal in &goalSystem.activeSet.set {
+        res.push(Rc::clone(&iVal));
+    }
+
     res
 }
 
 /// /param t is the procedural reasoner NAR time
 pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<RwLock<SentenceDummy>>>, depth:i64) {
+    enforce(goal.punct == EnumPunctation::GOAL); // must be a goal!
+    
     if goalSystem.cfg__dbg_enAddEntry { // print goal which is tried to put into system
         if depth > 2 {
             //println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true));
@@ -135,38 +158,71 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
     addEntry2(goalSystem, Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth, desirability:1.0, accDesirability:0.0})));
 }
 
-pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
-    let chosenDepthIdx:usize = e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize;
-    //dbg(&format!("addEntry depth = {} chosenDepthIdx = {}", e.borrow().depth, chosenDepthIdx));
-
-    let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[chosenDepthIdx]);
-    let mut chosenBatch = chosenBatchRc.borrow_mut();
+/// helper to add goal
+// private because it is a helper
+fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     
-    // now we need to add the entry to the batch
-    //
-    // a small problem is that the actual entries are stored by term of the sentence
-    // * so we have to find the group with the same term if the group exists and add it there or
-    // * add it as a new group
-    
-    { // try to search for group by e.sentence.term
-        for iGroup in &mut chosenBatch.groups { // iterate over groups by term
-            if checkEqTerm(&iGroup.term, &e.borrow().sentence.term) { // found entry?
-                let newAcc:f64 = iGroup.entries[iGroup.entries.len()-1].borrow().accDesirability+iGroup.entries[iGroup.entries.len()-1].borrow().desirability.max(0.0) as f64; // compute acc utility for this item
-                e.borrow_mut().accDesirability = newAcc; // update
+    // decide if we add the goal to the active set
+    use crate::TermUtils::decodeOp;
+    let isOp = decodeOp(&e.borrow().sentence.term).is_some();
+	if isOp {
+		if checkSetContains(&goalSystem.activeSet.set, &e.borrow().sentence) {
+			return;
+		}
 
-                iGroup.entries.push(Rc::clone(&e)); // add entry
-                return;
+		goalSystem.activeSet.set.push(Rc::clone(&e));
+	}
+	else {
+        // usual code for adding it to the "big" set
+
+
+        let chosenDepthIdx:usize = e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize;
+        //dbg(&format!("addEntry depth = {} chosenDepthIdx = {}", e.borrow().depth, chosenDepthIdx));
+    
+        let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[chosenDepthIdx]);
+        let mut chosenBatch = chosenBatchRc.borrow_mut();
+        
+        // now we need to add the entry to the batch
+        //
+        // a small problem is that the actual entries are stored by term of the sentence
+        // * so we have to find the group with the same term if the group exists and add it there or
+        // * add it as a new group
+        
+        { // try to search for group by e.sentence.term
+            for iGroup in &mut chosenBatch.groups { // iterate over groups by term
+                if checkEqTerm(&iGroup.term, &e.borrow().sentence.term) { // found entry?
+                    let newAcc:f64 = iGroup.entries[iGroup.entries.len()-1].borrow().accDesirability+iGroup.entries[iGroup.entries.len()-1].borrow().desirability.max(0.0) as f64; // compute acc utility for this item
+                    e.borrow_mut().accDesirability = newAcc; // update
+    
+                    iGroup.entries.push(Rc::clone(&e)); // add entry
+                    return;
+                }
             }
         }
-    }
+    
+        { // case to add it as a new group
+            chosenBatch.groups.push(EntryFoldedByTerm {
+                    term:(*(e.borrow().sentence.term)).clone(),
+                    entries:vec![Rc::clone(&e)],
+                }
+            );
+        }
+	}
+}
 
-    { // case to add it as a new group
-        chosenBatch.groups.push(EntryFoldedByTerm {
-                term:(*(e.borrow().sentence.term)).clone(),
-                entries:vec![Rc::clone(&e)],
-            }
-        );
+// privte because helper
+fn checkSetContains(set: &Vec< Rc<RefCell<Entry>> >, s: &SentenceDummy) -> bool {
+    // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
+    for iv in set {
+        if 
+            // optimization< checking term first is faster! >
+            checkEqTerm(&iv.borrow().sentence.term, &s.term) && // is necessary, else we don't accept detached goals!
+            NarStamp::checkSame(&iv.borrow().sentence.stamp, &s.stamp)
+        {
+            return true;
+        }
     }
+    false
 }
 
 /// called when it has to stay under AIKR
@@ -174,6 +230,10 @@ pub fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
 pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     let mut arr:Vec<Rc<RefCell<Entry>>> = retEntries(goalSystem); // working array with all entries
     
+    for iv in &goalSystem.activeSet.set {
+        arr.push(Rc::clone(&iv));
+    }
+
     dbg(&format!("nEntries={}", arr.len()));
 
     // * recalc utility
@@ -554,6 +614,15 @@ pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
             iEntity.desirability = 0.0; // set desirability to 0.0 because it happened
         }
     }
+
+    for iEntityRc in &goalSystem.activeSet.set {
+        let mut iEntity = iEntityRc.borrow_mut();
+        if goalSystem.cfg__enGoalSatisfaction && // do we want to satisfy goals?
+           checkEqTerm(&iEntity.sentence.term, eventTerm) // terms must of course to match up that a event can satify the goal
+        {
+            iEntity.desirability = 0.0; // set desirability to 0.0 because it happened
+        }
+    }
 }
 
 /// returns the goal which matches with the term
@@ -566,6 +635,14 @@ pub fn query(goalSystem: &GoalSystem, eventTerm:&Term) -> Option<Rc<RefCell<Entr
             return Some(Rc::clone(&iEntityRc));
         }
     }
+
+    for iEntityRc in &goalSystem.activeSet.set {
+        let iEntity = iEntityRc.borrow_mut();
+        if checkEqTerm(&iEntity.sentence.term, eventTerm) { // terms must of course to match up
+            return Some(Rc::clone(&iEntityRc));
+        }
+    }
+
     None
 }
 
@@ -582,6 +659,13 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
 
     res
 }
+
+
+
+
+
+
+
 
 
 

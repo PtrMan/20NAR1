@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use crate::NarProc;
 use crate::Term::{Term, convTermToStr};
+use crate::TermUtils::decodeOp;
 
 // ops for pong environment
 pub struct OpNop {
@@ -55,7 +56,7 @@ impl NarProc::Op for Op_nal9__exec_and_inject {
 
         // * execute ops sequentially
         for iOpTerm in &opsSeq {
-            match NarProc::decodeOp(iOpTerm) {
+            match decodeOp(iOpTerm) {
                 Some((opArgs, opName)) => {
                     let opOpt = NarProc::ret_op_by_name(nar, &opName);
                     if opOpt.is_some() {
