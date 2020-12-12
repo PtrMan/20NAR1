@@ -26,7 +26,7 @@ pub fn main() {
 
         nar20_1::NarInteractive::runInteractive(&mut nar);
     }
-    else if runEnv == "pong3" { // run environment
+    else if runEnv == "envPong3" { // run environment
         // jump to environment test
         nar20_1::Reasoner1Entry::reasoner1Entry();
     }
