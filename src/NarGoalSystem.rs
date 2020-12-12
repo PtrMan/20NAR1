@@ -8,6 +8,7 @@
 use std::rc::Rc;
 use core::cell::RefCell;
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 use rand::Rng;
 use parking_lot::RwLock;
 
@@ -46,6 +47,9 @@ pub struct GoalSystem {
     pub nMaxEntries: i64,
     /// soft limit of depth
     pub nMaxDepth: i64,
+
+    /// used to speed up queries
+    pub entriesByTerm: HashMap<Term, RefCell<Vec< Rc<RefCell<Entry>> > > >,
 
     /// is a goal satisfied if a event happens when the terms match up?
     ///
@@ -114,6 +118,8 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
         nMaxEntries: nMaxEntries,
         nMaxDepth: nMaxDepth,
 
+        entriesByTerm:HashMap::new(),
+
         cfg__enGoalSatisfaction: true, // enable for natural environments
         cfg__dbg_enAddEntry: true, // for debugging
 
@@ -150,13 +156,34 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, ev
     };
     
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
-    for iv in &retEntries(goalSystem) {
-        if 
-            // optimization< checking term first is faster! >
-            checkEqTerm(&iv.borrow().sentence.term, &goal.term) && // is necessary, else we don't accept detached goals!
-            NarStamp::checkSame(&iv.borrow().sentence.stamp, &goal.stamp)
-        {
-            return;
+    {
+        match goalSystem.entriesByTerm.get_mut(&goal.term.clone()) {
+            Some(arr) => {
+                let arr2 = &*arr.borrow();
+                {
+                    {
+                        let mut exists = false;
+                        for iv in arr2 {
+                            if 
+                                // optimization< checking term first is faster! >
+                                checkEqTerm(&iv.borrow().sentence.term, &goal.term) && // is necessary, else we don't accept detached goals!
+                                NarStamp::checkSame(&iv.borrow().sentence.stamp, &goal.stamp)
+                            {
+                                exists = true;
+                                break; // OPT
+                            }
+                        }
+                        
+                        if exists {
+                            return;
+                        }
+                    }
+                    //None => {
+                    //    println!("INTERNAL ERROR");
+                    //}
+                }
+            },
+            None => {} // term doesn't exist
         }
     }
 
@@ -211,6 +238,29 @@ fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
                     entries:vec![Rc::clone(&e)],
                 }
             );
+
+            match goalSystem.entriesByTerm.get_mut(&e.borrow().sentence.term) {
+                Some(arr) => {
+                    
+                    let mut exists = false;
+                    for iItem in arr.borrow().iter() {
+                        let borrowedItem = iItem.borrow();
+                        if checkEqTerm(&borrowedItem.sentence.term, &e.borrow().sentence.term) && 
+                           NarStamp::checkOverlap(&borrowedItem.sentence.stamp, &e.borrow().sentence.stamp) {
+                            exists = true;
+                            break; // OPT
+                        }
+                    }
+                    
+                    if !exists {
+                        arr.borrow_mut().push(Rc::clone(&e));
+                    }
+                },
+                None => { // by term doesn't exist
+                    // * insert new item if we are here
+                    goalSystem.entriesByTerm.insert(((*(e.borrow().sentence.term)).clone()), RefCell::new(vec![Rc::clone(&e)])); // add to memory
+                }
+            }
         }
 	}
 }
@@ -267,6 +317,8 @@ pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     for iDepth in 0..goalSystem.nMaxDepth {
         goalSystem.batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{groups: vec![], depth:iDepth,})));
     }
+
+    goalSystem.entriesByTerm.clear(); // flush, need to do this before calling addEntry2()
 
     // fill
     for iVal in arr {
