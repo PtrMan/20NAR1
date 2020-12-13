@@ -979,7 +979,7 @@ pub struct Mem2 {
     pub deriverWorkersTx: Vec<SyncSender<DeriverWorkMessage>>,
 }
 
-pub fn createMem2(cfg__nConceptBeliefs:usize)->Arc<RwLock<Mem2>> {
+pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLock<Mem2>> {
     let mem0:NarMem::Mem = NarMem::Mem{
         concepts:HashMap::new(),
     };
@@ -1182,7 +1182,7 @@ pub fn createMem2(cfg__nConceptBeliefs:usize)->Arc<RwLock<Mem2>> {
                     
                     for iConcl in &concl {
                         // TODO< check if task exists already, don't add if it exists >
-                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__nConceptBeliefs);
+                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs);
                     }
                 }
             }
@@ -1352,7 +1352,11 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
 }
 
 /// /param calcCredit compute the credit?
-pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool, cfg__nConceptBeliefs:usize) {
+pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize) {
+    if calcComplexity(&sentence.term) as i64 > cfg__maxComplexity { // don't add to complex terms because of AIKR god
+        return;
+    }
+    
     // try to revise
     let wasRevised = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
     if wasRevised {

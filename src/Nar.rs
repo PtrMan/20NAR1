@@ -33,18 +33,22 @@ pub struct Nar {
 
     /// number of beliefs of concept
     pub cfg__nConceptBeliefs: usize,
+
+    pub cfg__maxComplexity: i64,
 }
 
 /// creates a new NAR with a default configuration
 // PUBLICAPI
 pub fn createNar() -> Nar {
     let cfg__nConceptBeliefs = 20;
+    let cfg__maxComplexity = 64;
 
     Nar{
         procNar:NarProc::narInit(),
-        mem:createMem2(cfg__nConceptBeliefs),
+        mem:createMem2(cfg__maxComplexity, cfg__nConceptBeliefs),
         cfgVerbosityInput:1, // enable verbose input by default
         cfg__nConceptBeliefs:cfg__nConceptBeliefs,
+        cfg__maxComplexity: cfg__maxComplexity,
     }
 }
 
@@ -96,7 +100,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
             println!("ERR : eternal goals are not supported!");
         }
         else {
-            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__nConceptBeliefs);
+            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs);
         }
     }
 }
