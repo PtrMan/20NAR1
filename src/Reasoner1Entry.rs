@@ -14,7 +14,8 @@ use crate::NarGoalSystem;
 
 use crate::EnvPong3;
 
-pub fn reasoner1Entry() {
+// /return ratio
+pub fn reasoner1Entry() -> f64 {
     let mut rng = rand::thread_rng();
 
     let mut t:i64 = 0; // discrete time
@@ -106,6 +107,8 @@ pub fn reasoner1Entry() {
 
 
     println!("[d] reasoner: DONE!");
+
+    return (*envPongRc).borrow().hits as f64 / ((*envPongRc).borrow().misses+(*envPongRc).borrow().hits) as f64;
 }
 
 

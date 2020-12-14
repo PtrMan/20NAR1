@@ -42,4 +42,19 @@ pub fn main() {
     else if runEnv == "srv" { // run server
         nar20_1::NarServer::run();
     }
+    else if runEnv == "pe" { // run procedural evaluation
+        // run envPong3 a lot of times
+        // TODO< compute number of runs based on statistics >
+        let mut avgRatio: f64 = 0.0;
+        let mut nRuns = 0;
+        for iRun in 0..10 {
+            let runRatio:f64 = nar20_1::Reasoner1Entry::reasoner1Entry();
+            avgRatio += runRatio;
+            nRuns += 1;
+        }
+        avgRatio /= nRuns as f64;
+
+        println!("avg score = {}", avgRatio);
+    }
+    
 }
