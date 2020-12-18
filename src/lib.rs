@@ -37,14 +37,13 @@ pub mod ProcChaosEntry;
 pub mod OpLib;
 
 // utils
-pub mod map2d;
 pub mod Utils;
 
 // ML
 pub mod Nn;
 pub mod NnTrain;
-pub mod Classifier;
-pub mod expRepresent0;
+//pub mod Classifier;
+//pub mod expRepresent0;
 pub mod ad;
 pub mod mlutils;
 

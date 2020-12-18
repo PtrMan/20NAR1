@@ -1,4 +1,4 @@
-use crate::map2d::{Map2d,readAt};
+//use crate::map2d::{Map2d,readAt};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Vec2{
@@ -10,7 +10,7 @@ impl Default for Vec2 {
     fn default() -> Vec2 {Vec2{x:0.0,y:0.0}}
 }
 
-
+/*
 // flattens a vec2 map to a f64 array
 pub fn flattenVec2Map(m:&Map2d<Vec2>) -> Vec<f64> {
     let mut res = vec![];
@@ -33,3 +33,4 @@ pub fn flattenMap(m:&Map2d<f64>) -> Vec<f64> {
     }
     res
 }
+*/
