@@ -899,10 +899,14 @@ pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
 /// judgement task
 pub struct Task {
     pub sentence:SentenceDummy,
+
     /// how much "worth" is the task for the system
     pub credit:f64,
     /// create assigned for Q&A
     pub qaCredit:f64,
+    /// mul for credit
+    pub mulCredit:f64,
+
     /// unique id to quickly find unique tasks
     pub id:i64,
     /// time when this task was put into the working table
@@ -917,7 +921,7 @@ pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
     let decayFactor:f64 = (-decayFactor * (dt as f64)).exp();
 
     let qaCredit:f64 = task.qaCredit*0.2; // limit Q&A credit to a low range, to give other tasks a higher chance
-    (qaCredit + task.credit)*decayFactor // multiply because we want to decay the actual "base credit"
+    (qaCredit + task.credit)*decayFactor*task.mulCredit // multiply because we want to decay the actual "base credit"
 }
 
 /// task for a question
@@ -1024,7 +1028,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                     break; // other side has hung up, terminate this worker
                 }
                 let msg:DeriverWorkMessage = msgRes.unwrap(); // receive message
-                println!("[WORKER] received MSG!");
+                //println!("[WORKER] received MSG!");//DBG
 
                 /////////
                 // DERIVE
@@ -1181,7 +1185,9 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                     
                     for iConcl in &concl {
                         // TODO< check if task exists already, don't add if it exists >
-                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs);
+                        let mut mulCredit:f64 = 1.0;
+                        mulCredit = msg.primary.read().mulCredit * 0.9; // inherit the priority from the parent, similar to ONA
+                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs, mulCredit);
                     }
                 }
             }
@@ -1351,7 +1357,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
 }
 
 /// /param calcCredit compute the credit?
-pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize) {
+pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize, mulCredit:f64) {
     if calcComplexity(&sentence.term) as i64 > cfg__maxComplexity { // don't add to complex terms because of AIKR god
         return;
     }
@@ -1383,6 +1389,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy
                     sentence:sentence.clone(),
                     credit:1.0,
                     qaCredit:0.0, // no question was posed!
+                    mulCredit:mulCredit,
                     id:taskId,
                     derivTime:sharedGuard.cycleCounter
                 };

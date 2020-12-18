@@ -100,7 +100,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
             println!("ERR : eternal goals are not supported!");
         }
         else {
-            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs);
+            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0);
         }
     }
 }
