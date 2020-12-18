@@ -16,6 +16,8 @@ Running the program is easy. Note that `cargo test` can be omitted if the unitte
 connect to server with for example netcat: `nc 127.0.0.1 2039`<br />
 ## how to run pong
 `cargo test && cargo run --release envPong3`
+## how to eval Q&A performance for one file
+`cargo test && cargo run --release bQA nalExp/ExTimAnimalProd0.nal`
 ## build documentation
 `cargo doc --lib`
 
