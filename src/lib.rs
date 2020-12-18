@@ -36,6 +36,9 @@ pub mod ProcChaosEntry;
 
 pub mod OpLib;
 
+// eval
+pub mod Eval;
+
 // utils
 pub mod Utils;
 

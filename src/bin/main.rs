@@ -55,5 +55,24 @@ pub fn main() {
 
         println!("avg score = {}", avgRatio);
     }
+    else if runEnv == "bQA" { // run Q&A benchmark
+        let mut nar = nar20_1::Nar::createNar();
+
+        for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
+            let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
+            
+            nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
+        }
+
+        let evalRes:Option<i64> = nar20_1::Eval::run(&mut nar);
+        match evalRes {
+            Some(cycles) => {
+                println!("{}", cycles);
+            },
+            None => {
+                println!("None"); // found no result
+            }
+        }
+    }
     
 }
