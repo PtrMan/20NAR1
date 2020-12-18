@@ -20,7 +20,6 @@ pub fn main() {
         for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
             let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
             
-            use nar20_1::NarUtilReadn;
             nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
         }
 
@@ -47,7 +46,7 @@ pub fn main() {
         // TODO< compute number of runs based on statistics >
         let mut avgRatio: f64 = 0.0;
         let mut nRuns = 0;
-        for iRun in 0..10 {
+        for _iRun in 0..10 {
             let runRatio:f64 = nar20_1::Reasoner1Entry::reasoner1Entry();
             avgRatio += runRatio;
             nRuns += 1;

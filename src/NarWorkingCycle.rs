@@ -996,7 +996,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
     };
 
 
-    let mut res:Mem2 = Mem2{
+    let res:Mem2 = Mem2{
         shared:Arc::new(RwLock::new(shared)),
 
         globalQaHandlers:Arc::new(RwLock::new(vec![])), 
@@ -1476,7 +1476,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     
     {
         let memGuard = mem.read();
-        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
         {
             
             // transfer credits from questionTasks to Judgement tasks
@@ -1501,9 +1501,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
 
     {
         let memGuard = mem.read();
-        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
-        //let memGuard = mem.read();
-        //let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
         
         // give base credit
         // JUSTIFICATION< else the tasks die down for forward inference >
@@ -1520,7 +1518,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     // sample question to answer
     {
         let memGuard = mem.read();
-        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
 
         let len = sharedGuard.questionTasks.read().len();
         if len > 0 {
@@ -1555,19 +1553,13 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     let mut msg: Option<DeriverWorkMessage> = None; // message which we have to send to worker for derivation
     {
         let memGuard = mem.read();
-        let mut sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+        let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
         if sharedGuard.judgementTasks.len() > 0 { // one working cycle - select for processing
             let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
             let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
     
-            //let memGuard = mem.read();
-            //let sharedGuard = memGuard.shared.read();
             let selPrimaryTask = &sharedGuard.judgementTasks[selIdx];
-            let selPrimaryTaskTerm:Arc<Term>;
-            {
-                selPrimaryTaskTerm = selPrimaryTask.read().sentence.term.clone();
-            }
-
+            
             {
                 // attention mechanism which select the secondary task from the table 
                 

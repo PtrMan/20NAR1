@@ -3,7 +3,6 @@
 use crate::Tv;
 use crate::NarStamp;
 use crate::Term::*;
-use crate::NarSentence;
 use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::retTv;

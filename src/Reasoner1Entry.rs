@@ -3,11 +3,9 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use crate::Term::*;
 use crate::Term::convTermToStr;
-use crate::NarSentence::*;
 use crate::NarProc;
 use crate::Nar;
 use crate::NarGoalSystem;

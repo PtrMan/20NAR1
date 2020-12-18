@@ -19,7 +19,7 @@ use crate::OpLib;
 /// returns requested information as strings!
 // PUBLICAPI
 pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
-    let mut retInfo = Vec::new();
+    let retInfo = Vec::new();
     
     *quit = false;
     

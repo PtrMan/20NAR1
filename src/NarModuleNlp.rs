@@ -2,8 +2,6 @@
 // 
 // implementation spawns a "worker NAR" to process the preprocessed sentence
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
 use parking_lot::RwLock;
 

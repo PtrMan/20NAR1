@@ -906,7 +906,7 @@ pub fn retSeqCond2(term:&Term) -> Term {
 // helper
 pub fn is_seq(term:&Term) -> bool {
     return match &term {
-        Term::Seq(seq) => {
+        Term::Seq(_seq) => {
             true
         },
         _ => {false}

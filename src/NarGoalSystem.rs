@@ -7,7 +7,7 @@
 //! Sampling is made more fair by biasing the sampling by the depth of the goal (which is stored in the goal).
 use std::rc::Rc;
 use core::cell::RefCell;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::collections::HashMap;
 use rand::Rng;
 use parking_lot::RwLock;
@@ -24,8 +24,6 @@ use crate::NarSentence;
 use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::retTv;
-use crate::NarSentence::newEternalSentenceByTv;
-use crate::NarWorkingCycle;
 use crate::NarMem;
 use crate::NarUnify;
 use crate::NarInfProcedural;
@@ -354,7 +352,6 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
         */
         let mut selBatch:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[0]); // default, should never be used
         let mut sum:f64 = 0.0;
-        let mut idx=0;
         for iv in &goalSystem.batchesByDepth {
             if sum >= selPriority {
                 break;
@@ -363,8 +360,6 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
                 sum+=1.0;
                 selBatch = Rc::clone(iv);
             };
-            
-            idx+=1;
         }
 
         //dbg(&format!("sel byDepthIdx={}", idx));

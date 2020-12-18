@@ -2,8 +2,6 @@
 // 
 // implementation spawns a "worker NAR" to process the preprocessed sentence
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
 use parking_lot::RwLock;
 
@@ -30,7 +28,6 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
     let mut workerNar = createNar();
 
     { // load NAL module from file
-        use crate::NarUtilReadn;
         crate::NarUtilReadn::readNarseseFile(&mut workerNar, &"nalMod/modNlp.nal".to_string());    
     }
     

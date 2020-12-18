@@ -6,7 +6,6 @@ use rand::rngs::ThreadRng;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 
 use crate::Nar;

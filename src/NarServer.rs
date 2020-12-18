@@ -13,8 +13,6 @@ use parking_lot::RwLock;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
-use std::rc::Rc;
-use std::cell::{RefCell};
 
 use crate::Term::{Term, convTermToStr};
 use crate::Nar::*;
@@ -45,7 +43,7 @@ async fn connectionLoop(stream: TcpStream, tx: Sender<String>, global:Arc<Mutex<
 
     let mut myIdCounter; // id counter used to track broadcasted messages
     {
-        let mut data = global.lock().unwrap(); // unwrap to panic if it can't unlock
+        let data = global.lock().unwrap(); // unwrap to panic if it can't unlock
         myIdCounter = data.idCounter; // sync up
     }
 
@@ -57,7 +55,7 @@ async fn connectionLoop(stream: TcpStream, tx: Sender<String>, global:Arc<Mutex<
         // send broadcasted to stream
         let mut toSend:Vec<String> = Vec::new();
         {
-            let mut data = global.lock().unwrap(); // unwrap to panic if it can't unlock
+            let data = global.lock().unwrap(); // unwrap to panic if it can't unlock
             for iItem in &data.arr { // iterate over global items and send to writer
                 if iItem.0 >= myIdCounter { // is it a message which this tread didn't yet observe?
                     myIdCounter = iItem.0; // update counter so the message is next time ignored
