@@ -1019,7 +1019,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
         let globalQaHandlers = Arc::clone(&resArc.read().globalQaHandlers);
         let cfg__nConceptBeliefs = cfg__nConceptBeliefs;
         resArc.write().deriverWorkers.push(thread::spawn(move|| {
-            let cfgEnInstrumentation = true;
+            let cfgEnInstrumentation = false;
             let mut rng = rand::thread_rng();
 
             loop {
@@ -1125,7 +1125,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                     let keyTerm = msg.primary.read().sentence.term.clone();
                     match sharedArc.read().mem.read().concepts.get(&keyTerm) {
                         Some(concept) => {
-                            println!("sample concept {}", convTermToStr(&concept.name));
+                            if false {println!("sample concept {}", convTermToStr(&concept.name))};
         
                             let processAllBeliefs:bool = true; // does the deriver process all beliefs?
                             let processSampledBelief:bool = false; // does it just sample one belief?
@@ -1476,7 +1476,7 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &
 /// # Arguments
 /// * `mem` - memory
 pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
-    let cfgEnInstrumentation:bool = true; // enable instrumentation
+    let cfgEnInstrumentation:bool = false; // enable instrumentation
 
     mem.read().shared.write().cycleCounter+=1;
 
