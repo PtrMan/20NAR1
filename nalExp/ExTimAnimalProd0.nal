@@ -1,0 +1,6 @@
+// example from #nars in 2019
+<({sam}*{tim}) --> likes>.
+<({sam}*animal) --> likes>?
+<{tim} --> animal>.
+
+// expected answer without TV   <({sam}*animal) --> likes>.

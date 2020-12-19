@@ -1,0 +1,10 @@
+<{tom} --> computer>.
+
+// tom can run programs
+<({tom}*runprogram) --> can>.
+
+// programs can be long
+<runprogram --> (long|runprogram)>.
+
+// can tom run long program?
+<({tom}*(long|runprogram)) --> can>?
