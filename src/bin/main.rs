@@ -56,23 +56,58 @@ pub fn main() {
         println!("avg score = {}", avgRatio);
     }
     else if runEnv == "bQA" { // run Q&A benchmark
-        let mut nar = nar20_1::Nar::createNar();
+        
 
         for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
+            let mut nar = nar20_1::Nar::createNar();
+            
             let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
             
             nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
-        }
 
-        let evalRes:Option<i64> = nar20_1::Eval::run(&mut nar);
-        match evalRes {
-            Some(cycles) => {
-                println!("{}", cycles);
-            },
-            None => {
-                println!("None"); // found no result
+
+            let evalRes:Option<i64> = nar20_1::Eval::run(&mut nar);
+            match evalRes {
+                Some(cycles) => {
+                    println!("{}", cycles);
+                },
+                None => {
+                    println!("None"); // found no result
+                }
             }
         }
+    }
+    else if runEnv == "bQA2" { // run Q&A benchmark
+        let mut acc:f64 = 0.0;
+        let mut nRuns = 250; // how may runs are added up?
+
+        for _iRun in 0..nRuns {
+
+            
+
+            for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
+                let mut nar = nar20_1::Nar::createNar();
+                
+                let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
+                
+                nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
+
+                let evalRes:Option<i64> = nar20_1::Eval::run(&mut nar);
+                match evalRes {
+                    Some(cycles) => {
+                        println!("CYCLES {}", cycles);
+                        acc += ((cycles as f64*0.002*-1.0).exp());
+                    },
+                    None => {
+                        println!("CYCLES None"); // found no result
+                    }
+                }
+            }
+        }
+        acc /= (nRuns as f64); // calc average
+
+        println!("SCORE {}", acc); // print score
+
     }
     
 }
