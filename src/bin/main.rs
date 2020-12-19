@@ -79,7 +79,7 @@ pub fn main() {
     }
     else if runEnv == "bQA2" { // run Q&A benchmark
         let mut acc:f64 = 0.0;
-        let mut nRuns = 250; // how may runs are added up?
+        let mut nRuns = 5000; // how may runs are added up?
 
         for _iRun in 0..nRuns {
 
