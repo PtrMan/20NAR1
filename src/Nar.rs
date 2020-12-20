@@ -46,7 +46,7 @@ pub fn createNar() -> Nar {
     Nar{
         procNar:NarProc::narInit(),
         mem:createMem2(cfg__maxComplexity, cfg__nConceptBeliefs),
-        cfgVerbosityInput:1, // enable verbose input by default
+        cfgVerbosityInput:0, // enable verbose input by default
         cfg__nConceptBeliefs:cfg__nConceptBeliefs,
         cfg__maxComplexity: cfg__maxComplexity,
     }
