@@ -1,0 +1,10 @@
+// from https://github.com/opennars/ALANN2018/blob/master/Examples/deductive%20reasoning
+
+// is a bit complicated to solve because of many possibilities
+
+<cat --> animal>.
+<animal --> [living]>.
+<{tom} --> cat>.
+<(cat*fish) --> eats>.
+<cod --> fish>.
+<{tom} --> (eats /1 cod)>?
