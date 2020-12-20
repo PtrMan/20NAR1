@@ -625,8 +625,9 @@ pub fn narStep1(nar:&mut ProcNar) {
 
                             // extract op of seq
                             enforce(is_seq(&bestEntry3.unifiedSeq)); // must be sequence
-                            enforce(is_seqAnd2ndOp(&bestEntry3.unifiedSeq)); // 2nd must be op!
-                            let opTerm:Term = retSeqOp(&bestEntry3.unifiedSeq);
+                            
+                            enforce(is_seqAndLastOp(&bestEntry3.unifiedSeq)); // last must be op!
+                            let opTerm:Term = retSeqLast(&bestEntry3.unifiedSeq);
                             
                             
                             { // info
@@ -871,10 +872,10 @@ pub fn retImplSeqOp(term:&Term) -> Term {
     }
 }
 
-pub fn retSeqOp(term:&Term) -> Term {
+pub fn retSeqLast(term:&Term) -> Term {
     match &term {
         Term::Seq(seq) => {
-            *seq[1].clone()
+            *seq[seq.len()-1].clone() // return last
         },
         _ => {panic!("expected seq!");}
     }
@@ -914,10 +915,10 @@ pub fn is_seq(term:&Term) -> bool {
 }
 
 // helper
-pub fn is_seqAnd2ndOp(term:&Term) -> bool {
+pub fn is_seqAndLastOp(term:&Term) -> bool {
     return match &term {
         Term::Seq(seq) => {
-            let isOp = decodeOp(&*seq[1]).is_some();
+            let isOp = decodeOp(&*seq[seq.len()-1]).is_some();
             isOp
         },
         _ => {false}
