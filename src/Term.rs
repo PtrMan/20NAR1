@@ -354,7 +354,7 @@ pub fn convTermToStr(t:&Term) -> String {
         Term::ExtInt(elements) => {
             let mut inner = convTermToStr(&elements[0]);
             for i in 1..elements.len() {
-                inner = format!("{} | {}", inner, convTermToStr(&elements[i]));
+                inner = format!("{} & {}", inner, convTermToStr(&elements[i]));
             }
             format!("( {} )", inner)
         },
