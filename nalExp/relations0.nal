@@ -1,10 +1,4 @@
 // relations for testing NAR
-
-<(a*c) --> x>.
-<(b*c) --> x>.
-<(d*a) --> x>.
-<(d*c) --> x>.
-
 !.nlp2 Tom is fat
 !.nlp2 Tom is programmer
 
