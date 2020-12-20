@@ -3,7 +3,7 @@
 use std::rc::Rc;
 
 use crate::NarProc;
-use crate::Term::{Term, convTermToStr};
+use crate::Term::{Term, convTermToStr, checkEqTerm, Copula};
 use crate::TermUtils::decodeOp;
 
 // ops for pong environment
@@ -91,9 +91,37 @@ impl NarProc::Op for Op__nlp_rel_0 {
         // second parameter is relation to add
         let rel:Term = args[1].clone();
 
-        println!("H rel {}", &convTermToStr(&rel)); // print relation
+        // rewrite "and" sequence to ExtInt
+        let rewrittenRel:Term = match rel.clone() {
+            Term::Stmt(Copula::INH, subj, pred) => {
+                match *subj {
+                    Term::Prod(arr) => {
+                        let right:Term = (*arr[1]).clone();
+                        let rewrittenRight:Term = match right {
+                            Term::Seq(arr) if arr.len() == 3 && checkEqTerm(&arr[1], &Term::Name("and".to_string())) => {
+                                Term::ExtInt(vec![Box::new((*arr[0]).clone()), Box::new((*arr[2]).clone())]) // rewrite to ExtInt
+                            },
+                            _ => {
+                                right
+                            }
+                        };
+                        let rewrittenProd:Term = Term::Prod(vec![Box::new((*arr[0]).clone()), Box::new(rewrittenRight)]);
+                        Term::Stmt(Copula::INH, Box::new(rewrittenProd), Box::new((*pred).clone()))
+                    },
+                    _ => {
+                        Term::Stmt(Copula::INH, subj, pred)
+                    }
+                }
+            },
+            _ => {
+                rel.clone()
+            }
+        };
 
-        //TODO< add relation to declarative memory! >
+        println!("H rel {}", &convTermToStr(&rel)); // print relation
+        println!("H rewritten rel {}", &convTermToStr(&rewrittenRel)); // print relation
+        
+        //TODO< add rewrittenRel relation to declarative memory! >
     }
     fn isBabbleable(&self) -> bool {false} // can't be used for babbling because it is not useful to babble it
 }
