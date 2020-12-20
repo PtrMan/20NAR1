@@ -81,6 +81,8 @@ pub fn main() {
         let mut acc:f64 = 0.0;
         let mut nRuns = 5000; // how may runs are added up?
 
+        let mut cntUnanswered:i64 = 0; // how many questions were unanswered?
+
         for _iRun in 0..nRuns {
 
             
@@ -100,12 +102,15 @@ pub fn main() {
                     },
                     None => {
                         println!("CYCLES None"); // found no result
+                        cntUnanswered+=1;
                     }
                 }
             }
         }
         acc /= (nRuns as f64); // calc average
 
+        println!("H # runs {}", nRuns);
+        println!("H unanswered ratio {}", cntUnanswered as f64 / nRuns as f64);
         println!("SCORE {}", acc); // print score
 
     }
