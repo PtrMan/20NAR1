@@ -622,10 +622,11 @@ pub fn narStep1(nar:&mut ProcNar) {
                         Some(evidence) => {
                             
                             let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&evidence);
+                            
+                            //println!("DBG7 {}", convTermToStr(&bestEntry3.unifiedSeq));
 
                             // extract op of seq
                             enforce(is_seq(&bestEntry3.unifiedSeq)); // must be sequence
-                            
                             enforce(is_seqAndLastOp(&bestEntry3.unifiedSeq)); // last must be op!
                             let opTerm:Term = retSeqLast(&bestEntry3.unifiedSeq);
                             

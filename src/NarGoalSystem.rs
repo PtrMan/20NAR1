@@ -479,6 +479,16 @@ pub fn query_by_consequence(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<R
     res
 }
 
+/// returns sub sequence as term if it has a single sub-term or as seq if it has multiple
+//private because helper
+fn retSubSeqAsSeqOrTerm(subseq:&[Box<Term>])->Term {
+    return if subseq.len() == 1 {
+        (*subseq[0]).clone()
+    }
+    else {
+        Term::Seq(subseq.to_vec())
+    }
+}
 
 /// select highest ranked goal for state
 /// returns entity and unified result
@@ -491,7 +501,7 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
             Term::Seq(seq) if seq.len() >= 1 => {
                 // try to unify first part of sequence with observed state
                 // we can only consider if it matches!
-                let asgnmts:Option<Vec<NarUnify::Asgnment>> = NarUnify::unify(&seq[0], &state);
+                let asgnmts:Option<Vec<NarUnify::Asgnment>> = NarUnify::unify(&retSubSeqAsSeqOrTerm(&seq[..seq.len()-1]), &state);
 
                 if asgnmts.is_some() { // does first event of seq match to state with unification?, must unify!
                     let exp = Tv::calcExp(&retTv(&iv.borrow().sentence).unwrap());
