@@ -256,6 +256,32 @@ mod tests {
     assert_eq!(punct, EnumPunctation::JUGEMENT);
   }
 
+  #[test]
+  pub fn img2_0() {
+    let narsese = "<(a /1 c) --> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, _isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a /1 c ) --> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn img2_1() {
+    let narsese = "<(a /2 c) --> x>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, _isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<( a /2 c ) --> x>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
 
   #[test]
   pub fn seq2() {
@@ -535,6 +561,26 @@ fn parseSubjOrPred(input: &str, _enStatement:bool) -> IResult<&str, Term> {
   }
 
   {
+    let res0 = parseImg0(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
+    let res0 = parseImg1(input);
+    match res0 {
+      Ok(term) => {
+        return Ok(term.clone())
+      },
+      Err(_) => {}, // try other choice
+    }
+  }
+
+  {
     let res0 = parseIntInt2(input);
     match res0 {
       Ok(term) => {
@@ -790,6 +836,24 @@ pub fn parseProd(input: &str) -> IResult<&str, Term> {
   let (input2, _) = tag(")")(input)?;
   input = input2;
   Ok((input, p(&subterms)))
+}
+
+// parse image
+pub fn parseImg0(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(" /1 ")(input)?;
+  let (mut input, b) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, Term::Img(Box::new(a.clone()), 0, vec![Box::new(b.clone())])))
+}
+pub fn parseImg1(input: &str) -> IResult<&str, Term> {
+  let (input, _) = tag("(")(input)?;
+  let (input, a) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(" /2 ")(input)?;
+  let (mut input, b) = parseSubjOrPred(input, true)?;
+  let (input, _) = tag(")")(input)?;
+  Ok((input, Term::Img(Box::new(a.clone()), 1, vec![Box::new(b.clone())])))
 }
 
 
