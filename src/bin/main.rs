@@ -79,15 +79,19 @@ pub fn main() {
     }
     else if runEnv == "bQA2" { // run Q&A benchmark
         let mut acc:f64 = 0.0;
-        let mut nRuns = 5000; // how may runs are added up?
+        let mut nRuns = 380; // 5000 - is to slow // how may runs are added up?
 
         let mut cntUnanswered:i64 = 0; // how many questions were unanswered?
+
+        let mut cntEvals:i64 = 0; // how many files were evaluated
 
         for _iRun in 0..nRuns {
 
             
 
             for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
+                cntEvals+=1;
+                
                 let mut nar = nar20_1::Nar::createNar();
                 
                 let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
@@ -110,7 +114,7 @@ pub fn main() {
         acc /= (nRuns as f64); // calc average
 
         println!("H # runs {}", nRuns);
-        println!("H unanswered ratio {}", cntUnanswered as f64 / nRuns as f64);
+        println!("H unanswered ratio {}", cntUnanswered as f64 / cntEvals as f64);
         println!("SCORE {}", acc); // print score
 
     }
