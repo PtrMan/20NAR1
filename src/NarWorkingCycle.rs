@@ -45,7 +45,7 @@ pub fn inf2(a: &Term, punct:EnumPunctation, aTv: &Tv) -> Option<(Term, Tv, EnumP
 
     match a {
         Term::Stmt(Copula::INH, asubj, apred) => {
-            println!("TODO - compute tv");
+            // TODO - compute tv
             return Some((Term::Stmt(Copula::INH, Box::clone(apred), Box::clone(asubj)), aTv.clone()));
         },
         _ => {},
@@ -255,7 +255,7 @@ pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
                 Term::SetInt(asubj) if asubj.len() == 1 => {
                     match &**apred2 {
                         Term::SetInt(apred) if apred.len() == 1 => {
-                            println!("TODO - compute tv");
+                            // TV: id
                             return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
                         },
                         _ => {},
@@ -282,7 +282,7 @@ pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
                 Term::SetExt(asubj) if asubj.len() == 1 => {
                     match &**apred2 {
                         Term::SetExt(apred) if apred.len() == 1 => {
-                            println!("TODO - compute tv");
+                            // TV: id
                             return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
                         },
                         _ => {},
@@ -465,7 +465,7 @@ pub fn inf4(_a: &Term, _punctA:EnumPunctation, _aTv:&Option<Tv>, _b: &Term, _pun
                                         
                                         let resTerm = Term::SetExt(union_);
                                         
-                                        println!("TODO - compute tv");
+                                        // TODO - compute TV
                                         return Some((Term::Stmt(Copula::INH, Box::new(resTerm), Box::clone(apred)), aTv.clone()));
                                     }
                                     
@@ -1186,7 +1186,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                     for iConcl in &concl {
                         // TODO< check if task exists already, don't add if it exists >
                         let mut mulCredit:f64 = 1.0;
-                        mulCredit = msg.primary.read().mulCredit * 0.9; // inherit the priority from the parent, similar to ONA
+                        //mulCredit = msg.primary.read().mulCredit * 0.9; // inherit the priority from the parent, similar to ONA
                         memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs, mulCredit);
                     }
                 }
