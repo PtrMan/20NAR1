@@ -41,6 +41,11 @@ pub fn comp(a:&Tv,b:&Tv)->Tv {
     Tv{f:f,c:c}
 }
 
+// intersection
+pub fn int(a:&Tv,b:&Tv)->Tv {
+    Tv{f:a.f*b.f,c:a.c*b.c}
+}
+
 pub fn neg(a:&Tv)->Tv {
     Tv{f:1.0-a.f,c:a.c}
 }

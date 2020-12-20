@@ -416,8 +416,8 @@ pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:E
                                         
                                         let resTerm = Term::SetInt(union_);
                                         
-                                        println!("TODO - compute tv");
-                                        return Some((Term::Stmt(Copula::INH, Box::clone(asubj), Box::new(resTerm)), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
+                                        let tv:Tv = int(aTv.as_ref().unwrap(),bTv.as_ref().unwrap());
+                                        return Some((Term::Stmt(Copula::INH, Box::clone(asubj), Box::new(resTerm)), tv, EnumPunctation::JUGEMENT));
                                     }
                                     
                                 },
