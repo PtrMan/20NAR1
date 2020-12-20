@@ -66,6 +66,11 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
                 nar.procNar.ops.push(Rc::new(Box::new(OpLib::Op_nal9__exec_and_inject{})));
                 println!("added op");
             }
+            else if argOpType == "nlpRel0" { // NLP op to add relation to declarative knowledge
+                // add op
+                nar.procNar.ops.push(Rc::new(Box::new(OpLib::Op__nlp_rel_0{})));
+                println!("added op");
+            }
             else {} // other types aren't supported
         }
         else if args.len() == 2 { // must have two args
