@@ -91,7 +91,7 @@ impl NarProc::Op for Op__nlp_rel_0 {
         // second parameter is relation to add
         let rel:Term = args[1].clone();
 
-        println!("H rel {}!", &convTermToStr(&rel)); // print relation
+        println!("H rel {}", &convTermToStr(&rel)); // print relation
 
         //TODO< add relation to declarative memory! >
     }
