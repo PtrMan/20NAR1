@@ -391,6 +391,31 @@ pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
 }
 
 
+/// x --> a.  x --> b.  |- x --> (a&b).
+pub fn inf10(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
+    if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
+    match a {
+        Term::Stmt(Copula::INH, asubj, apred) => {
+            match b {
+                Term::Stmt(Copula::INH, bsubj, bpred) => {
+                    if !checkEqTerm(&apred, &bpred) && checkEqTerm(&asubj, &bsubj) {
+                        let conclTerm = Term::ExtInt(vec![Box::new((**apred).clone()),Box::new((**bpred).clone())]);
+                        let tv:Tv = int(aTv.as_ref().unwrap(),bTv.as_ref().unwrap());
+                        return Some((Term::Stmt(Copula::INH, Box::clone(asubj), Box::new(conclTerm)), tv, EnumPunctation::JUGEMENT));
+                    }
+                },
+                _ => {},
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
 /// x --> [a].  x --> [b].  |- x --> [a b].
 pub fn inf3(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
@@ -614,6 +639,9 @@ pub fn infBinaryInner(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match inf7(&a, aPunct, &aTv, &b, bPunct, &bTv) {
+        Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
+    }
+    match inf10(&a, aPunct, &aTv, &b, bPunct, &bTv) {
         Some(x) => { res.push(x); *wereRulesApplied=true; } _ => {}
     }
     match infCompPred(&a, aPunct, &aTv, &b, bPunct, &bTv) {
