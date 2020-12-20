@@ -180,6 +180,20 @@ fn unify2(a2:&Term,b2:&Term,assignments:&mut Vec<Asgnment>) -> bool {
                 _ => false
             }
         },
+        Term::ExtInt(seta) => {
+            match b2 {
+                Term::ExtInt(setb) => {
+                    if seta.len() == setb.len() {
+                        for idx in 0..seta.len() {
+                            if !unify2(&seta[idx], &setb[idx], assignments) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
         Term::Par(elementsa) => {
             match b2 {
                 Term::Par(elementsb) => {
@@ -316,6 +330,13 @@ pub fn unifySubst(t: &Term, subst: &Vec<Asgnment>) -> Term {
                 arr.push(Box::new(unifySubst(i, subst)));
             }
             Term::IntInt(arr)
+        },
+        Term::ExtInt(subterms) => {
+            let mut arr = vec![];
+            for i in subterms {
+                arr.push(Box::new(unifySubst(i, subst)));
+            }
+            Term::ExtInt(arr)
         },
         Term::Par(subterms) => {
             let mut arr = vec![];

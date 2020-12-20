@@ -21,6 +21,7 @@ pub enum Term {
     Prod(Vec<Box<Term>>), // product
     Img(Box<Term>, usize, Vec<Box<Term>>),// image (rel /idx+1 others)
     IntInt(Vec<Box<Term>>), // | intensional intersection
+    ExtInt(Vec<Box<Term>>), // &  extensional intersection
     Par(Vec<Box<Term>>), // &| parallel events
     Neg(Box<Term>), // negation
 }
@@ -90,6 +91,13 @@ impl Clone for Term {
                 }
                 Term::IntInt(arr)
             },
+            Term::ExtInt(set) => {
+                let mut arr = vec![];
+                for i in set {
+                    arr.push(i.clone());
+                }
+                Term::ExtInt(arr)
+            }
             Term::Par(elements) => {
                 let mut arr = vec![];
                 for i in elements {
@@ -145,6 +153,11 @@ fn retSubterms2(t:&Term, res:&mut Vec<Term>) {
             retSubterms2(&rel, res);
         },
         Term::IntInt(set) => {
+            for i in set {
+                retSubterms2(&i, res);
+            }
+        },
+        Term::ExtInt(set) => {
             for i in set {
                 retSubterms2(&i, res);
             }
@@ -251,6 +264,13 @@ pub fn calcComplexity(t:&Term) -> u64 {
             }
             c
         },
+        Term::ExtInt(set) => {
+            let mut c = 0;
+            for i in set {
+                c+=calcComplexity(i);
+            }
+            c
+        },
         Term::Par(elements) => {
             let mut c = 0;
             for i in elements {
@@ -325,6 +345,13 @@ pub fn convTermToStr(t:&Term) -> String {
             format!("( {} /{} {} )", convTermToStr(&rel), idx+1, inner)
         },
         Term::IntInt(elements) => {
+            let mut inner = convTermToStr(&elements[0]);
+            for i in 1..elements.len() {
+                inner = format!("{} | {}", inner, convTermToStr(&elements[i]));
+            }
+            format!("( {} )", inner)
+        },
+        Term::ExtInt(elements) => {
             let mut inner = convTermToStr(&elements[0]);
             for i in 1..elements.len() {
                 inner = format!("{} | {}", inner, convTermToStr(&elements[i]));
@@ -467,6 +494,20 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
         Term::IntInt(seta) => {
             match b {
                 Term::IntInt(setb) => {
+                    if seta.len() == setb.len() {
+                        for idx in 0..seta.len() {
+                            if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
+                        }
+                        true
+                    }
+                    else {false}
+                },
+                _ => false
+            }
+        },
+        Term::ExtInt(seta) => {
+            match b {
+                Term::ExtInt(setb) => {
                     if seta.len() == setb.len() {
                         for idx in 0..seta.len() {
                             if !checkEqTerm(&seta[idx], &setb[idx]) {return false};
