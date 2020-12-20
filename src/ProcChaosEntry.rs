@@ -5,11 +5,14 @@
 #![allow(dead_code)]
 
 use std::rc::Rc;
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use crate::Term::*;
 use crate::NarProc;
 use crate::Nar;
 use crate::NarGoalSystem;
+use crate::NarWorkingCycle::Mem2;
 
 pub fn procChaosEntry() {
     let mut t:i64 = 0; // discrete time
@@ -36,7 +39,7 @@ pub fn procChaosEntry() {
 
         nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(format!("{}",t)),evi:nar.procNar.t,occT:nar.procNar.t}));
 
-        NarProc::narStep1(&mut nar.procNar);
+        NarProc::narStep1(&mut nar.procNar, &None);
         
         
         
@@ -84,7 +87,7 @@ impl NarProc::Op for OpNop {
     fn retName(&self) -> String {
         self.selfName.clone()
     }
-    fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
+    fn call(&self, _nar:&mut NarProc::ProcNar, _narMem:&Option<Arc<RwLock<Mem2>>>, _args:&Vec<Term>) {
         println!("CALL {}", &self.selfName);
     }
     fn isBabbleable(&self) -> bool {true}

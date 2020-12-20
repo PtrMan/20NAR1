@@ -3,12 +3,15 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 use crate::Term::*;
 use crate::Term::convTermToStr;
 use crate::NarProc;
 use crate::Nar;
 use crate::NarGoalSystem;
+use crate::NarWorkingCycle::Mem2;
 
 use crate::EnvPong3;
 
@@ -64,7 +67,7 @@ pub fn reasoner1Entry() -> f64 {
                 println!("{} ballX={} batX={} diff={}", convTermToStr(&nar.procNar.trace[nar.procNar.trace.len()-1].name), (*envPongRc).borrow().ballX, (*envPongRc).borrow().batX, (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
             }
             
-            NarProc::narStep1(&mut nar.procNar);
+            NarProc::narStep1(&mut nar.procNar, &None);
             
             let mut envPong = (*envPongRc).borrow_mut();
             EnvPong3::simStep(&mut envPong, &mut rng);
@@ -125,7 +128,7 @@ impl NarProc::Op for OpPong {
     fn retName(&self) -> String {
         self.selfName.clone()
     }
-    fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
+    fn call(&self, _nar:&mut NarProc::ProcNar, _narMem:&Option<Arc<RwLock<Mem2>>>, _args:&Vec<Term>) {
         (*self.env).borrow_mut().batVX = self.opDir;
         println!("CALL {}", &self.selfName);
     }

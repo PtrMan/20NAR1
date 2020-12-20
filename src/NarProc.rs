@@ -18,7 +18,7 @@ use crate::NarMem;
 use crate::Tv;
 use crate::NarInfProcedural;
 use crate::Utils::{enforce};
-
+use crate::NarWorkingCycle::Mem2;
 
 /// contains all necessary variables of a procedural NAR
 pub struct ProcNar {
@@ -433,7 +433,7 @@ pub fn narStep0(nar:&mut ProcNar) {
 /// does second part of reasoner step
 ///
 /// usually after events were put into the FIFO
-pub fn narStep1(nar:&mut ProcNar) {    
+pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {    
     let mut pickedAction:Option<Term> = None; // complete term of op
     {
         struct BestEntry {
@@ -764,7 +764,7 @@ pub fn narStep1(nar:&mut ProcNar) {
             // search for action with name
             let opOpt = ret_op_by_name(nar, &opName);
             if opOpt.is_some() { // was op found?
-                opOpt.unwrap().call(nar, &opArgs); // call op
+                opOpt.unwrap().call(nar, declMem, &opArgs); // call op
             
                 println!("{}!", &convTermToStr(&term)); // print execution
     
@@ -991,7 +991,7 @@ pub struct AnticipationEvent {
 pub trait Op {
     /// return name of the op
     fn retName(&self) -> String;
-    fn call(&self, nar:&mut ProcNar, args:&Vec<Term>);
+    fn call(&self, nar:&mut ProcNar, narMem:&Option<Arc<RwLock<Mem2>>>, args:&Vec<Term>);
     /// can the op be called with motor babbling?
     fn isBabbleable(&self) -> bool;
 }

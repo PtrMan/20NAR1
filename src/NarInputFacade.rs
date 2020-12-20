@@ -1,6 +1,7 @@
 //! facade which consumes narse, comments, empty lines and commands
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::Nar::*;
 use crate::NarWorkingCycle::{debugCreditsOfTasks};
@@ -39,13 +40,13 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
         //}
         
         NarProc::narStep0(&mut nar.procNar);
-        NarProc::narStep1(&mut nar.procNar);
+        NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
     }
     else if input == "!spA" { // step procedural A
         NarProc::narStep0(&mut nar.procNar);
     }
     else if input == "!spB" { // step procedural B
-        NarProc::narStep1(&mut nar.procNar);
+        NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
     }
     else if input.len() >= 2 && &input[..2] == "!s" {
         let mut nCycles = 1;

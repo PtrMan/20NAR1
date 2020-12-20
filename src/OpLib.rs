@@ -1,10 +1,14 @@
 // library of standard ops
 
 use std::rc::Rc;
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 use crate::NarProc;
 use crate::Term::{Term, convTermToStr, checkEqTerm, Copula};
 use crate::TermUtils::decodeOp;
+use crate::NarMem;
+use crate::NarWorkingCycle::Mem2;
 
 // ops for pong environment
 pub struct OpNop {
@@ -15,7 +19,7 @@ impl NarProc::Op for OpNop {
     fn retName(&self) -> String {
         self.name.clone()
     }
-    fn call(&self, _nar:&mut NarProc::ProcNar, _args:&Vec<Term>) {
+    fn call(&self, _nar:&mut NarProc::ProcNar, _narMem:&Option<Arc<RwLock<Mem2>>>, _args:&Vec<Term>) {
     }
     fn isBabbleable(&self) -> bool {true}
 }
@@ -31,7 +35,7 @@ impl NarProc::Op for Op_nal9__exec_and_inject {
     fn retName(&self) -> String {
         "^nal9_exeAndInject".to_string()
     }
-    fn call(&self, nar:&mut NarProc::ProcNar, args:&Vec<Term>) {
+    fn call(&self, nar:&mut NarProc::ProcNar, narMem:&Option<Arc<RwLock<Mem2>>>, args:&Vec<Term>) {
         println!("ENTER");
 
         if args.len() != 3 {
@@ -61,7 +65,7 @@ impl NarProc::Op for Op_nal9__exec_and_inject {
                     let opOpt = NarProc::ret_op_by_name(nar, &opName);
                     if opOpt.is_some() {
                         println!("{}!", &convTermToStr(&iOpTerm)); // print execution
-                        opOpt.unwrap().call(nar, &opArgs);
+                        opOpt.unwrap().call(nar, narMem, &opArgs);
                     }
                 },
                 None => {} // ignore
@@ -81,7 +85,7 @@ impl NarProc::Op for Op__nlp_rel_0 {
     fn retName(&self) -> String {
         "^nlpRel0".to_string()
     }
-    fn call(&self, nar:&mut NarProc::ProcNar, args:&Vec<Term>) {
+    fn call(&self, nar:&mut NarProc::ProcNar, narMem:&Option<Arc<RwLock<Mem2>>>, args:&Vec<Term>) {
         println!("ENTER NLP rel 0");
 
         if args.len() != 2 {
