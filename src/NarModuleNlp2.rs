@@ -18,6 +18,8 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
 
     let nCycles = 200; // number of reasoning cycles for "worker NAR"
 
+    let mut natural: String = natural.clone();
+    natural = natural.replace("?", " ? "); // treat "?" as token
     let mut tokens: Vec<&str> = natural.split_whitespace().collect(); // split into tokens
 
     if tokens.len() > 0 && tokens[tokens.len()-1] == "?" { // it is a question if it ends with a question-mark
