@@ -1823,6 +1823,11 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     }
 }
 
+pub fn flushTasks(mem: &Mem2) {
+    let mut sharedGuard = mem.shared.write();
+    sharedGuard.judgementTasks.clear();
+    sharedGuard.judgementTasksByTerm.write().clear();
+}
 
 pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
     let mut res = Vec::new();

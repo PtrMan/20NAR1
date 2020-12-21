@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::Nar::*;
-use crate::NarWorkingCycle::{debugCreditsOfTasks};
+use crate::NarWorkingCycle::{debugCreditsOfTasks, flushTasks};
 use crate::NarModuleNlp;
 use crate::NarModuleNlp2;
 use crate::Term::*;
@@ -57,6 +57,9 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
         for _i in 0..nCycles {
             cycle(nar);
         }
+    }
+    else if input == "!dtf" { // delcarative tasks flush
+        flushTasks(&*nar.mem.read());
     }
     else if input.len() >= 5 && &input[..5] == "!por " { // procedural op register --- register op, argument is type/name of op, 2nd argument is name of op
         let args:Vec<&str> = input[5..].split_whitespace().collect();
