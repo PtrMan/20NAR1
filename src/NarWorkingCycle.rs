@@ -1588,167 +1588,182 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     let mut msg: Option<DeriverWorkMessage> = None; // message which we have to send to worker for derivation
     {
         let memGuard = mem.read();
-        let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
-        if sharedGuard.judgementTasks.len() > 0 { // one working cycle - select for processing
+        
+        let existAnyJudgementTasks = {
+            let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+            sharedGuard.judgementTasks.len() > 0
+        };
+        
+        let mut selPrimaryTask: Option<Arc<RwLock<Task>>> = None;
+
+        if existAnyJudgementTasks { // one working cycle - select for processing
+            let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
             let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
             let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
     
-            let selPrimaryTask = &sharedGuard.judgementTasks[selIdx];
-            
-            {
-                // attention mechanism which select the secondary task from the table 
-                
-                let mut secondaryElligable:Vec<Arc<RwLock<Task>>> = vec![]; // tasks which are eligable to get selected as the secondary
-                
-                let selPrimaryTaskTerm:Arc<Term>;
-                {
-                    selPrimaryTaskTerm = selPrimaryTask.read().sentence.term.clone();
-                }
-    
-    
-                for iSubTerm in &retUniqueSubterms(&selPrimaryTaskTerm) {
-                    if sharedGuard.judgementTasksByTerm.read().contains_key(iSubTerm) {
-                        let itJudgementTasksByTerm:Vec<Arc<RwLock<Task>>> = sharedGuard.judgementTasksByTerm.read().get(iSubTerm).unwrap().to_vec();
-                        for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
-                            let itId;
-                            {
-                                itId = it.read().id;
-                            }
-    
-                            // code to figure out if task already exists in secondaryElligable
-                            let mut existsById = false;
-                            {
-                                for iSec in &secondaryElligable {
-                                    if iSec.read().id == itId {
-                                        existsById = true;
-                                        break; // OPT
-                                    }
-                                }
-                            }
-                            
-                            if !existsById {
-                                secondaryElligable.push(Arc::clone(&it));
-                            }
-                        }
+            selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
+        }
+
+        { // derive from selected primary task
+            let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+            match selPrimaryTask {
+                Some(selPrimaryTask2) => {
+                    // attention mechanism which select the secondary task from the table 
+                    
+                    let mut secondaryElligable:Vec<Arc<RwLock<Task>>> = vec![]; // tasks which are eligable to get selected as the secondary
+                    
+                    let selPrimaryTaskTerm:Arc<Term>;
+                    {
+                        selPrimaryTaskTerm = selPrimaryTask2.read().sentence.term.clone();
                     }
-                }
-    
-    
-    
-    
-    
-                { // filter secondary elligable 
-                    /*
-            the selection of secondary premise should consider the structure of the primary premise.
-            Motivation for this is a higher efficiency of the deriver by prefering to select premises which can lead to conclusions.
-            
-            cases
-            a) primary is not <=> or ==>
-               consider secondary only if
-               a.1) secondary is of form &&==> or &&<=> and sub-term of && unifies with term of primary
-                    reason: deriver should prefer to unify terms to "cut down" the conj
-                    ex:
-                       primary  : <a --> b>
-                       secondary: (<$0 --> b>&&<z --> Z>) ==> <Z --> B>
-               a.2) secondary is of form ==> or <=> without && and subject unfies with term of primary
-                    ex:
-                       primary  : <a --> b>
-                       secondary: <$0 --> b> ==> <Z --> B>
-               a.3) secondary is not of form <=> or ==>
-                    reason: non-NAL-5&6 derivation!
-    
-            b) primary is <=> or ==>
-               consider secondary!
-                    */
-    
-                    // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
-                    // NOTE< 09:00 08.08.2020 : is disabled because it is not necessary with ALANN's method to select all candidates >
-                    let enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
-    
-                    if enFunctionalityNal5PremiseFiler1 {
-    
-                        let mut secondaryElligableFiltered = vec![];
-    
-                        println!("TRACE  primary term = {}", convTermToStr(&selPrimaryTask.read().sentence.term));
         
-                        for iSecondaryElligable in &secondaryElligable {
-                            println!("TRACE   consider secondary term = {}", convTermToStr(&iSecondaryElligable.read().sentence.term));
-                            
-                            match *selPrimaryTask.read().sentence.term { // is primary <=> or ==>
-                                Term::Stmt(cop,_,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
-                                    secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                    println!("TRACE      ...   eligable, reason: primary is ==> or <=> !");
-                                    continue;
-                                },
-                                _ => {}
-                            }
         
-                            // else special handling
-                            match (*iSecondaryElligable.read().sentence.term).clone() {
-                                Term::Stmt(cop,secondarySubj,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
-                                    match *secondarySubj {
-                                        Term::Conj(conjterms) => {
-                                            // we need to check if conjterm unifies with primary
-                                            let mut anyUnify = false;
-                                            for iConjTerm in &conjterms {
-                                                if unify(&selPrimaryTask.read().sentence.term.clone(), &iConjTerm).is_some() {
-                                                    anyUnify = true;
-                                                    break;
-                                                }
-                                            }
+                    for iSubTerm in &retUniqueSubterms(&selPrimaryTaskTerm) {
+                        if sharedGuard.judgementTasksByTerm.read().contains_key(iSubTerm) {
+                            let itJudgementTasksByTerm:Vec<Arc<RwLock<Task>>> = sharedGuard.judgementTasksByTerm.read().get(iSubTerm).unwrap().to_vec();
+                            for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
+                                let itId;
+                                {
+                                    itId = it.read().id;
+                                }
         
-                                            if anyUnify {
-                                                secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                                println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
-                                                continue;
-                                            }
-                                        },
-                                        _ => {
-                                            // we need to check if secondarySubj unfies with primary
-                                            if unify(&selPrimaryTask.read().sentence.term.clone(), &secondarySubj).is_some() {
-                                                secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                                println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
-                                                continue;
-                                            }
+                                // code to figure out if task already exists in secondaryElligable
+                                let mut existsById = false;
+                                {
+                                    for iSec in &secondaryElligable {
+                                        if iSec.read().id == itId {
+                                            existsById = true;
+                                            break; // OPT
                                         }
                                     }
-                                },
-                                _ => {
-                                    secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
-                                    println!("TRACE      ...   eligable, reason: non-NAL-5&6 derivation!");
+                                }
+                                
+                                if !existsById {
+                                    secondaryElligable.push(Arc::clone(&it));
                                 }
                             }
                         }
-                        secondaryElligable = secondaryElligableFiltered;
                     }
-                }
-
-                // sort secondary elligable by complexity
-                // limit to max length to keep under holy AIKR
-                {
-                    let mut arr:Vec<(u64, Arc<RwLock<Task>>)> = secondaryElligable.iter().map(|v| (calcComplexity(&v.read().sentence.term), Arc::clone(&v))).collect();
-
-                    arr.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-                    arr = arr[0..arr.len().min(300)].to_vec(); // keep under AIKR
-                    secondaryElligable = arr.iter().map(|(_,v)| Arc::clone(v)).collect();
-                }
-    
-                let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
-                if dbgSecondaryElligable {
-                    println!("TRACE secondary eligable:");
-                    for iSecondaryElligable in &secondaryElligable {
-                        println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.read().sentence, true));
+        
+        
+        
+        
+        
+                    { // filter secondary elligable 
+                        /*
+                the selection of secondary premise should consider the structure of the primary premise.
+                Motivation for this is a higher efficiency of the deriver by prefering to select premises which can lead to conclusions.
+                
+                cases
+                a) primary is not <=> or ==>
+                consider secondary only if
+                a.1) secondary is of form &&==> or &&<=> and sub-term of && unifies with term of primary
+                        reason: deriver should prefer to unify terms to "cut down" the conj
+                        ex:
+                        primary  : <a --> b>
+                        secondary: (<$0 --> b>&&<z --> Z>) ==> <Z --> B>
+                a.2) secondary is of form ==> or <=> without && and subject unfies with term of primary
+                        ex:
+                        primary  : <a --> b>
+                        secondary: <$0 --> b> ==> <Z --> B>
+                a.3) secondary is not of form <=> or ==>
+                        reason: non-NAL-5&6 derivation!
+        
+                b) primary is <=> or ==>
+                consider secondary!
+                        */
+        
+                        // NOTE< 08:00 08.08.2020 : is disabled because I am searching for a stupid bug which prevents inference >
+                        // NOTE< 09:00 08.08.2020 : is disabled because it is not necessary with ALANN's method to select all candidates >
+                        let enFunctionalityNal5PremiseFiler1 = false; // do we enable filtering mechanism to make &&==> and &&<=> inference more efficient?
+        
+                        if enFunctionalityNal5PremiseFiler1 {
+        
+                            let mut secondaryElligableFiltered = vec![];
+        
+                            println!("TRACE  primary term = {}", convTermToStr(&selPrimaryTask2.read().sentence.term));
+            
+                            for iSecondaryElligable in &secondaryElligable {
+                                println!("TRACE   consider secondary term = {}", convTermToStr(&iSecondaryElligable.read().sentence.term));
+                                
+                                match *selPrimaryTask2.read().sentence.term { // is primary <=> or ==>
+                                    Term::Stmt(cop,_,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
+                                        secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                        println!("TRACE      ...   eligable, reason: primary is ==> or <=> !");
+                                        continue;
+                                    },
+                                    _ => {}
+                                }
+            
+                                // else special handling
+                                match (*iSecondaryElligable.read().sentence.term).clone() {
+                                    Term::Stmt(cop,secondarySubj,_) if cop == Copula::IMPL || cop == Copula::EQUIV => {
+                                        match *secondarySubj {
+                                            Term::Conj(conjterms) => {
+                                                // we need to check if conjterm unifies with primary
+                                                let mut anyUnify = false;
+                                                for iConjTerm in &conjterms {
+                                                    if unify(&selPrimaryTask2.read().sentence.term.clone(), &iConjTerm).is_some() {
+                                                        anyUnify = true;
+                                                        break;
+                                                    }
+                                                }
+            
+                                                if anyUnify {
+                                                    secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                                    println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
+                                                    continue;
+                                                }
+                                            },
+                                            _ => {
+                                                // we need to check if secondarySubj unfies with primary
+                                                if unify(&selPrimaryTask2.read().sentence.term.clone(), &secondarySubj).is_some() {
+                                                    secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                                    println!("TRACE      ...   eligable, reason: secondary is &&==> or &&<=> and subterm of && unifies!");
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    _ => {
+                                        secondaryElligableFiltered.push(Arc::clone(iSecondaryElligable)); // consider
+                                        println!("TRACE      ...   eligable, reason: non-NAL-5&6 derivation!");
+                                    }
+                                }
+                            }
+                            secondaryElligable = secondaryElligableFiltered;
+                        }
                     }
-                }
-    
-                if secondaryElligable.len() > 0 { // must contain any premise to get selected    
-                    // build message of work
-                    msg = Some(DeriverWorkMessage {
-                        primary: Arc::clone(&selPrimaryTask),
-                        secondary: secondaryElligable.iter().map(|iv| Arc::clone(iv)).collect(), // clone
-                        cycleCounter: sharedGuard.cycleCounter,
-                    });
-                }
+
+                    // sort secondary elligable by complexity
+                    // limit to max length to keep under holy AIKR
+                    {
+                        let mut arr:Vec<(u64, Arc<RwLock<Task>>)> = secondaryElligable.iter().map(|v| (calcComplexity(&v.read().sentence.term), Arc::clone(&v))).collect();
+
+                        arr.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                        arr = arr[0..arr.len().min(300)].to_vec(); // keep under AIKR
+                        secondaryElligable = arr.iter().map(|(_,v)| Arc::clone(v)).collect();
+                    }
+        
+                    let dbgSecondaryElligable = false; // do we want to debug elligable secondary tasks?
+                    if dbgSecondaryElligable {
+                        println!("TRACE secondary eligable:");
+                        for iSecondaryElligable in &secondaryElligable {
+                            println!("TRACE    {}", convSentenceTermPunctToStr(&iSecondaryElligable.read().sentence, true));
+                        }
+                    }
+        
+                    if secondaryElligable.len() > 0 { // must contain any premise to get selected    
+                        // build message of work
+                        msg = Some(DeriverWorkMessage {
+                            primary: Arc::clone(&selPrimaryTask2),
+                            secondary: secondaryElligable.iter().map(|iv| Arc::clone(iv)).collect(), // clone
+                            cycleCounter: sharedGuard.cycleCounter,
+                        });
+                    }
+                },
+                None => {}
+                
             }
         }
     
