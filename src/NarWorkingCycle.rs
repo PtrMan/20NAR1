@@ -55,14 +55,14 @@ pub fn inf2(a: &Term, punct:EnumPunctation, aTv: &Tv) -> Option<(Term, Tv, EnumP
 */
 
 /// (!a) |- a
-pub fn infNeg(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infNeg(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
     }
 
     match a {
         Term::Neg(aterm) => {
-            return Some(((**aterm).clone(), neg(&aTv.as_ref().unwrap()), EnumPunctation::JUGEMENT));
+            return Some(((**aterm).clone(), neg(&aTv.as_ref().unwrap()), EnumPunctation::JUGEMENT, 0.5));
         },
         _ => {},
     }
@@ -76,7 +76,7 @@ pub fn infNeg(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term,
 /// a --> X.
 /// a --> Y.
 /// ...
-pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -87,7 +87,7 @@ pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usiz
                 Term::IntInt(arr) => {
                     if idx < arr.len() {
                         let concl = Term::Stmt(Copula::INH, Box::clone(subj), Box::clone(&arr[idx]));
-                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT,1.0));
                     }
                 },
                 _ => {}
@@ -104,7 +104,7 @@ pub fn infStructPred1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usiz
 /// X --> a.
 /// Y --> a.
 /// ...
-pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usize) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -115,7 +115,7 @@ pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usiz
                 Term::IntInt(arr) => {
                     if idx < arr.len() {
                         let concl = Term::Stmt(Copula::INH, Box::clone(&arr[idx]), Box::clone(pred));
-                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT, 0.9));
                     }
                 },
                 _ => {}
@@ -132,7 +132,7 @@ pub fn infStructSubj1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>, idx:usiz
 /// |-
 /// <X --> (rel /1 Y)>.
 /// <Y --> (rel /2 X)>.
-pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -145,7 +145,7 @@ pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Optio
                     let prod1 = &arr[1];
 
                     let concl = Term::Stmt(Copula::INH, Box::clone(&prod0), Box::new(Term::Img(Box::clone(pred), 0, vec![Box::clone(&prod1)])));
-                    return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
+                    return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT, 0.8));
                 },
                 _ => {}
             }
@@ -160,7 +160,7 @@ pub fn infStructProd0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Optio
 /// |-
 /// <X --> (rel /1 Y)>.
 /// <Y --> (rel /2 X)>.
-pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -173,7 +173,7 @@ pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Optio
                         let prod0 = &arr[0];
                         let prod1 = &arr[1];
                         let concl = Term::Stmt(Copula::INH, Box::clone(&prod1), Box::new(Term::Img(Box::clone(pred), 1, vec![Box::clone(&prod0)])));
-                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT, 0.8));
                     }
                 },
                 _ => {}
@@ -188,7 +188,7 @@ pub fn infStructProd1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Optio
 /// <X --> (rel /1 Y)>.?
 /// |-
 /// (X * Y) --> rel.?
-pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT && punct != EnumPunctation::QUESTION {
         return None;
     }
@@ -200,7 +200,7 @@ pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
                     if arr.len() == 1 {
                         let arr0 = &arr[0];
                         let concl = Term::Stmt(Copula::INH, Box::new(Term::Prod(vec![Box::clone(&subj), Box::clone(&arr0)])), Box::clone(&predImg));
-                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT, 0.9));
                     }
                 },
                 _ => {}
@@ -216,7 +216,7 @@ pub fn infStructImg0(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 /// <Y --> (rel /2 X)>.?
 /// |-
 /// (X * Y) --> rel.?
-pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation)> {
+pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<(Term, Tv, EnumPunctation, f64)> {
     if punct != EnumPunctation::JUGEMENT && punct != EnumPunctation::QUESTION {
         return None;
     }
@@ -228,7 +228,7 @@ pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
                     if arr.len() == 1 {
                         let arr0 = &arr[0];
                         let concl = Term::Stmt(Copula::INH, Box::new(Term::Prod(vec![Box::clone(&arr0), Box::clone(&subj)])), Box::clone(&predImg));
-                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT));
+                        return Some((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT, 0.9));
                     }
                 },
                 _ => {}
@@ -244,7 +244,7 @@ pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 
 /// see ONA
 /// [a] <-> [b]. |- a <-> b.
-pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
+pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation, f64)> {
     if punctA != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -256,7 +256,7 @@ pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
                     match &**apred2 {
                         Term::SetInt(apred) if apred.len() == 1 => {
                             // TV: id
-                            return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
+                            return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT, 1.0));
                         },
                         _ => {},
                     }
@@ -271,7 +271,7 @@ pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
 
 /// see ONA
 /// {a} <-> {b}. |- a <-> b.
-pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
+pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation,f64)> {
     if punctA != EnumPunctation::JUGEMENT {
         return None;
     }
@@ -283,7 +283,7 @@ pub fn infStructSetExt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Opti
                     match &**apred2 {
                         Term::SetExt(apred) if apred.len() == 1 => {
                             // TV: id
-                            return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT));
+                            return Some((Term::Stmt(Copula::SIM, Box::clone(&asubj[0]), Box::clone(&apred[0])), aTv.as_ref().unwrap().clone(), EnumPunctation::JUGEMENT, 1.0));
                         },
                         _ => {},
                     }
@@ -708,7 +708,7 @@ pub fn infBinary(a: &Term, aPunct:EnumPunctation, aTv:&Option<Tv>, b: &Term, bPu
     res
 }
 
-pub fn infSinglePremise(a: &Term, punct:EnumPunctation, aTv:&Option<Tv>) -> Vec<(Term,Tv,EnumPunctation)> {
+pub fn infSinglePremise(a: &Term, punct:EnumPunctation, aTv:&Option<Tv>) -> Vec<(Term,Tv,EnumPunctation,f64)> {
     let mut res = vec![];
 
     match infNeg(&a, punct, &aTv) {
@@ -868,7 +868,7 @@ pub fn inference2(
     paTerm:&Term, paPunct:EnumPunctation, paStamp:&Stamp, paTv:&Option<Tv>,  
     pbTerm:&Term, pbPunct:EnumPunctation, pbStamp:&Stamp, pbTv:&Option<Tv>, 
     wereRulesApplied:&mut bool
-)->Vec<SentenceDummy> {
+)->Vec<(SentenceDummy,f64)> {
     *wereRulesApplied = false;
 
     let mut concl = vec![];
@@ -876,14 +876,14 @@ pub fn inference2(
     let infConcl = infBinary(&paTerm, paPunct, paTv, &pbTerm, pbPunct, pbTv, wereRulesApplied);
     for iInfConcl in infConcl {
         let (term, tv, punct) = iInfConcl;
-        concl.push(SentenceDummy{
+        concl.push((SentenceDummy{
             term:Arc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
             stamp:merge(&paStamp, &pbStamp),
             t:None, // time of occurence 
             punct:punct,
             expDt:None
-        });
+        },1.0));
     }
 
     if concl.len() > 0 && checkOverlap(&paStamp, &pbStamp) { // check for overlap
@@ -896,7 +896,7 @@ pub fn inference2(
 
 /// do inference of two sentences
 /// /param wereRulesApplied is true if any rules were applied
-pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<SentenceDummy> {
+pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<(SentenceDummy,f64)> {
     inference2(
         &pa.term, pa.punct, &pa.stamp, &retTv(&pa),  
         &pb.term, pb.punct, &pb.stamp, &retTv(&pb), 
@@ -904,21 +904,21 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
     )
 }
 
-pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<SentenceDummy> {
+pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<(SentenceDummy,f64)> {
     let mut concl = vec![];
 
     let infConcl = infSinglePremise(&pa.term, pa.punct, &retTv(pa));
     for iInfConcl in infConcl {
-        let (term, tv, punct) = iInfConcl;
+        let (term, tv, punct, attBias) = iInfConcl;
         
-        concl.push(SentenceDummy{
+        concl.push((SentenceDummy{
             term:Arc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
             stamp:pa.stamp.clone(),
             t:None, // time of occurence 
             punct:punct,
             expDt:None
-        });
+        }, attBias));
     }
 
     concl
@@ -1061,10 +1061,10 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                 /////////
                 // DERIVE
                 /////////
-                let mut concl:Vec<SentenceDummy> = vec![];
+                let mut concl:Vec<(SentenceDummy,f64)> = vec![]; // conclusions, which are the sentences with "attention bias" factor
 
                 { // single premise derivation
-                    let mut concl2: Vec<SentenceDummy> = infSinglePremise2(&msg.primary.read().sentence);
+                    let mut concl2: Vec<(SentenceDummy,f64)> = infSinglePremise2(&msg.primary.read().sentence);
                     concl.append(&mut concl2);
                 }
 
@@ -1093,7 +1093,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
 
                     // do inference with premises
                     let mut wereRulesApplied = false;
-                    let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.read().sentence, &secondarySelTask.read().sentence, &mut wereRulesApplied);
+                    let mut concl2: Vec<(SentenceDummy,f64)> = inference(&msg.primary.read().sentence, &secondarySelTask.read().sentence, &mut wereRulesApplied);
                     concl.append(&mut concl2);
                 }
 
@@ -1118,7 +1118,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                         let mut res = vec![];
                         for iSecondarySentence in &secondaryElligablePartB {
                             let mut wereRulesApplied = false;
-                            let mut concl2: Vec<SentenceDummy> = inference2(
+                            let mut concl2: Vec<(SentenceDummy,f64)> = inference2(
                                 &selPrimarySentenceTuple.0, selPrimarySentenceTuple.1, &selPrimarySentenceTuple.2, &selPrimarySentenceTuple.3,
                                 &iSecondarySentence.0, iSecondarySentence.1, &iSecondarySentence.2, &iSecondarySentence.3, 
                                 &mut wereRulesApplied
@@ -1133,7 +1133,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                         // do inference and add conclusions to array
                         if !Arc::ptr_eq(&msg.primary, &iSecondaryTask) { // arcs must not point to same task!
                             let mut wereRulesApplied = false;
-                            let mut concl2: Vec<SentenceDummy> = inference(selPrimaryTaskSentence, &iSecondaryTask.read().sentence, &mut wereRulesApplied);
+                            let mut concl2: Vec<(SentenceDummy,f64)> = inference(selPrimaryTaskSentence, &iSecondaryTask.read().sentence, &mut wereRulesApplied);
                             concl.append(&mut concl2);
                         }
                     }
@@ -1167,7 +1167,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                                     let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
-                                    let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.read().sentence, &iBeliefGuard, &mut wereRulesApplied);
+                                    let mut concl2: Vec<(SentenceDummy,f64)> = inference(&msg.primary.read().sentence, &iBeliefGuard, &mut wereRulesApplied);
                                     concl.append(&mut concl2);
                                 }
                             }
@@ -1182,7 +1182,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
         
                                 // do inference and add conclusions to array
                                 let mut wereRulesApplied = false;
-                                let mut concl2: Vec<SentenceDummy> = inference(&msg.primary.read().sentence, selBelief, &mut wereRulesApplied);
+                                let mut concl2: Vec<(SentenceDummy,f64)> = inference(&msg.primary.read().sentence, selBelief, &mut wereRulesApplied);
                                 concl.append(&mut concl2);
                             }
                         },
@@ -1202,7 +1202,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                 {
                     // MECHANISM< Q&A - answer questions >
                     {
-                        for iConcl in &concl {
+                        for (iConcl, _iConclAttBias) in &concl {
                             if iConcl.punct == EnumPunctation::JUGEMENT { // only jugements can answer questions!
                                 for mut iQTask in &mut *sharedArc.read().questionTasks.write() {
                                     qaTryAnswer(&mut iQTask, &iConcl, &globalQaHandlers.read());
@@ -1211,10 +1211,13 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                         }
                     }
                     
-                    for iConcl in &concl {
+                    for (iConcl, iConclAttBias) in &concl {
                         // TODO< check if task exists already, don't add if it exists >
                         let mut mulCredit:f64 = 1.0;
-                        //mulCredit = msg.primary.read().mulCredit * 0.9; // inherit the priority from the parent, similar to ONA
+                        mulCredit *= msg.primary.read().mulCredit; // inherit mul credit from parent, like in ONA
+                        //mulCredit *= 0.9; // inherit the priority from the parent, similar to ONA, leads to worse score when evaluating with Eval.sh
+
+                        mulCredit *= iConclAttBias; // multiply by "attention bias" to get a lower attention value, to avoid repeating the same derivations over and over
                         memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs, mulCredit);
                     }
                 }
@@ -1612,22 +1615,24 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
         
         let mut selPrimaryTask: Option<Arc<RwLock<Task>>> = None;
 
-        /* old mechanism which selects random task by credit
         if existAnyJudgementTasks { // one working cycle - select for processing
-            let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
-            let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
-            let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
-    
-            selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
-        } */
-
-        if existAnyJudgementTasks { // one working cycle - select for processing
-            let mut sharedGuard = memGuard.shared.write();
-            let selIdx = taskSelByCreditTop(&sharedGuard.judgementTasks, sharedGuard.cycleCounter);
-            
-            selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
-            sharedGuard.judgementTasks.swap_remove(selIdx); // remove item
-            println!("idx {}", selIdx);
+            if false {
+                /* old mechanism which selects random task by credit
+                
+                let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
+                let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
+                let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
+        
+                selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
+                */
+            }
+            else {                
+                let mut sharedGuard = memGuard.shared.write();
+                let selIdx = taskSelByCreditTop(&sharedGuard.judgementTasks, sharedGuard.cycleCounter);
+                
+                selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
+                sharedGuard.judgementTasks.swap_remove(selIdx); // remove item
+            }
         }
 
         { // derive from selected primary task
@@ -1823,6 +1828,10 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                 ).unwrap());
             sharedGuard.judgementTasks = sharedGuard.judgementTasks[0..maxJudgementTasks.min(sharedGuard.judgementTasks.len())].to_vec(); // limit to keep under AIKR
             
+            /// minimal priority which a work item can have
+            let cfg__minWorkItemPriority = 0.001;
+            sharedGuard.judgementTasks = sharedGuard.judgementTasks.iter().filter(|iTask| taskCalcCredit(&iTask.read(), memCycleCounter) > cfg__minWorkItemPriority).cloned().collect();
+
             println!("[d] EXIT: keep working tasks under AIKR");
         }
     }
