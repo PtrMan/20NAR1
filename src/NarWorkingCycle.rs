@@ -1242,6 +1242,22 @@ pub fn taskSelByCreditRandom(selVal:f64, arr: &Vec<Arc<RwLock<Task>>>, cycleCoun
     arr.len()-1 // sel last
 }
 
+/// helper to select best task by credit
+pub fn taskSelByCreditTop(arr: &Vec<Arc<RwLock<Task>>>, cycleCounter:i64)->usize {
+    let mut best: (usize, f64) = (0, -5000.0);
+    
+    let mut idx = 0;
+    for iv in arr {
+        let iCredit:f64 = taskCalcCredit(&iv.read(), cycleCounter);
+        if iCredit > best.1 {
+            best = (idx, iCredit);
+        }
+        idx+=1;
+    }
+    
+    best.0 // return idx
+}
+
 pub fn task2SelByCreditRandom(selVal:f64, arr: &Vec<Box<Task2>>)->usize {
     let sum:f64 = arr.iter().map(|iv| (*iv).prio).sum();
     let mut acc = 0.0;
@@ -1596,12 +1612,22 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
         
         let mut selPrimaryTask: Option<Arc<RwLock<Task>>> = None;
 
+        /* old mechanism which selects random task by credit
         if existAnyJudgementTasks { // one working cycle - select for processing
             let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
             let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
             let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
     
             selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
+        } */
+
+        if existAnyJudgementTasks { // one working cycle - select for processing
+            let mut sharedGuard = memGuard.shared.write();
+            let selIdx = taskSelByCreditTop(&sharedGuard.judgementTasks, sharedGuard.cycleCounter);
+            
+            selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
+            sharedGuard.judgementTasks.swap_remove(selIdx); // remove item
+            println!("idx {}", selIdx);
         }
 
         { // derive from selected primary task
