@@ -16,7 +16,7 @@ pub fn run(nar:&mut Nar)->Option<i64> {
     
     nar.mem.read().globalQaHandlers.write().push(Arc::new(RwLock::new(QHandlerImpl{global:Arc::clone(&global)}))); // register Q&A handler to send answers to all clients
 
-    let mut maxCycles = 100;
+    let mut maxCycles = 180;
     for iCycle in 0..maxCycles {
         cycle(nar);
 
