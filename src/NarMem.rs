@@ -1,6 +1,5 @@
 // memory system for NAR
 
-use std::rc::Rc;
 use std::sync::{Arc};
 use std::collections::HashMap;
 use parking_lot::RwLock;

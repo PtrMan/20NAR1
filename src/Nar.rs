@@ -1,7 +1,6 @@
 //! Non-Axiomatic Reasoner
 //! is exposing a NAR as one "unit" which can be instantiated
 
-use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc};
 use std::sync::atomic::{Ordering};

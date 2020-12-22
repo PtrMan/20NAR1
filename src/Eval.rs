@@ -3,12 +3,10 @@ use parking_lot::RwLock;
 
 use crate::Term::{Term, convTermToStr};
 use crate::Nar::*;
-use crate::NarInputFacade;
 use crate::NarWorkingCycle::QHandler;
 use crate::NarSentence::SentenceDummy;
 use crate::NarSentence::convSentenceTermPunctToStr;
 
-use crate::Nar::*;
 
 // evaluate how good NARS is with the narsese-program
 pub fn run(nar:&mut Nar)->Option<i64> {
@@ -22,7 +20,7 @@ pub fn run(nar:&mut Nar)->Option<i64> {
 
         // check if question was answered
         {
-            let mut data = global.lock().unwrap(); // unwrap to panic when it can't unlock
+            let data = global.lock().unwrap(); // unwrap to panic when it can't unlock
             if data.foundAnswer {
                 return Some(iCycle);
             }

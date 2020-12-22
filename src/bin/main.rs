@@ -79,7 +79,7 @@ pub fn main() {
     }
     else if runEnv == "bQA2" { // run Q&A benchmark
         let mut acc:f64 = 0.0;
-        let mut nRuns:i64 = std::env::args().nth(2).unwrap().parse::<i64>().unwrap();;// how may runs are added up?
+        let mut nRuns:i64 = std::env::args().nth(2).unwrap().parse::<i64>().unwrap();// how may runs are added up?
 
         let mut cntUnanswered:i64 = 0; // how many questions were unanswered?
 

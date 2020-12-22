@@ -1,9 +1,6 @@
 //! Logic unifier for Terms for (any) NARS
 
 use crate::Term::Term;
-use crate::Term::Copula;
-use crate::Term::retSubterms;
-use crate::Term::retUniqueSubterms;
 use crate::Term::checkEqTerm;
 
 /// structure to store assignment of var

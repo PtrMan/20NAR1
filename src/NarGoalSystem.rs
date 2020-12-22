@@ -256,7 +256,7 @@ fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
                 },
                 None => { // by term doesn't exist
                     // * insert new item if we are here
-                    goalSystem.entriesByTerm.insert(((*(e.borrow().sentence.term)).clone()), RefCell::new(vec![Rc::clone(&e)])); // add to memory
+                    goalSystem.entriesByTerm.insert((*(e.borrow().sentence.term)).clone(), RefCell::new(vec![Rc::clone(&e)])); // add to memory
                 }
             }
         }

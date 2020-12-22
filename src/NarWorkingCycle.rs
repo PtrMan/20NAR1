@@ -1,13 +1,12 @@
 //! implementation of basic working cycle (for declarative reasoner)
 
-use std::sync::mpsc;
 use std::thread;
 use rand::Rng;
 use rand::rngs::ThreadRng;
 
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::sync::{Arc};
+use std::time::{Instant};
 
 use crate::Term::Term;
 use crate::Term::Copula;
@@ -1672,7 +1671,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                     // limit to max length to keep under holy AIKR
                     {
                         let mut arr:Vec<(u64, Arc<RwLock<Task>>)> = secondaryElligable.iter().map(|v| {
-                            let mut complexity: f64 = calcComplexity(&v.read().sentence.term) as f64;
+                            let complexity: f64 = calcComplexity(&v.read().sentence.term) as f64;
                             
                             /*
                             let isImplOrEquiv = match *v.read().sentence.term {

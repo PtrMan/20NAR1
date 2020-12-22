@@ -8,7 +8,6 @@ use parking_lot::RwLock;
 use crate::NarProc;
 use crate::Term::{Term, convTermToStr, checkEqTerm, Copula};
 use crate::TermUtils::decodeOp;
-use crate::NarMem;
 use crate::NarWorkingCycle;
 use crate::NarSentence::*;
 use crate::NarStamp;

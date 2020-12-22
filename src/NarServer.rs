@@ -132,7 +132,12 @@ pub fn run() {
         }
     });
     
-    task::block_on(future);
+    match task::block_on(future) {
+        Ok(_) => {}
+        Err(_) => {
+            panic!("error occurred while running server!");
+        }
+    }
 }
 
 /// handler to send answer to clients
