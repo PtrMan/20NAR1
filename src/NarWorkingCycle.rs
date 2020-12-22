@@ -1617,14 +1617,13 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
 
         if existAnyJudgementTasks { // one working cycle - select for processing
             if false {
-                /* old mechanism which selects random task by credit
+                // old mechanism which selects random task by credit
                 
                 let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
                 let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
-                let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter);
-        
+                let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter.load(Ordering::Relaxed));
+                
                 selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
-                */
             }
             else {                
                 let mut sharedGuard = memGuard.shared.write();
