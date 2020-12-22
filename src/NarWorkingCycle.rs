@@ -1827,7 +1827,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
         {
             let mut sharedGuard = memGuard.shared.write();
 
-            println!("[d] ENTER: keep working tasks under AIKR");
+            if false{println!("[d] ENTER: keep working tasks under AIKR")};
 
             let memCycleCounter:i64 = sharedGuard.cycleCounter.load(Ordering::Relaxed);
 
@@ -1841,7 +1841,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
             let cfg__minWorkItemPriority = 0.001;
             sharedGuard.judgementTasks = sharedGuard.judgementTasks.iter().filter(|iTask| taskCalcCredit(&iTask.read(), memCycleCounter) > cfg__minWorkItemPriority).cloned().collect();
 
-            println!("[d] EXIT: keep working tasks under AIKR");
+            if false {println!("[d] EXIT: keep working tasks under AIKR")};
         }
     }
 
