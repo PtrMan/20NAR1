@@ -1330,14 +1330,15 @@ pub fn populateTaskByTermLookup(judgementTasksByTerm:Arc<RwLock< HashMap<Term, V
 
 /// tries to revise the belief if possible
 ///
-/// returns if it has done revision
-pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) -> bool {
+/// returns Some with the conclusion if it has done revision
+pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) -> Option<SentenceDummy> {
     // MECHANISM< belief revision
     // revises beliefs if the term matches and if the stamps don't overlap
     // >
     
     // try to revise
     let mut wasRevised = false;
+    let mut res:Option<SentenceDummy> = None;
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
             
@@ -1367,6 +1368,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
                                             expDt:iBelief.expDt, // exponential time delta, used for =/>
                                             evi:Some(evi),
                                         }); // add revised belief!
+                                        res = additionalBelief.clone(); // result is the revision conclusion
 
                                         wasRevised = true;
                                         break; // breaking here is fine, because belief should be just once in table!
@@ -1392,7 +1394,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
         },
         _ => {}
     };
-    wasRevised
+    res
 }
 
 /// /param calcCredit compute the credit?
@@ -1400,71 +1402,78 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy
     if calcComplexity(&sentence.term) as i64 > cfg__maxComplexity { // don't add to complex terms because of AIKR god
         return;
     }
+
+    let mut toAddToTasks = vec![sentence.clone()];
     
     // try to revise
-    let wasRevised = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
+    let revisionConcl:Option<SentenceDummy> = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
+    let wasRevised = revisionConcl.is_some();
     if wasRevised {
-        return;
+        toAddToTasks.push(revisionConcl.unwrap().clone());
     }
-    // we are here if it can't revise
-    
-    NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence, cfg__nConceptBeliefs); // store sentence in memory, adressed by concepts
 
-    match sentence.punct {
-        EnumPunctation::JUGEMENT => {
-            let task = {
-                let sharedGuard = shared.read();
-                if true { // check if we should check if it already exist in the tasks
-                    for ijt in &sharedGuard.judgementTasks { // ijt:iteration-judgement-task
-                        let ijt2 = ijt.read();
-                        if checkEqTerm(&sentence.term, &ijt2.sentence.term) && checkSame(&sentence.stamp, &ijt2.sentence.stamp) {
-                            return; // don't add if it exists already! because we would skew the fairness if we would add it
+    if !wasRevised {
+        // add it only if it wasn't revised
+        NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence, cfg__nConceptBeliefs); // store sentence in memory, adressed by concepts
+    }
+
+    for iToAddToTasks in &toAddToTasks {
+        match iToAddToTasks.punct {
+            EnumPunctation::JUGEMENT => {
+                let task = {
+                    let sharedGuard = shared.read();
+                    if true { // check if we should check if it already exist in the tasks
+                        for ijt in &sharedGuard.judgementTasks { // ijt:iteration-judgement-task
+                            let ijt2 = ijt.read();
+                            if checkEqTerm(&iToAddToTasks.term, &ijt2.sentence.term) && checkSame(&iToAddToTasks.stamp, &ijt2.sentence.stamp) {
+                                return; // don't add if it exists already! because we would skew the fairness if we would add it
+                            }
                         }
                     }
-                }
-
-                let taskId:i64 = sharedGuard.taskIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
-                let mut task = Task {
-                    sentence:sentence.clone(),
-                    credit:1.0,
-                    qaCredit:0.0, // no question was posed!
-                    mulCredit:mulCredit,
-                    id:taskId,
-                    derivTime:sharedGuard.cycleCounter.load(Ordering::Relaxed)
+    
+                    let taskId:i64 = sharedGuard.taskIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
+                    let mut task = Task {
+                        sentence:iToAddToTasks.clone(),
+                        credit:1.0,
+                        qaCredit:0.0, // no question was posed!
+                        mulCredit:mulCredit,
+                        id:taskId,
+                        derivTime:sharedGuard.cycleCounter.load(Ordering::Relaxed)
+                    };
+                    if calcCredit {
+                        divCreditByComplexity(&mut task); // punish more complicated terms
+                    }
+    
+                    task
                 };
-                if calcCredit {
-                    divCreditByComplexity(&mut task); // punish more complicated terms
+                
+    
+                let taskArc = Arc::new(RwLock::new(task));
+                {
+                    shared.write().judgementTasks.push(Arc::clone(&taskArc));    
                 }
-
-                task
-            };
-            
-
-            let taskArc = Arc::new(RwLock::new(task));
-            {
-                shared.write().judgementTasks.push(Arc::clone(&taskArc));    
-            }
-
-
-            
-            // populate hashmap lookup
-            let sharedGuard = shared.read();
-            populateTaskByTermLookup(Arc::clone(&sharedGuard.judgementTasksByTerm), &sentence.term, &taskArc);
-        },
-        EnumPunctation::QUESTION => {
-            println!("TODO - check if we should check if it already exist in the tasks");
-            
-            let sharedGuard = shared.read();
-            sharedGuard.questionTasks.write().push(Box::new(Task2 {
-                sentence:sentence.clone(),
-                handler:None,
-                bestAnswerExp:0.0, // because has no answer yet
-                prio:1.0,
-            }));
-        },
-        EnumPunctation::GOAL => {
-            println!("ERROR: goal is not implemented!");
-        },
+    
+    
+                
+                // populate hashmap lookup
+                let sharedGuard = shared.read();
+                populateTaskByTermLookup(Arc::clone(&sharedGuard.judgementTasksByTerm), &iToAddToTasks.term, &taskArc);
+            },
+            EnumPunctation::QUESTION => {
+                println!("TODO - check if we should check if it already exist in the tasks");
+                
+                let sharedGuard = shared.read();
+                sharedGuard.questionTasks.write().push(Box::new(Task2 {
+                    sentence:iToAddToTasks.clone(),
+                    handler:None,
+                    bestAnswerExp:0.0, // because has no answer yet
+                    prio:1.0,
+                }));
+            },
+            EnumPunctation::GOAL => {
+                println!("ERROR: goal is not implemented!");
+            },
+        }
     }
 }
 
