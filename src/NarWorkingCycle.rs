@@ -1769,7 +1769,23 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                     // sort secondary elligable by complexity
                     // limit to max length to keep under holy AIKR
                     {
-                        let mut arr:Vec<(u64, Arc<RwLock<Task>>)> = secondaryElligable.iter().map(|v| (calcComplexity(&v.read().sentence.term), Arc::clone(&v))).collect();
+                        let mut arr:Vec<(u64, Arc<RwLock<Task>>)> = secondaryElligable.iter().map(|v| {
+                            let mut complexity: f64 = calcComplexity(&v.read().sentence.term) as f64;
+                            
+                            /*
+                            let isImplOrEquiv = match *v.read().sentence.term {
+                                Term::Stmt(Copula::IMPL, _, _) => {true},
+                                Term::Stmt(Copula::EQUIV, _, _) => {true},
+                                _ => {false}
+                            };
+
+                            complexity = if isImplOrEquiv {complexity * 0.0001} else {complexity}; // favor inference with implications
+                            */
+                            
+                            let complexity2: u64 = complexity as u64;
+
+                            (complexity2, Arc::clone(&v))
+                        }).collect();
 
                         arr.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
                         arr = arr[0..arr.len().min(300)].to_vec(); // keep under AIKR
