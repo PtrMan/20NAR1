@@ -1,12 +1,5 @@
 //! implementation of basic working cycle (for declarative reasoner)
 
-// TODO< select highest ranked task, remove it from array, select other task by priority distribution, do inference, put results into memory >
-//     TODO< put processed task into randomly sampled bag-table! >
-
-
-
-// TODO< add question variable >
-
 use std::sync::mpsc;
 use std::thread;
 use rand::Rng;
