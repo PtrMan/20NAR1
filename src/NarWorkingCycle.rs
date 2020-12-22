@@ -993,7 +993,7 @@ pub struct DeclarativeShared {
     pub taskIdCounter: Arc<AtomicI64>,
     
     /// counter for done reasoning cycles
-    pub cycleCounter: i64,
+    pub cycleCounter: AtomicI64,
 }
 
 /// memory of NAR for eternal beliefs
@@ -1022,9 +1022,9 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
 
         questionTasks:Arc::new(RwLock::new(vec![])), 
         mem:Arc::clone(&memArc),
-        stampIdCounter:AtomicI64::new(0), 
+        stampIdCounter:AtomicI64::new(0),
         taskIdCounter:Arc::new(AtomicI64::new(1000)), // high number to easy debugging to prevent confusion
-        cycleCounter:0,
+        cycleCounter:AtomicI64::new(0),
     };
 
 
@@ -1438,7 +1438,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy
                     qaCredit:0.0, // no question was posed!
                     mulCredit:mulCredit,
                     id:taskId,
-                    derivTime:sharedGuard.cycleCounter
+                    derivTime:sharedGuard.cycleCounter.load(Ordering::Relaxed)
                 };
                 if calcCredit {
                     divCreditByComplexity(&mut task); // punish more complicated terms
@@ -1525,8 +1525,7 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &
 pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     let cfgEnInstrumentation:bool = false; // enable instrumentation
 
-    mem.read().shared.write().cycleCounter+=1;
-
+    mem.read().shared.read().cycleCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
     
     {
         let memGuard = mem.read();
@@ -1628,7 +1627,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
             }
             else {                
                 let mut sharedGuard = memGuard.shared.write();
-                let selIdx = taskSelByCreditTop(&sharedGuard.judgementTasks, sharedGuard.cycleCounter);
+                let selIdx = taskSelByCreditTop(&sharedGuard.judgementTasks, sharedGuard.cycleCounter.load(Ordering::Relaxed));
                 
                 selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));
                 sharedGuard.judgementTasks.swap_remove(selIdx); // remove item
@@ -1805,7 +1804,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                         msg = Some(DeriverWorkMessage {
                             primary: Arc::clone(&selPrimaryTask2),
                             secondary: secondaryElligable.iter().map(|iv| Arc::clone(iv)).collect(), // clone
-                            cycleCounter: sharedGuard.cycleCounter,
+                            cycleCounter: sharedGuard.cycleCounter.load(Ordering::Relaxed),
                         });
                     }
                 },
@@ -1831,12 +1830,13 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     // keep working tasks of judgements under AIKR
     {
         let memGuard = mem.read();
-        let mut sharedGuard = memGuard.shared.write(); // get read guard because we need only read here
-        if sharedGuard.cycleCounter % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
+        if memGuard.shared.read().cycleCounter.load(Ordering::Relaxed) % intervalCheckTasks == 0 //&& mem.judgementTasks.len() > maxJudgementTasks //// commented for testing
         {
+            let mut sharedGuard = memGuard.shared.write();
+
             println!("[d] ENTER: keep working tasks under AIKR");
 
-            let memCycleCounter:i64 = sharedGuard.cycleCounter;
+            let memCycleCounter:i64 = sharedGuard.cycleCounter.load(Ordering::Relaxed);
 
             sharedGuard.judgementTasks.sort_by(|a, b| 
                 taskCalcCredit(&b.read(), memCycleCounter).partial_cmp(
@@ -1855,8 +1855,9 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     // keep judgement tasks by term under AIKR
     {
         let memGuard = mem.read();
-        let mut sharedGuard = memGuard.shared.write(); // get read guard because we need only read here
-        if sharedGuard.cycleCounter % intervalCheckTasks == 0 {
+        if memGuard.shared.read().cycleCounter.load(Ordering::Relaxed) % intervalCheckTasks == 0 {
+            let mut sharedGuard = memGuard.shared.write();
+            
             sharedGuard.judgementTasksByTerm = Arc::new(RwLock::new(HashMap::new())); // flush, because we will repopulate
 
             // repopulate judgementTasksByTerm
@@ -1883,7 +1884,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     { // limit number of concepts
         let memGuard = mem.read();
         let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
-        if sharedGuard.cycleCounter % intervalCheckConcepts == 0 {
+        if sharedGuard.cycleCounter.load(Ordering::Relaxed) % intervalCheckConcepts == 0 {
             NarMem::limitMemory(&mut sharedGuard.mem.write(), nConcepts);
         }
     }
@@ -1910,7 +1911,7 @@ pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
                 taskAsStr = format!("{} {}", taskAsStr, NarStamp::convToStr(&iTask.read().sentence.stamp));
             }
 
-            res.push(format!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.read(), mem.shared.read().cycleCounter)));
+            res.push(format!("task  {}  credit={}", taskAsStr, taskCalcCredit(&iTask.read(), mem.shared.read().cycleCounter.load(Ordering::Relaxed))));
         }
     }
 
