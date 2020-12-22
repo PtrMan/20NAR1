@@ -1,0 +1,25 @@
+// from https://github.com/opennars/OpenNARS-for-Applications/blob/master/examples/nal/asthma.nal
+
+//Stressed people tend to smoke
+<<$1 --> [stressed]> ==> <$1 --> [smokes]>>. {1.0 0.99}
+//A smoker befriended with someone else often makes the other person smoke as well
+<<#1 --> ((friend /2 $2)&[smokes])> ==> <$2 --> [smokes]>>. {1.0 0.9}
+//If someone smokes, he gets asthma
+<<$1 --> [smokes]> ==> <$1 --> [asthma]>>. {1.0 0.9}
+
+// necessary to give it transformation rules
+!s10
+
+//Angelika smokes
+<{angelika} --> [smokes]>.
+
+//COMMENTED because it doesn't answer the question <{jonas} --> [asthma]>? if this is here
+//Angelika is a friend of Jonas
+//<{angelika} --> (friend /1 {jonas})>.
+
+//Jonas is a friend of Angelika
+<{jonas} --> (friend /1 {angelika})>.
+
+//Jonas has asthma?
+<{jonas} --> [asthma]>?
+//expectedTv <{jonas} --> [asthma]>. {1 0.6561000000000001}
