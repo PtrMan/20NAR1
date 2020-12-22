@@ -79,7 +79,7 @@ pub fn main() {
     }
     else if runEnv == "bQA2" { // run Q&A benchmark
         let mut acc:f64 = 0.0;
-        let mut nRuns = 380; // 5000 - is to slow // how may runs are added up?
+        let mut nRuns:i64 = std::env::args().nth(2).unwrap().parse::<i64>().unwrap();;// how may runs are added up?
 
         let mut cntUnanswered:i64 = 0; // how many questions were unanswered?
 
@@ -89,12 +89,12 @@ pub fn main() {
 
             
 
-            for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
+            for iFilepathIdx in 0..std::env::args().len()-3 { // iterate over paths of nars files to load
                 cntEvals+=1;
                 
                 let mut nar = nar20_1::Nar::createNar();
                 
-                let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
+                let iFilePath:String = std::env::args().nth(3+iFilepathIdx).unwrap();
                 
                 nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
 
