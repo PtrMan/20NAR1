@@ -1,0 +1,1 @@
+cargo test && cargo run --release bQA2 50   nalExp/ExTimAnimalProd0.nal nalExp/ExTomIsComputer1.nal nalExp/ExCatBlueSky.nal nalExp/EvalShapeWorld2_1.nal nalExp/EvalShapeWorldComplexSingle.nal  nalExp/ExDeductiveReasoning0.nal nalExp/EvalAsthma1.nal
