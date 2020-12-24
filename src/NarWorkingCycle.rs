@@ -1646,12 +1646,20 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                     {
                         selPrimaryTaskTerm = selPrimaryTask2.read().sentence.term.clone();
                     }
-        
-        
+                    
+                    if false{println!("DBG enter enum secondary elligable")};
+                    if false{println!("DBG   term  {}", &convTermToStr(&selPrimaryTaskTerm))};
                     for iSubTerm in &retUniqueSubterms(&selPrimaryTaskTerm) {
                         if sharedGuard.judgementTasksByTerm.read().contains_key(iSubTerm) {
                             let itJudgementTasksByTerm:Vec<Arc<RwLock<Task>>> = sharedGuard.judgementTasksByTerm.read().get(iSubTerm).unwrap().to_vec();
+                            
+                            let mut icnt = 0; // counter to limit it
                             for it in &itJudgementTasksByTerm {// append to elligable, because it contains the term
+                                if icnt > 50 { // HACK HACK HACK 22.12.2020 < limit it in a hacky way because this is to slow >
+                                    break; 
+                                }
+                                icnt+=1;
+                                
                                 let itId;
                                 {
                                     itId = it.read().id;
@@ -1674,6 +1682,8 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                             }
                         }
                     }
+                    if false{println!("DBG exit enum secondary elligable")};
+                    if false{println!("DBG   collected # = {}", secondaryElligable.len())};
 
                     // sort secondary elligable by complexity
                     // limit to max length to keep under holy AIKR
@@ -1709,7 +1719,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                         }
                     }
         
-                    if secondaryElligable.len() > 0 { // must contain any premise to get selected    
+                    if true {    
                         // build message of work
                         msg = Some(DeriverWorkMessage {
                             primary: Arc::clone(&selPrimaryTask2),
