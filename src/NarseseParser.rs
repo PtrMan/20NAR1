@@ -47,6 +47,16 @@ pub fn parseNarseseRetTv(narsese:&mut String, tv:&mut Tv) {
 pub fn parseNarsese(narsese:&String) -> Option<(Term, Tv, EnumPunctation, bool)> {
   let mut narsese2:String = narsese.clone();
 
+  // HACK< replace spaces so the parser itself doesn't have to care to much about spaces in certain places >
+  while narsese2.contains("* ") {
+    narsese2 = narsese2.replace("* ", "*");
+  }
+
+  while narsese2.contains(" *") {
+    narsese2 = narsese2.replace(" *", "*");
+  }
+
+
   let mut isEvent = false;
   if narsese2.ends_with(" :|:") {
     isEvent = true;
@@ -233,6 +243,19 @@ mod tests {
   #[test]
   pub fn setExtProd() {
     let narsese = "<{(a*c)} --> b>.".to_string();
+    let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
+    assert_eq!(parseResOpt.is_some(), true);
+    
+    let (term, tv, punct, _isEvent) = parseResOpt.unwrap();
+    assert_eq!(convTermToStr(&term), "<{( a * c )} --> b>");
+    assert_eq!((tv.f - 1.0).abs() < 0.01, true);
+    assert_eq!((tv.c - 0.9).abs() < 0.01, true);
+    assert_eq!(punct, EnumPunctation::JUGEMENT);
+  }
+
+  #[test]
+  pub fn setExtProd_spaces() {
+    let narsese = "<{(a * c)} --> b>.".to_string();
     let parseResOpt: Option<(Term, Tv, EnumPunctation, bool)> = parseNarsese(&narsese);
     assert_eq!(parseResOpt.is_some(), true);
     
