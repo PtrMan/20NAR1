@@ -1,5 +1,5 @@
 # 
-This is a NARS+ General Machine Intelligence (GMI) system.
+This is a NARS inspired General Machine Intelligence (GMI) system. The current implementation only implements a NAR(non-axiomatic reasoner) for NAL1-7 and NAL8-9.
 
 # commands
 The system accepts either Narsese or commands as inputs. Commands are used to give the reasoner compute in the form of cycles. Commands also can be used to change parameters of the input/output and/or the reasoner itself. Commands also allow to invoke special functionality of the NARS+ implementation, for example for the NLP module.<br />
