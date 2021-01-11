@@ -11,9 +11,9 @@ use crate::TermApi::*;
 use crate::NarWorkingCycle::{Task2, debugCreditsOfTasks, QHandler};
 use crate::Tv::*;
 use crate::NarStamp::newStamp;
-use crate::NarSentence::{SentenceDummy, EnumPunctation};
+use crate::NarSentence::{Sentence, EnumPunctation};
 
-pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
+pub fn process(natural:&String, isQuestion:&mut bool)->Option<Sentence> {
     *isQuestion = false;
 
     let mut tokens: Vec<&str> = natural.split_whitespace().collect(); // split into tokens
@@ -187,7 +187,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let answerHandlerRef0 = Arc::new(RwLock::new(answerHandler0));
     let rc0 = Arc::clone(&answerHandlerRef0);
     {
-        let sentence = SentenceDummy {
+        let sentence = Sentence {
             term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relGENERIC".to_string())) ),
             t:None, // time of occurence
             punct:EnumPunctation::QUESTION,
@@ -208,7 +208,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let answerHandlerRef1 = Arc::new(RwLock::new(answerHandler1));
     let rc1 = Arc::clone(&answerHandlerRef1);
     {
-        let sentence = SentenceDummy {
+        let sentence = Sentence {
             term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIsQuery".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
@@ -229,7 +229,7 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
     let answerHandlerRef2 = Arc::new(RwLock::new(answerHandler2));
     let rc2 = Arc::clone(&answerHandlerRef2);
     {
-        let sentence = SentenceDummy {
+        let sentence = Sentence {
             term:Arc::new( s(Copula::INH, &Term::QVar("0".to_string()), &Term::Name("relIs2".to_string())) ),
             t:None, // time of occurence 
             punct:EnumPunctation::QUESTION,
@@ -274,11 +274,11 @@ pub fn process(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
 }
 
 struct NlpAnswerHandler {
-    answer: Option<SentenceDummy>, // holds the answer if it was found
+    answer: Option<Sentence>, // holds the answer if it was found
 }
 
 impl QHandler for NlpAnswerHandler {
-    fn answer(&mut self, _question:&Term, answer:&SentenceDummy) {
+    fn answer(&mut self, _question:&Term, answer:&Sentence) {
         self.answer = Some(answer.clone());
     }
 }

@@ -24,7 +24,7 @@ use rand::Rng;
 use Term::Term;
 
 // map if the sentence is a op
-pub fn mapArrSentencesByOp(sentences:&Vec<SentenceDummy>) -> Vec<bool> {
+pub fn mapArrSentencesByOp(sentences:&Vec<Sentence>) -> Vec<bool> {
     sentences.into_iter().map(|v| v.isOp).collect()
 }
 
@@ -48,7 +48,7 @@ pub fn selRngTrue(arr:Vec<bool>, rng:&mut ThreadRng) -> Option<usize> {
 }
 
 // tries to perceive events with ops as pivots
-pub fn perceiveImpl(events:&Vec<SentenceDummy>, rng:&mut ThreadRng) -> Vec<SentenceDummy> {
+pub fn perceiveImpl(events:&Vec<Sentence>, rng:&mut ThreadRng) -> Vec<Sentence> {
     let opIndices = mapArrSentencesByOp(events); // select indices of ops, because we want ops as "pivots"
     let pivotEventIdx = selRngTrue(opIndices, rng);
     match pivotEventIdx {

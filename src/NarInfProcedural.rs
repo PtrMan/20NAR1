@@ -4,7 +4,7 @@ use crate::Tv;
 use crate::NarStamp;
 use crate::Term::*;
 use crate::NarSentence::EnumPunctation;
-use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::Sentence;
 use crate::NarSentence::retTv;
 use crate::NarSentence::newEternalSentenceByTv;
 
@@ -17,7 +17,7 @@ use crate::NarSentence::newEternalSentenceByTv;
 /// a!
 ///
 /// returns derivation
-pub fn infGoalBelief(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<SentenceDummy> {
+pub fn infGoalBelief(goal: &Sentence, belief: &Sentence)-> Option<Sentence> {
     // check if term is same and inference can be done
     match &*belief.term {
         Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
@@ -59,13 +59,13 @@ pub fn infGoalBelief(goal: &SentenceDummy, belief: &SentenceDummy)-> Option<Sent
 /// goal detachment rule
 ///
 /// ex: (a, b)! |- a!
-pub fn infGoalDetach(premise: &SentenceDummy) -> Option<SentenceDummy> {
+pub fn infGoalDetach(premise: &Sentence) -> Option<Sentence> {
     // TODO< assert that premise is a goal >
 
     // * try to do goal detachment
     match &*premise.term {
         Term::Seq(seq) if seq.len() >= 1 => {
-            let detachedGoal:SentenceDummy = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&premise).unwrap(),premise.stamp.clone());
+            let detachedGoal:Sentence = newEternalSentenceByTv(&seq[0],EnumPunctation::GOAL,&retTv(&premise).unwrap(),premise.stamp.clone());
             //dbg(&format!("detached goal {}", &NarSentence::convSentenceTermPunctToStr(&detachedGoal, true)));
             Some(detachedGoal)
         },
@@ -77,6 +77,6 @@ pub fn infGoalDetach(premise: &SentenceDummy) -> Option<SentenceDummy> {
 
 /// helper
 // not PUBLIC because it's such a small helper which shouldn't get exposed
-fn retDesire(goal: &SentenceDummy) -> Tv::Tv {
+fn retDesire(goal: &Sentence) -> Tv::Tv {
     retTv(&goal).unwrap() // interpret tv as desire
 }

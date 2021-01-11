@@ -96,7 +96,7 @@ pub struct ProcNar {
     /// array of workers
     pub storeWorkers: Vec<JoinHandle<()>>,
     /// sender to worker
-    pub storeWorkersTx: Vec<SyncSender<SentenceDummy>>,
+    pub storeWorkersTx: Vec<SyncSender<Sentence>>,
 }
 
 /// init and set to default values
@@ -220,7 +220,7 @@ pub fn narInit() -> ProcNar {
 }
 
 /// add procedural evidence to memory
-pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &SentenceDummy, nBeliefs:usize) {
+pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &Sentence, nBeliefs:usize) {
     // enumerate subterms to decide concept names where we store the belief
     let subterms = {
         let mut subterms = vec![];
@@ -234,7 +234,7 @@ pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence:
 }
 
 /// returns all evidence, can be overlapping!
-pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<RwLock<SentenceDummy>>> {
+pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<RwLock<Sentence>>> {
     let mut res = vec![];
     for (ikey, _iConcept) in &procNar.evidenceMem.read().concepts {
         let beliefsOfConcept = NarMem::ret_beliefs_of_concept(&procNar.evidenceMem.read(), &ikey);
@@ -410,7 +410,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                             newStamp(&stampEvi)
                         };
 
-                        let evidenceSentence: SentenceDummy = SentenceDummy {
+                        let evidenceSentence: Sentence = Sentence {
                             punct:EnumPunctation::JUGEMENT,
                             t:None,
                             stamp:stamp,
@@ -439,11 +439,11 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         struct BestEntry {
             unifiedSeq: Term, // unified sequence used for decision making
             exp: f64, // expectation
-            evidence: Option<Arc<RwLock<SentenceDummy>>>, // evidence, used for anticipation
+            evidence: Option<Arc<RwLock<Sentence>>>, // evidence, used for anticipation
         };
 
         // helper to clone evidence
-        fn cloneEvidence(v: &Option<Arc<RwLock<SentenceDummy>>>) -> Option<Arc<RwLock<SentenceDummy>>> {
+        fn cloneEvidence(v: &Option<Arc<RwLock<Sentence>>>) -> Option<Arc<RwLock<Sentence>>> {
             match v {
                 Some(vv) => {Some(Arc::clone(vv))},
                 None => None
@@ -505,9 +505,9 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                 let mut predictedTerm: Term = checkedState.clone();
                 //let mut predictedTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
 
-                //let mut firstExecEvidence: Option<Arc<RwLock<SentenceDummy>>> = None; // used to remember evidence of first impl seq
+                //let mut firstExecEvidence: Option<Arc<RwLock<Sentence>>> = None; // used to remember evidence of first impl seq
 
-                let mut execEvidence: Vec<Arc<RwLock<SentenceDummy>>> = vec![]; // used to remember chain till hit goal, necessary for correct TV/desire computation
+                let mut execEvidence: Vec<Arc<RwLock<Sentence>>> = vec![]; // used to remember chain till hit goal, necessary for correct TV/desire computation
 
                 let cfg__forwardPredication_steps:i64 = 3; // how many steps are maximaly utilized for forward planning with prediction?, set to 0 to disable feature, IS EXPERIMENTAL
                 for iStep in 0..cfg__forwardPredication_steps {
@@ -527,11 +527,11 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
 
                                     for iBelief in execEvidence.iter().rev() { // iterate from back becaue we have to derive from goal to goal
                                         // create synthetic sentence for the current goal
-                                        let goal:SentenceDummy = newEternalSentenceByTv(&carriedGoalTerm, EnumPunctation::GOAL, &carriedGoalTv, newStamp(&vec![-1]));
+                                        let goal:Sentence = newEternalSentenceByTv(&carriedGoalTerm, EnumPunctation::GOAL, &carriedGoalTv, newStamp(&vec![-1]));
                                         //println!("DBG X {}", convSentenceTermPunctToStr(&goal, true));
                                         //println!("DBG Y {}", convSentenceTermPunctToStr(&iBelief.read(), true));
 
-                                        let iConcl:SentenceDummy = NarInfProcedural::infGoalBelief(&goal, &iBelief.read()).unwrap();
+                                        let iConcl:Sentence = NarInfProcedural::infGoalBelief(&goal, &iBelief.read()).unwrap();
 
                                         // return subj of iConcl and carry over carriedGoalTerm and TV
                                         // TODO< unify somehow ! >
@@ -580,7 +580,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                     }
 
                     
-                    let queryResult: Vec<Arc<RwLock<SentenceDummy>>> = NarGoalSystem::query_by_antecedent(&predictedTerm, &nar.evidenceMem.read());
+                    let queryResult: Vec<Arc<RwLock<Sentence>>> = NarGoalSystem::query_by_antecedent(&predictedTerm, &nar.evidenceMem.read());
                     if queryResult.len() == 0 {
                         // no result for query of chain, give up
 
@@ -590,7 +590,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                     }
 
                     // select random
-                    let sel: &Arc<RwLock<SentenceDummy>> = {
+                    let sel: &Arc<RwLock<Sentence>> = {
                         let selIdx:usize = nar.rng.gen_range(0, queryResult.len());
                         &queryResult[selIdx]
                     };
@@ -621,7 +621,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                     match bestEntry3.evidence {
                         Some(evidence) => {
                             
-                            let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&evidence);
+                            let pickedEvidence: Arc<RwLock<Sentence>> = Arc::clone(&evidence);
                             
                             //println!("DBG7 {}", convTermToStr(&bestEntry3.unifiedSeq));
 
@@ -682,7 +682,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                     let mut bestEntry5 = bestEntry3.borrow_mut();
                     match &bestEntry5.evidence {
                         Some(evidence) => {
-                            let pickedEvidence: Arc<RwLock<SentenceDummy>> = Arc::clone(&evidence);
+                            let pickedEvidence: Arc<RwLock<Sentence>> = Arc::clone(&evidence);
 
                             let opTerm:Term = (*bestEntry5.sentence.term).clone();
                             //let opTerm:Term = opTerm.clone();
@@ -982,7 +982,7 @@ pub fn debugEvidence(procNar: &ProcNar) {
 #[derive(Clone)]
 pub struct AnticipationEvent {
     /// evidence
-    pub evi:Arc<RwLock<SentenceDummy>>,
+    pub evi:Arc<RwLock<Sentence>>,
     /// deadline in absolute cycles
     pub deadline:i64,
 }

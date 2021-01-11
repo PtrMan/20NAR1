@@ -18,7 +18,7 @@ use crate::Term::{Term, convTermToStr};
 use crate::Nar::*;
 use crate::NarInputFacade;
 use crate::NarWorkingCycle::QHandler;
-use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::Sentence;
 use crate::NarSentence::convSentenceTermPunctToStr;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -146,7 +146,7 @@ pub struct QHandlerImpl {
 }
 
 impl QHandler for QHandlerImpl {
-    fn answer(&mut self, question:&Term, answer:&SentenceDummy) {
+    fn answer(&mut self, question:&Term, answer:&Sentence) {
         // print question and send answer
         let msg = "TRACE answer: ".to_owned() + &convTermToStr(&question) + "? " + &convSentenceTermPunctToStr(&answer, true);
 

@@ -9,7 +9,7 @@ use crate::NarModuleNlp;
 use crate::NarModuleNlp2;
 use crate::Term::*;
 use crate::TermApi::*;
-use crate::NarSentence::{SentenceDummy, EnumPunctation};
+use crate::NarSentence::{Sentence, EnumPunctation};
 use crate::Tv::{Tv};
 use crate::NarProc;
 use crate::OpLib;
@@ -104,7 +104,7 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module
         let natural = &input[6..].to_string();
         let mut isQuestion = false;
-        let resTermOpt:Option<SentenceDummy> = NarModuleNlp::process(&natural, &mut isQuestion);
+        let resTermOpt:Option<Sentence> = NarModuleNlp::process(&natural, &mut isQuestion);
         let punct = match isQuestion { // compute punctuation of narsese if it is a question or not
             true => EnumPunctation::QUESTION,
             false => EnumPunctation::JUGEMENT

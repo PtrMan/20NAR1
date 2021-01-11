@@ -132,7 +132,7 @@ impl NarProc::Op for Op__nlp_rel_0 {
         // add rewrittenRel to memory
         match declMem {
             Some(mem) => {
-                let sentence: SentenceDummy = {
+                let sentence: Sentence = {
                     let stampId:i64 =mem.read().shared.read().stampIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
                     let stamp = NarStamp::newStamp(&vec![stampId]);
                     newEternalSentenceByTv(&rewrittenRel,EnumPunctation::JUGEMENT,&Tv::Tv{f:1.0,c:0.9},stamp)

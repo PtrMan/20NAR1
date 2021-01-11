@@ -21,7 +21,7 @@ pub enum Evidence {
 }
 
 #[derive(Clone)]
-pub struct SentenceDummy {
+pub struct Sentence {
     pub term:Arc<Term>,
     pub t:Option<i64>, // time of occurence 
     pub punct:EnumPunctation,
@@ -33,8 +33,8 @@ pub struct SentenceDummy {
 }
 
 // create new eternal sentence
-pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:Stamp)->SentenceDummy {
-    SentenceDummy {
+pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:Stamp)->Sentence {
+    Sentence {
         term:Arc::new(term.clone()),
         t:None, // time of occurence 
         punct:punct,
@@ -44,7 +44,7 @@ pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:S
     }
 }
 
-pub fn retTv(s:&SentenceDummy)->Option<Tv::Tv> {
+pub fn retTv(s:&Sentence)->Option<Tv::Tv> {
     if !s.evi.is_some() {
         return None;
     }
@@ -71,7 +71,7 @@ pub fn retConf(evidence:&Evidence)->f64 {
 }
 
 // convert only term and punctation to string
-pub fn convSentenceTermPunctToStr(s:&SentenceDummy, enTv:bool) -> String {
+pub fn convSentenceTermPunctToStr(s:&Sentence, enTv:bool) -> String {
     let punct = match s.punct{
         EnumPunctation::QUESTION=>"?",
         EnumPunctation::JUGEMENT=>".",

@@ -22,7 +22,7 @@ use crate::NarStamp;
 
 use crate::NarSentence;
 use crate::NarSentence::EnumPunctation;
-use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::Sentence;
 use crate::NarSentence::retTv;
 use crate::NarMem;
 use crate::NarUnify;
@@ -73,12 +73,12 @@ pub struct EntryFoldedByTerm {
 
 /// entry for goal system
 pub struct Entry {
-    pub sentence: Arc<SentenceDummy>,
+    pub sentence: Arc<Sentence>,
     
     /// evidence which was used to derive this sentence. This is used to create the anticipations
     /// sentence: (a, ^b)!
     /// evidence: (a, ^b) =/> c.  (actual impl seq was this)
-    pub evidence: Option<Arc<RwLock<SentenceDummy>>>,
+    pub evidence: Option<Arc<RwLock<Sentence>>>,
     /// time of the creation of this entry
     pub createTime: i64,
     /// depth of the goal
@@ -144,7 +144,7 @@ pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
 }
 
 /// /param t is the procedural reasoner NAR time
-pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<SentenceDummy>, evidence: Option<Arc<RwLock<SentenceDummy>>>, depth:i64) {
+pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<Sentence>, evidence: Option<Arc<RwLock<Sentence>>>, depth:i64) {
     enforce(goal.punct == EnumPunctation::GOAL); // must be a goal!
     
     if goalSystem.cfg__dbg_enAddEntry { // print goal which is tried to put into system
@@ -264,7 +264,7 @@ fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
 }
 
 // privte because helper
-fn checkSetContains(set: &Vec< Rc<RefCell<Entry>> >, s: &SentenceDummy) -> bool {
+fn checkSetContains(set: &Vec< Rc<RefCell<Entry>> >, s: &Sentence) -> bool {
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in set {
         if 
@@ -326,7 +326,7 @@ pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
 
 /// sample a goal from the goal table of the goal system
 /// returns (sentence, depth)
-pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Option<(Arc<SentenceDummy>, i64)> {
+pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Option<(Arc<Sentence>, i64)> {
     // select batch (or return)
     let selBatchRef = {
 
@@ -433,7 +433,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 /// belief (b, x) =/> b
 /// returns
 /// belief (a, x) =/> b
-pub fn query_by_antecedent(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
+pub fn query_by_antecedent(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<Sentence>>> {
     let mut res = Vec::new();
 
     // query memory for potential evidence which we can use
@@ -458,7 +458,7 @@ pub fn query_by_antecedent(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<Rw
 }
 
 /// filters belief candidates which can be used for inference with the goal
-pub fn query_by_consequence(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<SentenceDummy>>> {
+pub fn query_by_consequence(queryTerm: &Term, procMem:&NarMem::Mem) -> Vec<Arc<RwLock<Sentence>>> {
     let mut res = Vec::new();
 
     // query memory for potential evidence which we can use
@@ -523,8 +523,8 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
 /// helper struct for deriver
 /// carries goal with evidence and the depth of the goal
 struct H {
-    goal: Arc<SentenceDummy>,
-    evidence: Option<Arc<RwLock<SentenceDummy>>>,
+    goal: Arc<Sentence>,
+    evidence: Option<Arc<RwLock<Sentence>>>,
     depth: i64,
 }
 
@@ -539,7 +539,7 @@ enum EnumGoalDerivationStrategy {
 
 // private because helper for sampleAndInference()
 /// sampledDepth: depth of sampled goal
-fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, strategy:EnumGoalDerivationStrategy, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng)->Vec<H> {
+fn deriveGoalsHelper(sampledGoal: &Sentence, sampledDepth:i64, strategy:EnumGoalDerivationStrategy, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng)->Vec<H> {
     let mut concls:Vec<H> = Vec::new(); // conclusions
 
     match NarInfProcedural::infGoalDetach(&sampledGoal) {
@@ -548,7 +548,7 @@ fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, strategy:Enu
         },
         _ => {
             // * try to find candidates for inference
-            let evidenceCandidates: Vec<Arc<RwLock<SentenceDummy>>> = query_by_consequence(&sampledGoal.term, procMem);
+            let evidenceCandidates: Vec<Arc<RwLock<Sentence>>> = query_by_consequence(&sampledGoal.term, procMem);
 
             //dbg(&format!("sampleAndInference() found belief candidates #={}", evidenceCandidates.len()));
 
@@ -556,7 +556,7 @@ fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, strategy:Enu
             match strategy {
                 ALL_BELIEFS => {
                     for iBelief in &evidenceCandidates {
-                        let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &iBelief.read());
+                        let conclOpt:Option<Sentence> = NarInfProcedural::infGoalBelief(&sampledGoal, &iBelief.read());
                         if conclOpt.is_some() {
                             concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(iBelief)), depth:sampledDepth+1});
                         }
@@ -566,7 +566,7 @@ fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, strategy:Enu
                     for _it in 0..2 {
                         if evidenceCandidates.len() > 0 {
                             let idx = rng.gen_range(0, evidenceCandidates.len());
-                            let conclOpt:Option<SentenceDummy> = NarInfProcedural::infGoalBelief(&sampledGoal, &evidenceCandidates[idx].read());
+                            let conclOpt:Option<Sentence> = NarInfProcedural::infGoalBelief(&sampledGoal, &evidenceCandidates[idx].read());
                             if conclOpt.is_some() {
                                 concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(&evidenceCandidates[idx])), depth:sampledDepth+1});
                             }
@@ -585,21 +585,21 @@ fn deriveGoalsHelper(sampledGoal: &SentenceDummy, sampledDepth:i64, strategy:Enu
 /// /param t is the procedural reasoner NAR time
 pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal from set of goals
-    let sampledGoalOpt: Option<(Arc<SentenceDummy>, i64)> = sample(&goalSystem, rng);
+    let sampledGoalOpt: Option<(Arc<Sentence>, i64)> = sample(&goalSystem, rng);
 
     if !sampledGoalOpt.is_some() {
         return; // no goal was sampled -> give up
     }
-    let (sampledGoal, sampledDepth): (Arc<SentenceDummy>, i64) = sampledGoalOpt.unwrap();
+    let (sampledGoal, sampledDepth): (Arc<Sentence>, i64) = sampledGoalOpt.unwrap();
 
-    let mut concls:Vec<(Arc<SentenceDummy>, Option<Arc<RwLock<SentenceDummy>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
+    let mut concls:Vec<(Arc<Sentence>, Option<Arc<RwLock<Sentence>>>, i64)> = Vec::new(); // conclusions are tuple (goal, evidence, depth)
     
     //dbg(&format!("sampleAndInference() sampled goal = {}", &NarSentence::convSentenceTermPunctToStr(&sampledGoal, true)));
 
     {
         // we need a structure to store goals in the working set with some meta-information
         struct WsEntry { // working set entry
-            pub goal: Arc<SentenceDummy>, // goal
+            pub goal: Arc<Sentence>, // goal
             pub sampledDepth: i64, // the depth of the goal
         }
 

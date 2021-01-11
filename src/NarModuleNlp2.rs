@@ -11,9 +11,9 @@ use crate::TermApi::*;
 use crate::NarWorkingCycle::{Task2, debugCreditsOfTasks, QHandler};
 use crate::Tv::*;
 use crate::NarStamp::newStamp;
-use crate::NarSentence::{SentenceDummy, EnumPunctation};
+use crate::NarSentence::{Sentence, EnumPunctation};
 
-pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDummy> {
+pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<Sentence> {
     *isQuestion = false;
 
     let nCycles = 200; // number of reasoning cycles for "worker NAR"
@@ -62,7 +62,7 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
     let answerHandlerRef0 = Arc::new(RwLock::new(answerHandler0));
     let rc0 = Arc::clone(&answerHandlerRef0);
     {
-        let sentence = SentenceDummy {
+        let sentence = Sentence {
             term:Arc::new( s(Copula::INH, &p2(&Term::SetExt(vec![Box::new(Term::Prod(termTokens))]), &Term::QVar("0".to_string())), &Term::Name("RELrepresent".to_string())) ),
             t:None, // time of occurence
             punct:EnumPunctation::QUESTION,
@@ -101,7 +101,7 @@ pub fn processInternal(natural:&String, isQuestion:&mut bool)->Option<SentenceDu
 // /param parentNar is the NAR to which the beliefs and questions will be fed
 pub fn process(parentNar: &mut Nar, natural:&String) {
     let mut isQuestion = false;
-    let resTermOpt:Option<SentenceDummy> = processInternal(&natural, &mut isQuestion);
+    let resTermOpt:Option<Sentence> = processInternal(&natural, &mut isQuestion);
     let punct = match isQuestion { // compute punctuation of narsese if it is a question or not
         true => EnumPunctation::QUESTION,
         false => EnumPunctation::JUGEMENT
@@ -137,11 +137,11 @@ pub fn process(parentNar: &mut Nar, natural:&String) {
 }
 
 struct NlpAnswerHandler {
-    answer: Option<SentenceDummy>, // holds the answer if it was found
+    answer: Option<Sentence>, // holds the answer if it was found
 }
 
 impl QHandler for NlpAnswerHandler {
-    fn answer(&mut self, _question:&Term, answer:&SentenceDummy) {
+    fn answer(&mut self, _question:&Term, answer:&Sentence) {
         self.answer = Some(answer.clone());
     }
 }

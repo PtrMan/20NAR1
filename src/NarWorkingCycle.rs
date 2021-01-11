@@ -17,7 +17,7 @@ use crate::Term::convTermToStr;
 use crate::Term::checkEqTerm;
 
 use crate::NarSentence::EnumPunctation;
-use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::Sentence;
 use crate::NarSentence::convSentenceTermPunctToStr;
 use crate::NarSentence::retTv;
 use crate::NarSentence::Evidence;
@@ -860,7 +860,7 @@ pub fn inference2(
     paTerm:&Term, paPunct:EnumPunctation, paStamp:&Stamp, paTv:&Option<Tv>,  
     pbTerm:&Term, pbPunct:EnumPunctation, pbStamp:&Stamp, pbTv:&Option<Tv>, 
     wereRulesApplied:&mut bool
-)->Vec<(SentenceDummy,f64)> {
+)->Vec<(Sentence,f64)> {
     *wereRulesApplied = false;
 
     let mut concl = vec![];
@@ -868,7 +868,7 @@ pub fn inference2(
     let infConcl = infBinary(&paTerm, paPunct, paTv, &pbTerm, pbPunct, pbTv, wereRulesApplied);
     for iInfConcl in infConcl {
         let (term, tv, punct) = iInfConcl;
-        concl.push((SentenceDummy{
+        concl.push((Sentence{
             term:Arc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
             stamp:merge(&paStamp, &pbStamp),
@@ -888,7 +888,7 @@ pub fn inference2(
 
 /// do inference of two sentences
 /// /param wereRulesApplied is true if any rules were applied
-pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut bool)->Vec<(SentenceDummy,f64)> {
+pub fn inference(pa:&Sentence, pb:&Sentence, wereRulesApplied:&mut bool)->Vec<(Sentence,f64)> {
     inference2(
         &pa.term, pa.punct, &pa.stamp, &retTv(&pa),  
         &pb.term, pb.punct, &pb.stamp, &retTv(&pb), 
@@ -896,14 +896,14 @@ pub fn inference(pa:&SentenceDummy, pb:&SentenceDummy, wereRulesApplied:&mut boo
     )
 }
 
-pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<(SentenceDummy,f64)> {
+pub fn infSinglePremise2(pa:&Sentence) -> Vec<(Sentence,f64)> {
     let mut concl = vec![];
 
     let infConcl = infSinglePremise(&pa.term, pa.punct, &retTv(pa));
     for iInfConcl in infConcl {
         let (term, tv, punct, attBias) = iInfConcl;
         
-        concl.push((SentenceDummy{
+        concl.push((Sentence{
             term:Arc::new(term.clone()),
             evi:if true {Some(Evidence::TV(tv.clone()))} else {None},
             stamp:pa.stamp.clone(),
@@ -918,7 +918,7 @@ pub fn infSinglePremise2(pa:&SentenceDummy) -> Vec<(SentenceDummy,f64)> {
 
 /// judgement task
 pub struct Task {
-    pub sentence:SentenceDummy,
+    pub sentence:Sentence,
 
     /// how much "worth" is the task for the system
     pub credit:f64,
@@ -946,7 +946,7 @@ pub fn taskCalcCredit(task:&Task, cycleCounter:i64) -> f64 {
 
 /// task for a question
 pub struct Task2 {
-    pub sentence:SentenceDummy,
+    pub sentence:Sentence,
     /// handler which is called when a better answer is found
     pub handler:Option< Arc<RwLock< dyn QHandler>> >,
     /// expectation of best answer
@@ -1053,10 +1053,10 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                 /////////
                 // DERIVE
                 /////////
-                let mut concl:Vec<(SentenceDummy,f64)> = vec![]; // conclusions, which are the sentences with "attention bias" factor
+                let mut concl:Vec<(Sentence,f64)> = vec![]; // conclusions, which are the sentences with "attention bias" factor
 
                 { // single premise derivation
-                    let mut concl2: Vec<(SentenceDummy,f64)> = infSinglePremise2(&msg.primary.read().sentence);
+                    let mut concl2: Vec<(Sentence,f64)> = infSinglePremise2(&msg.primary.read().sentence);
                     concl.append(&mut concl2);
                 }
 
@@ -1085,7 +1085,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
 
                     // do inference with premises
                     let mut wereRulesApplied = false;
-                    let mut concl2: Vec<(SentenceDummy,f64)> = inference(&msg.primary.read().sentence, &secondarySelTask.read().sentence, &mut wereRulesApplied);
+                    let mut concl2: Vec<(Sentence,f64)> = inference(&msg.primary.read().sentence, &secondarySelTask.read().sentence, &mut wereRulesApplied);
                     concl.append(&mut concl2);
                 }
 
@@ -1096,13 +1096,13 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                     let secondaryElligablePartA = &msg.secondary[..msg.secondary.len()/2];
                     let secondaryElligablePartB2 = msg.secondary[msg.secondary.len()/2..].to_vec();
                     let secondaryElligablePartB:Vec<(Term,EnumPunctation,Stamp,Option<Tv>)> = msg.secondary.iter().map(|s| {
-                        let s2:&SentenceDummy = &s.read().sentence;
+                        let s2:&Sentence = &s.read().sentence;
                         ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
                     }).collect();
 
                     let selPrimarySentenceTuple;
                     {
-                        let s2:&SentenceDummy = &msg.primary.read().sentence;
+                        let s2:&Sentence = &msg.primary.read().sentence;
                         selPrimarySentenceTuple = ((*s2.term).clone(), s2.punct, s2.stamp.clone(), retTv(&s2))
                     }
 
@@ -1110,7 +1110,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                         let mut res = vec![];
                         for iSecondarySentence in &secondaryElligablePartB {
                             let mut wereRulesApplied = false;
-                            let mut concl2: Vec<(SentenceDummy,f64)> = inference2(
+                            let mut concl2: Vec<(Sentence,f64)> = inference2(
                                 &selPrimarySentenceTuple.0, selPrimarySentenceTuple.1, &selPrimarySentenceTuple.2, &selPrimarySentenceTuple.3,
                                 &iSecondarySentence.0, iSecondarySentence.1, &iSecondarySentence.2, &iSecondarySentence.3, 
                                 &mut wereRulesApplied
@@ -1120,12 +1120,12 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                         res
                     });
 
-                    let selPrimaryTaskSentence:&SentenceDummy = &msg.primary.read().sentence;
+                    let selPrimaryTaskSentence:&Sentence = &msg.primary.read().sentence;
                     for iSecondaryTask in secondaryElligablePartA {
                         // do inference and add conclusions to array
                         if !Arc::ptr_eq(&msg.primary, &iSecondaryTask) { // arcs must not point to same task!
                             let mut wereRulesApplied = false;
-                            let mut concl2: Vec<(SentenceDummy,f64)> = inference(selPrimaryTaskSentence, &iSecondaryTask.read().sentence, &mut wereRulesApplied);
+                            let mut concl2: Vec<(Sentence,f64)> = inference(selPrimaryTaskSentence, &iSecondaryTask.read().sentence, &mut wereRulesApplied);
                             concl.append(&mut concl2);
                         }
                     }
@@ -1159,7 +1159,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                                     let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
-                                    let mut concl2: Vec<(SentenceDummy,f64)> = inference(&msg.primary.read().sentence, &iBeliefGuard, &mut wereRulesApplied);
+                                    let mut concl2: Vec<(Sentence,f64)> = inference(&msg.primary.read().sentence, &iBeliefGuard, &mut wereRulesApplied);
                                     concl.append(&mut concl2);
                                 }
                             }
@@ -1170,11 +1170,11 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                                 // >
                                 let selVal:f64 = rng.gen_range(0.0,1.0);
                                 let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                                let selBelief:&SentenceDummy = &concept.beliefs[selBeliefIdx].read();
+                                let selBelief:&Sentence = &concept.beliefs[selBeliefIdx].read();
         
                                 // do inference and add conclusions to array
                                 let mut wereRulesApplied = false;
-                                let mut concl2: Vec<(SentenceDummy,f64)> = inference(&msg.primary.read().sentence, selBelief, &mut wereRulesApplied);
+                                let mut concl2: Vec<(Sentence,f64)> = inference(&msg.primary.read().sentence, selBelief, &mut wereRulesApplied);
                                 concl.append(&mut concl2);
                             }
                         },
@@ -1270,7 +1270,7 @@ pub fn task2SelByCreditRandom(selVal:f64, arr: &Vec<Box<Task2>>)->usize {
 
 /// helper to select random belief by AV
 /// expect that the arr isn't question!
-pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<RwLock<SentenceDummy>>>)->usize {
+pub fn conceptSelByAvRandom(selVal:f64, arr: &Vec<Arc<RwLock<Sentence>>>)->usize {
     let sum:f64 = arr.iter().map(|iv| {
         let ivGuard = iv.read();
         if ivGuard.punct == EnumPunctation::QUESTION {panic!("TV expected!");}; // questions don't have TV as we need confidence!
@@ -1331,14 +1331,14 @@ pub fn populateTaskByTermLookup(judgementTasksByTerm:Arc<RwLock< HashMap<Term, V
 /// tries to revise the belief if possible
 ///
 /// returns Some with the conclusion if it has done revision
-pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) -> Option<SentenceDummy> {
+pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Option<Sentence> {
     // MECHANISM< belief revision
     // revises beliefs if the term matches and if the stamps don't overlap
     // >
     
     // try to revise
     let mut wasRevised = false;
-    let mut res:Option<SentenceDummy> = None;
+    let mut res:Option<Sentence> = None;
     match sentence.punct {
         EnumPunctation::JUGEMENT => {
             
@@ -1349,7 +1349,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
                             Some(concept) => {
                                 let mut delBeliefIdx:Option<usize> = None;
 
-                                let mut additionalBelief:Option<SentenceDummy> = None; // stores the additional belief
+                                let mut additionalBelief:Option<Sentence> = None; // stores the additional belief
                                 
                                 for iBeliefIdx in 0..concept.beliefs.len() {
                                     let iBelief = &concept.beliefs[iBeliefIdx].read();
@@ -1360,7 +1360,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
                                         let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
                                         
                                         delBeliefIdx = Some(iBeliefIdx);
-                                        additionalBelief = Some(SentenceDummy {
+                                        additionalBelief = Some(Sentence{
                                             term:iBelief.term.clone(),
                                             t:iBelief.t,
                                             punct:iBelief.punct,
@@ -1398,7 +1398,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&SentenceDummy) ->
 }
 
 /// /param calcCredit compute the credit?
-pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize, mulCredit:f64) {
+pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize, mulCredit:f64) {
     if calcComplexity(&sentence.term) as i64 > cfg__maxComplexity { // don't add to complex terms because of AIKR god
         return;
     }
@@ -1406,7 +1406,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&SentenceDummy
     let mut toAddToTasks = vec![sentence.clone()];
     
     // try to revise
-    let revisionConcl:Option<SentenceDummy> = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
+    let revisionConcl:Option<Sentence> = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
     let wasRevised = revisionConcl.is_some();
     if wasRevised {
         toAddToTasks.push(revisionConcl.unwrap().clone());
@@ -1488,7 +1488,7 @@ pub fn divCreditByComplexity(task:&mut Task) {
 /// * `qTask` - the question task to find a answer to
 /// * `concl` - candidate answer to get evaluated
 /// * `globalQaHandlers` - 
-pub fn qaTryAnswer(qTask: &mut Task2, concl: &SentenceDummy, globalQaHandlers: &Vec<Arc<RwLock< dyn QHandler>>>) {
+pub fn qaTryAnswer(qTask: &mut Task2, concl: &Sentence, globalQaHandlers: &Vec<Arc<RwLock< dyn QHandler>>>) {
     if concl.punct != EnumPunctation::JUGEMENT { // only jugements can answer questions!
         return;
     }
@@ -1851,5 +1851,5 @@ pub fn debugCreditsOfTasks(mem: &Mem2) -> Vec<String> {
 
 /// called when answer is found
 pub trait QHandler: Sync + Send {
-    fn answer(&mut self, question:&Term, answer:&SentenceDummy);
+    fn answer(&mut self, question:&Term, answer:&Sentence);
 }

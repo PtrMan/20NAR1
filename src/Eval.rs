@@ -4,7 +4,7 @@ use parking_lot::RwLock;
 use crate::Term::{Term, convTermToStr};
 use crate::Nar::*;
 use crate::NarWorkingCycle::QHandler;
-use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::Sentence;
 use crate::NarSentence::convSentenceTermPunctToStr;
 
 
@@ -43,7 +43,7 @@ pub struct QHandlerImpl {
 }
 
 impl QHandler for QHandlerImpl {
-    fn answer(&mut self, question:&Term, answer:&SentenceDummy) {
+    fn answer(&mut self, question:&Term, answer:&Sentence) {
         // print question and send answer
         let msg = "TRACE answer: ".to_owned() + &convTermToStr(&question) + "? " + &convSentenceTermPunctToStr(&answer, true);
 
