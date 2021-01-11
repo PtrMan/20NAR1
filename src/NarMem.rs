@@ -13,14 +13,14 @@ use crate::Tv::calcExp;
 use crate::NarStamp;
 
 use crate::NarSentence::EnumPunctation;
-use crate::NarSentence::SentenceDummy;
+use crate::NarSentence::Sentence;
 use crate::NarSentence::retTv;
 
 /// memory system
 pub struct Concept {
     pub name:Term,
 
-    pub beliefs:Vec<Arc<RwLock<SentenceDummy>>>,
+    pub beliefs:Vec<Arc<RwLock<Sentence>>>,
 }
 
 /// memory
@@ -32,12 +32,12 @@ pub fn make() -> Mem {
     Mem{concepts:HashMap::new(),}
 }
 
-pub fn storeInConcepts(mem: &mut Mem, s:&SentenceDummy, nBeliefs: usize) {
+pub fn storeInConcepts(mem: &mut Mem, s:&Sentence, nBeliefs: usize) {
     storeInConcepts2(mem, s, &retSubterms(&*s.term), nBeliefs); // enumerate all terms, we need to do this to add the sentence to all relevant names
 }
 
 /// function is a indirection for more control over which subterms are used for storage
-pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>, nBeliefs: usize) {
+pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBeliefs: usize) {
     if s.punct != EnumPunctation::JUGEMENT {
         return; // ignore everything else than JUGEMENT
     }
@@ -60,7 +60,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&SentenceDummy, subterms: &Vec<Term>, n
                             concept.beliefs.push(Arc::new(RwLock::new((*s).clone()))); // add belief
 
                             // order by importance
-                            let mut temp:Vec<(f64,Arc<RwLock<SentenceDummy>>)> = concept.beliefs.iter().map(|iv| {
+                            let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.beliefs.iter().map(|iv| {
                                     let ivGuard = iv.read();
                                     (calcExp(&retTv(&ivGuard).unwrap()), Arc::clone(iv))
                                 }).collect(); // compute exp for each element, necessary because else we have a deadlock
@@ -133,7 +133,7 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
 /// return beliefs of concept by term
 ///
 /// doesn't examine memory for subterms!
-pub fn ret_beliefs_of_concept(mem: &Mem, selTerm: &Term) -> Vec<Arc<RwLock<SentenceDummy>>> {
+pub fn ret_beliefs_of_concept(mem: &Mem, selTerm: &Term) -> Vec<Arc<RwLock<Sentence>>> {
     match mem.concepts.get(&selTerm) {
         Some(concept) => {
             concept.beliefs.iter().map(|iv| Arc::clone(iv)).collect()
@@ -145,8 +145,8 @@ pub fn ret_beliefs_of_concept(mem: &Mem, selTerm: &Term) -> Vec<Arc<RwLock<Sente
 }
 
 /// return non-unique beliefs by terms and it's subterms
-pub fn ret_beliefs_by_terms_nonunique(narMem:&Mem, terms:&[Term]) -> Vec<Arc<RwLock<SentenceDummy>>> {
-    let mut res:Vec<Arc<RwLock<SentenceDummy>>> = vec![];
+pub fn ret_beliefs_by_terms_nonunique(narMem:&Mem, terms:&[Term]) -> Vec<Arc<RwLock<Sentence>>> {
+    let mut res:Vec<Arc<RwLock<Sentence>>> = vec![];
     for iTerm in terms {
         for isubterm in &retSubterms(&iTerm) { // we have to iterate over term and subterm, ex: a-->b   ===> a, b, a-->b
             let beliefsOfConcept = ret_beliefs_of_concept(narMem, &isubterm);
