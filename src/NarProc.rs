@@ -1,4 +1,5 @@
 use rand::Rng;
+use std::time::{Instant};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc};
@@ -34,9 +35,6 @@ pub struct ProcNar {
 
     /// maximal number of evidence
     pub cfgNMaxEvidence:i64,
-
-    /// how ofter should event-FIFO get sampled for perception in cycle?
-    pub cfgPerceptionSamplesPerStep:i64,
     
     /// enable motor babbling?
     pub cfgEnBabbling:bool,
@@ -59,8 +57,16 @@ pub struct ProcNar {
     /// how many beliefs are stored in a concept
     pub cfg__nConceptBeliefs:usize,
 
-    /// how many samples are done for goal derivation (per timed cycle)
-    pub cfg__nGoalDeriverSamples:i64,
+    // how many samples are done for goal derivation (per timed cycle)
+    //pub cfg__nGoalDeriverSamples:i64,
+
+    // resource distribution (AIKR)
+    /// expected time for one derivation step, is the smallest time unit from the outside
+    pub cfg__resourceExpectedTime: f32,
+    /// priority of (temporal) goal derivation
+    pub cfg__resourceGoalDeriverPrio: f32,
+    /// how ofter should event-FIFO get sampled for perception in cycle?
+    pub cfg__perceptionSamplesPerStep:i64,
 
 
     /// how verbose is the reasoner, mainly used for debugging
@@ -107,7 +113,7 @@ pub fn narInit() -> ProcNar {
         cfgPerceptWindow: 2,
         cfgDescnThreshold: 0.58,
         cfgNMaxEvidence: 5000,
-        cfgPerceptionSamplesPerStep:4,
+        cfg__perceptionSamplesPerStep:4,
         cfgEnBabbling: true,
         cfg__nOpsMax: 1,
         cfg__multiOpProbability: 0.2,
@@ -116,7 +122,11 @@ pub fn narInit() -> ProcNar {
 
         cfg__nConcepts: 1000,
         cfg__nConceptBeliefs: 100,
-        cfg__nGoalDeriverSamples: 1, // 3 is enough for pong
+
+        // compute resources
+        //cfg__nGoalDeriverSamples: 1, // 3 is enough for pong
+        cfg__resourceExpectedTime: 0.08, // expected time for one inference step
+        cfg__resourceGoalDeriverPrio: 1.05, // priority of (temporal) goal derivation
         
         cfgVerbosity: 0, // be silent
 
@@ -330,7 +340,7 @@ pub fn narStep0(nar:&mut ProcNar) {
     }
 
     if nar.trace.len() >= 3 { // add evidence
-        for _sampleIt in 0..nar.cfgPerceptionSamplesPerStep {
+        for _sampleIt in 0..nar.cfg__perceptionSamplesPerStep {
             // filter middle by ops and select random first event before that!
             let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &nar.trace);
             if idxsOfOps.len() > 0 { // there must be at least one op to sample
@@ -434,6 +444,8 @@ pub fn narStep0(nar:&mut ProcNar) {
 ///
 /// usually after events were put into the FIFO
 pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {    
+    let timeStart = Instant::now();
+    
     let mut pickedAction:Option<Term> = None; // complete term of op
     {
         struct BestEntry {
@@ -789,17 +801,38 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         NarMem::limitMemory(&mut nar.evidenceMem.write(), nar.cfg__nConcepts as usize);
     }
 
-
-    // give goal system resources
-    if nar.t % 3 == 0 {
-        for _iSample in 0..nar.cfg__nGoalDeriverSamples {
-            NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem.read(), &mut nar.rng);
-        }
-    }
-
     if nar.t % 13 == 1 {
         NarGoalSystem::limitMemory(&mut nar.goalSystem, nar.t);
     }
+
+    // give goal system resources
+    {
+
+        while true {
+            let dt:f32 = (timeStart.elapsed().as_micros() as f32)/1000000.0;
+
+            // decide about resource distribution with max utility
+            let mut winner:(f32, String) = (1.0, "CYCLEFIN".to_string());
+
+            {
+                let utility:f32 = ((nar.cfg__resourceExpectedTime - dt) / nar.cfg__resourceExpectedTime) * nar.cfg__resourceGoalDeriverPrio;
+                if utility > winner.0 {
+                    winner = (utility, "GOALDERIV".to_string());
+                }
+            }
+
+            if &winner.1 == "CYCLEFIN" { // finish the cycle because we invested enough resources
+                //println!("DBG: CYCLEFIN");
+                break;
+            }
+            else if &winner.1 == "GOALDERIV" { // derive goal
+                //println!("DBG: GOALDERIV");
+                // TODO< make this more fine grained >
+                NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem.read(), &mut nar.rng);
+            }
+        }
+    }
+
     
     nar.t+=1; // increment time of NAR
 }
