@@ -986,6 +986,9 @@ pub struct DeclarativeShared {
     
     /// counter for done reasoning cycles
     pub cycleCounter: AtomicI64,
+
+    /// procedural memory for temporal Q&A
+    pub procMem: Arc<RwLock<NarMem::Mem>>,
 }
 
 /// memory of NAR for eternal beliefs
@@ -1007,6 +1010,10 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
         concepts:HashMap::new(),
     };
     let memArc:Arc<RwLock<NarMem::Mem>> = Arc::new(RwLock::new(mem0));
+    let mem1:NarMem::Mem = NarMem::Mem{
+        concepts:HashMap::new(),
+    };
+    let procMemArc:Arc<RwLock<NarMem::Mem>> = Arc::new(RwLock::new(mem1)); // create dummy procedural memory by default, we need to link it up externally
 
     let shared = DeclarativeShared {
         judgementTasks:vec![], 
@@ -1017,6 +1024,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
         stampIdCounter:AtomicI64::new(0),
         taskIdCounter:Arc::new(AtomicI64::new(1000)), // high number to easy debugging to prevent confusion
         cycleCounter:AtomicI64::new(0),
+        procMem:Arc::clone(&procMemArc),
     };
 
 
@@ -1587,10 +1595,21 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
             
 
             // * enumerate subterms
+            let isTemporal = match *(*selTask).sentence.term {
+                Term::Stmt(cop,_,_) if cop == Copula::PREDIMPL => {true},
+                _ => {false} // not temporal by default
+            };
+            
             for iSubTerm in &retUniqueSubterms(&(*selTask).sentence.term.clone()) {
+                let accessedMem = if isTemporal { // is it a temporal question?
+                    Arc::clone(&sharedGuard.procMem)
+                }
+                else {
+                    Arc::clone(&sharedGuard.mem)
+                };
 
                 // * retrieve concept by subterm
-                match sharedGuard.mem.read().concepts.get(&iSubTerm) {
+                match Arc::clone(&accessedMem).read().concepts.get(&iSubTerm) {
                     Some(concept) => {
                         // try to answer question with all beliefs which may be relevant
                         for iBelief in &concept.beliefs {
@@ -1599,8 +1618,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                     },
                     None => {} // concept doesn't exist, ignore
                 }
-
-            }
+            };
         }
     }
     
