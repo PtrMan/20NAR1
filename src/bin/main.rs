@@ -9,6 +9,8 @@ extern crate nom;
 //use std::process::exit;
 //use rand_distr::Normal;
 
+use std::sync::Arc;
+
 pub fn main() {
     //NnTrain::testTrainingNn0();
 
@@ -16,6 +18,7 @@ pub fn main() {
 
     if runEnv == "it" { // run interactive
         let mut nar = nar20_1::Nar::createNar();
+        nar.mem.read().shared.write().procMem = Arc::clone(&nar.procNar.evidenceMem); // wire up proc memory for proc-Q&A
 
         for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
             let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
