@@ -34,10 +34,10 @@ Robot examples need pybullet, install with `pip install pybullet`
 * unification of =/> by subj
 * goals
 * decision making
+* Q&A for temporal, ex: <(a,^x) =/> b>?
 ## non-temporal
 * Q&A
 # what is missing?
 * unification of =/> by pred
-* Q&A for temporal, ex: <(a,^x) =/> b>?
 * use of non-temporal knowledge for temporal inference
 * quests
