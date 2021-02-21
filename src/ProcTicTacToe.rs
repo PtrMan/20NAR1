@@ -39,12 +39,12 @@ pub fn run(maxEpochs:i64) {
 
     let mut nar:Nar::Nar = Nar::createNar();
     nar.procNar.cfg__eviCnt = 10000; // almost axiomatic
-    nar.procNar.goalSystem.cfg__enGoalSatisfaction = false; // disable because we want goals to persist
+    nar.procNar.goalSystem.write().cfg__enGoalSatisfaction = false; // disable because we want goals to persist
     
     // resources
     nar.procNar.cfg__nConcepts = 500; // 10000;
     nar.procNar.cfg__nConceptBeliefs = 100; // 1000;
-    nar.procNar.goalSystem.nMaxEntries = 1000; // 5000; // give more resources (memory - goals)
+    nar.procNar.goalSystem.write().nMaxEntries = 1000; // 5000; // give more resources (memory - goals)
     //nar.procNar.cfg__nGoalDeriverSamples = 100; // give a lot of samples so that it builds the tree fast
 
     // debugging
@@ -78,8 +78,8 @@ pub fn run(maxEpochs:i64) {
         // check if super goal is known, remind system if it has forgotten it
         {
             let mut found = false;
-            for iEntry in &NarGoalSystem::retEntries(&nar.procNar.goalSystem) {
-                if checkEqTerm(&iEntry.borrow().sentence.term, &Term::Name("w".to_string())) {
+            for iEntry in &NarGoalSystem::retEntries(&nar.procNar.goalSystem.read()) {
+                if checkEqTerm(&iEntry.read().sentence.term, &Term::Name("w".to_string())) {
                     found = true;
                     break;
                 }

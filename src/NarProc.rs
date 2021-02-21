@@ -93,7 +93,7 @@ pub struct ProcNar {
     pub expIntervalsTable:Vec<i64>,
 
     /// "goal system" - manages goals of the procedural reasoner
-    pub goalSystem: NarGoalSystem::GoalSystem,
+    pub goalSystem: Arc<RwLock<NarGoalSystem::GoalSystem>>,
 
 
 
@@ -142,7 +142,7 @@ pub fn narInit() -> ProcNar {
 
         expIntervalsTable: Vec::new(),
 
-        goalSystem: NarGoalSystem::makeGoalSystem(20, 8),
+        goalSystem: Arc::new(RwLock::new(NarGoalSystem::makeGoalSystem(20, 8))),
 
         storeWorkers: vec![],
         storeWorkersTx: vec![],
@@ -336,7 +336,7 @@ pub fn narStep0(nar:&mut ProcNar) {
     // neutralize goals which are fullfilled by current event
     if nar.trace.len() > 0 {
         let lastEvent:&SimpleSentence = &*nar.trace[nar.trace.len()-1];
-        NarGoalSystem::event_occurred(&mut nar.goalSystem, &lastEvent.name);
+        NarGoalSystem::event_occurred(&mut nar.goalSystem.write(), &lastEvent.name);
     }
 
     if nar.trace.len() >= 3 { // add evidence
@@ -472,7 +472,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
 
                 // check if current state "leads" to action
                 // tuple is (exp, entity)
-                let thisEntry: (f64, Option<(Rc<RefCell<NarGoalSystem::Entry>>, Term)>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem, &checkedState);
+                let thisEntry: (f64, Option<(Arc<RwLock<NarGoalSystem::Entry>>, Term)>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem.read(), &checkedState);
 
                 match thisEntry.1 {
                     Some(e) => { // was a candidate found?
@@ -484,14 +484,14 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                                     bestEntry2 = Some(BestEntry{
                                         unifiedSeq: e.1.clone(), // pull out unified term
                                         exp:thisEntry.0,
-                                        evidence:cloneEvidence(&e.0.borrow().evidence)});
+                                        evidence:cloneEvidence(&e.0.read().evidence)});
                                 }
                             },
                             None => {
                                 bestEntry2 = Some(BestEntry{
                                     unifiedSeq: e.1.clone(), // pull out unified term
                                     exp:thisEntry.0,
-                                    evidence:cloneEvidence(&e.0.borrow().evidence)});
+                                    evidence:cloneEvidence(&e.0.read().evidence)});
                             }
                         }
                     },
@@ -526,13 +526,13 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                     
                     // check if prediction did hit a goal
                     if iStep > 0 {
-                        let hitGoalEntryOpt: Option<Rc<RefCell<NarGoalSystem::Entry>>> = NarGoalSystem::query(&nar.goalSystem, &predictedTerm);
+                        let hitGoalEntryOpt: Option<Arc<RwLock<NarGoalSystem::Entry>>> = NarGoalSystem::query(&nar.goalSystem.read(), &predictedTerm);
                         match hitGoalEntryOpt {
                             Some(hitGoalEntry) => {
                                 if execEvidence.len() > 0 {
                                     // build decision by deriving goal
 
-                                    let mut carriedGoalTv: Tv::Tv = retTv(&hitGoalEntry.borrow().sentence).unwrap();
+                                    let mut carriedGoalTv: Tv::Tv = retTv(&hitGoalEntry.read().sentence).unwrap();
                                     let mut carriedGoalTerm: Term = predictedTerm.clone();
 
                                     let mut unifiedSeqOpt: Option<Term> = None; // uified last sequence
@@ -657,7 +657,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                                 let conclTerm:Term = opTerm.clone();
                                 let sentence = newEternalSentenceByTv(&conclTerm,EnumPunctation::GOAL,&retTv(&pickedEvidence.read()).unwrap(),pickedEvidence.read().stamp.clone());
 
-                                NarGoalSystem::addEntry(&mut nar.goalSystem, nar.t, Arc::new(sentence), Some(pickedEvidence), 0); 
+                                NarGoalSystem::addEntry(&mut nar.goalSystem, &declMem.as_ref().unwrap().read(), nar.t, Arc::new(sentence), Some(pickedEvidence), 0); 
                             }
                         },
                         None => {}
@@ -671,15 +671,15 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
     // select best desired goal from goal system
     {
         let mut bestExp:f64 = 0.0;
-        let mut bestEntry4: Option<Rc<RefCell<NarGoalSystem::Entry>>> = None;
+        let mut bestEntry4: Option<Arc<RwLock<NarGoalSystem::Entry>>> = None;
         let mut bestEntryIdx: Option<usize> = None; // used to remove goal after exec
         let mut idx = 0;
-        for iActiveGoalEntry in &nar.goalSystem.activeSet.set {
-            if NarGoalSystem::is_desired(&iActiveGoalEntry.borrow()) { // only consider desired goals!
-                let exp:f64 = Tv::calcExp(&retTv(&iActiveGoalEntry.borrow().sentence).unwrap());
+        for iActiveGoalEntry in &nar.goalSystem.read().activeSet.set {
+            if NarGoalSystem::is_desired(&iActiveGoalEntry.read()) { // only consider desired goals!
+                let exp:f64 = Tv::calcExp(&retTv(&iActiveGoalEntry.read().sentence).unwrap());
                 if exp > bestExp && exp > nar.cfgDescnThreshold { // is the goal a better goal?
                     bestExp = exp;
-                    bestEntry4 = Some(Rc::clone(&iActiveGoalEntry));
+                    bestEntry4 = Some(Arc::clone(&iActiveGoalEntry));
                     bestEntryIdx = Some(idx);
                 } 
             }
@@ -689,9 +689,9 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         
         match bestEntry4 {
             Some(bestEntry3) => {
-                let exp:f64 = Tv::calcExp(&retTv(&bestEntry3.borrow().sentence).unwrap());
+                let exp:f64 = Tv::calcExp(&retTv(&bestEntry3.read().sentence).unwrap());
                 if exp > nar.cfgDescnThreshold {
-                    let mut bestEntry5 = bestEntry3.borrow_mut();
+                    let mut bestEntry5 = bestEntry3.write();
                     match &bestEntry5.evidence {
                         Some(evidence) => {
                             let pickedEvidence: Arc<RwLock<Sentence>> = Arc::clone(&evidence);
@@ -715,7 +715,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                                     pickedAction = Some(opTerm.clone());
                                     
                                     bestEntry5.desirability = 0.0; // we executed action which reduces desirability of goal!
-                                    nar.goalSystem.activeSet.set.remove(bestEntryIdx.unwrap()); // remove immediatly, else pong3 score suffers!
+                                    nar.goalSystem.write().activeSet.set.remove(bestEntryIdx.unwrap()); // remove immediatly, else pong3 score suffers!
 
                                     // add anticipated event
                                     let expIntervalIdx:i64 =
@@ -802,7 +802,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
     }
 
     if nar.t % 13 == 1 {
-        NarGoalSystem::limitMemory(&mut nar.goalSystem, nar.t);
+        NarGoalSystem::limitMemory(&nar.goalSystem, &declMem.as_ref().unwrap().read(), nar.t);
     }
 
     // give goal system resources
@@ -828,7 +828,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
             else if &winner.1 == "GOALDERIV" { // derive goal
                 //println!("DBG: GOALDERIV");
                 // TODO< make this more fine grained >
-                NarGoalSystem::sampleAndInference(&mut nar.goalSystem, nar.t, &nar.evidenceMem.read(), &mut nar.rng);
+                NarGoalSystem::sampleAndInference(&mut nar.goalSystem, &declMem.as_ref().unwrap().read(), nar.t, &nar.evidenceMem.read(), &mut nar.rng);
             }
         }
     }

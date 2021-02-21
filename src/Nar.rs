@@ -71,7 +71,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
     if isEvent {
         if punct == EnumPunctation::GOAL {
             // add to goals
-            NarGoalSystem::addEntry(&mut nar.procNar.goalSystem, nar.procNar.t, Arc::new(sentence), None, 0);
+            NarGoalSystem::addEntry(&mut nar.procNar.goalSystem, &nar.mem.read(), nar.procNar.t, Arc::new(sentence), None, 0);
         }
         else {
             // add event

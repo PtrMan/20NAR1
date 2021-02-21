@@ -62,7 +62,7 @@ pub fn procChaosEntry() {
     }
 
     { // debug goals of goal system 
-        println!("{}", NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem));
+        println!("{}", NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem.read()));
     }
     
     {

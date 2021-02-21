@@ -24,30 +24,38 @@ use crate::NarSentence;
 use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::Sentence;
 use crate::NarSentence::retTv;
+use crate::NarSentence::newEternalSentenceByTv;
+use crate::NarSentence::convSentenceTermPunctToStr;
 use crate::NarMem;
 use crate::NarUnify;
 use crate::NarInfProcedural;
 use crate::Utils::{enforce};
+use crate::NarStamp::newStamp;
+use crate::NarWorkingCycle::Task2;
+use crate::NarWorkingCycle::QHandler;
+use crate::NarWorkingCycle::Mem2;
 
 pub struct ActiveSet {
-	pub set: Vec< Rc<RefCell<Entry>> >,
+	pub set: Vec< Arc<RwLock<Entry>> >,
 }
 
 
 /// structure for the goal system
 pub struct GoalSystem {
+    pub queuedProcQaBridgeAnswers: Vec<QueuedProcQaBridgeAnswer>,
+
     /// we store op goals seperatly as a optimization
     pub activeSet: ActiveSet,
 
     /// we are storing the entries batched by depth
-    pub batchesByDepth: Vec<Rc<RefCell<BatchByDepth>>>,
+    pub batchesByDepth: Vec<Arc<RwLock<BatchByDepth>>>,
     /// max number of entries
     pub nMaxEntries: i64,
     /// soft limit of depth
     pub nMaxDepth: i64,
 
     /// used to speed up queries
-    pub entriesByTerm: HashMap<Term, RefCell<Vec< Rc<RefCell<Entry>> > > >,
+    pub entriesByTerm: HashMap<Term, RwLock<Vec< Arc<RwLock<Entry>> > > >,
 
     /// is a goal satisfied if a event happens when the terms match up?
     ///
@@ -68,7 +76,7 @@ pub struct EntryFoldedByTerm {
     /// folded term
     pub term:Term,
     /// entries which all have the same term
-    pub entries:Vec<Rc<RefCell<Entry>>>,
+    pub entries:Vec<Arc<RwLock<Entry>>>,
 }
 
 /// entry for goal system
@@ -103,13 +111,21 @@ pub struct BatchByDepth {
     pub depth: i64,
 }
 
+/// answer of procedural / Q&A bridge - which is queued for processing in NarProc.rs
+pub struct QueuedProcQaBridgeAnswer {
+    entry: Arc<RwLock<Entry>>,
+    answer: Sentence,
+}
+
 pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
-    let mut batchesByDepth: Vec<Rc<RefCell<BatchByDepth>>> = vec![];
+    let mut batchesByDepth: Vec<Arc<RwLock<BatchByDepth>>> = vec![];
     for iDepth in 0..nMaxDepth {
-        batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{groups: vec![], depth:iDepth,})));
+        batchesByDepth.push(Arc::new(RwLock::new(BatchByDepth{groups: vec![], depth:iDepth,})));
     }
     
     GoalSystem {
+        queuedProcQaBridgeAnswers: vec![],
+
         activeSet: ActiveSet{set: vec![]},
 
         batchesByDepth: batchesByDepth,
@@ -126,28 +142,28 @@ pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
 }
 
 /// return array of all entries, is a helper and shouldn't get called to often
-pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Rc<RefCell<Entry>>> {
-    let mut res: Vec<Rc<RefCell<Entry>>> = vec![];
+pub fn retEntries(goalSystem: &GoalSystem) -> Vec<Arc<RwLock<Entry>>> {
+    let mut res: Vec<Arc<RwLock<Entry>>> = vec![];
     for iEntry in &goalSystem.batchesByDepth {
-        for iGroup in &iEntry.borrow().groups {
+        for iGroup in &iEntry.read().groups {
             for iVal in &iGroup.entries {
-                res.push(Rc::clone(&iVal));
+                res.push(Arc::clone(&iVal));
             }
         }
     }
 
     for iVal in &goalSystem.activeSet.set {
-        res.push(Rc::clone(&iVal));
+        res.push(Arc::clone(&iVal));
     }
 
     res
 }
 
 /// /param t is the procedural reasoner NAR time
-pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<Sentence>, evidence: Option<Arc<RwLock<Sentence>>>, depth:i64) {
+pub fn addEntry(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, t:i64, goal: Arc<Sentence>, evidence: Option<Arc<RwLock<Sentence>>>, depth:i64) {
     enforce(goal.punct == EnumPunctation::GOAL); // must be a goal!
     
-    if goalSystem.cfg__dbg_enAddEntry { // print goal which is tried to put into system
+    if goalSystem.read().cfg__dbg_enAddEntry { // print goal which is tried to put into system
         if depth > 2 {
             //println!("goal system: addEntry depth={} {}", depth, &NarSentence::convSentenceTermPunctToStr(&goal, true));
         }
@@ -155,17 +171,17 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<Sentence>, evidenc
     
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     {
-        match goalSystem.entriesByTerm.get_mut(&goal.term.clone()) {
+        match goalSystem.write().entriesByTerm.get_mut(&goal.term.clone()) {
             Some(arr) => {
-                let arr2 = &*arr.borrow();
+                let arr2 = &*arr.read();
                 {
                     {
                         let mut exists = false;
                         for iv in arr2 {
                             if 
                                 // optimization< checking term first is faster! >
-                                checkEqTerm(&iv.borrow().sentence.term, &goal.term) && // is necessary, else we don't accept detached goals!
-                                NarStamp::checkSame(&iv.borrow().sentence.stamp, &goal.stamp)
+                                checkEqTerm(&iv.read().sentence.term, &goal.term) && // is necessary, else we don't accept detached goals!
+                                NarStamp::checkSame(&iv.read().sentence.stamp, &goal.stamp)
                             {
                                 exists = true;
                                 break; // OPT
@@ -185,32 +201,52 @@ pub fn addEntry(goalSystem: &mut GoalSystem, t:i64, goal: Arc<Sentence>, evidenc
         }
     }
 
-    addEntry2(goalSystem, Rc::new(RefCell::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth, desirability:1.0, accDesirability:0.0})));
+    addEntry2(goalSystem, mem2, Arc::new(RwLock::new(Entry{sentence:Arc::clone(&goal), utility:1.0, evidence:evidence, createTime:t, depth:depth, desirability:1.0, accDesirability:0.0})));
 }
 
 /// helper to add goal
 // private because it is a helper
-fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
+fn addEntry2(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, e: Arc<RwLock<Entry>>) {
     
+    { // procedural / Q&A bridge
+        match &*e.read().sentence.term {
+            Term::Seq(seq) if seq.len() > 0 => {
+                let seqCondTerm: Term = (*seq[0]).clone();
+
+                let seqCondQaTerm: Term = convProcTermToQaTerm(&seqCondTerm); // translate variables to Question variables
+
+                // add question to Q&A system
+                let sharedGuard = mem2.shared.read();
+                sharedGuard.questionTasks.write().push(Box::new(Task2 {
+                    sentence:newEternalSentenceByTv(&seqCondQaTerm,EnumPunctation::QUESTION,&Tv::Tv{f:1.0,c:0.0},newStamp(&vec![])),
+                    handler:Some(Arc::new(RwLock::new(QaProcHandlerImpl{entry:Arc::clone(&e), goalSystem:Arc::clone(goalSystem)}))),
+                    bestAnswerExp:0.0, // because has no answer yet
+                    prio:1.0,
+                }));
+            }
+            _ => {}
+        }
+    }
+
     // decide if we add the goal to the active set
     use crate::TermUtils::decodeOp;
-    let isOp = decodeOp(&e.borrow().sentence.term).is_some();
+    let isOp = decodeOp(&e.read().sentence.term).is_some();
 	if isOp {
-		if checkSetContains(&goalSystem.activeSet.set, &e.borrow().sentence) {
+		if checkSetContains(&goalSystem.read().activeSet.set, &e.read().sentence) {
 			return;
 		}
 
-		goalSystem.activeSet.set.push(Rc::clone(&e));
+		goalSystem.write().activeSet.set.push(Arc::clone(&e));
 	}
 	else {
         // usual code for adding it to the "big" set
 
 
-        let chosenDepthIdx:usize = e.borrow().depth.min(goalSystem.nMaxDepth-1) as usize;
+        let chosenDepthIdx:usize = e.read().depth.min(goalSystem.read().nMaxDepth-1) as usize;
         //dbg(&format!("addEntry depth = {} chosenDepthIdx = {}", e.borrow().depth, chosenDepthIdx));
     
-        let chosenBatchRc:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[chosenDepthIdx]);
-        let mut chosenBatch = chosenBatchRc.borrow_mut();
+        let chosenBatchArc:Arc<RwLock<BatchByDepth>> = Arc::clone(&goalSystem.read().batchesByDepth[chosenDepthIdx]);
+        let mut chosenBatch = chosenBatchArc.write();
         
         // now we need to add the entry to the batch
         //
@@ -220,11 +256,11 @@ fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
         
         { // try to search for group by e.sentence.term
             for iGroup in &mut chosenBatch.groups { // iterate over groups by term
-                if checkEqTerm(&iGroup.term, &e.borrow().sentence.term) { // found entry?
-                    let newAcc:f64 = iGroup.entries[iGroup.entries.len()-1].borrow().accDesirability+iGroup.entries[iGroup.entries.len()-1].borrow().desirability.max(0.0) as f64; // compute acc utility for this item
-                    e.borrow_mut().accDesirability = newAcc; // update
+                if checkEqTerm(&iGroup.term, &e.read().sentence.term) { // found entry?
+                    let newAcc:f64 = iGroup.entries[iGroup.entries.len()-1].read().accDesirability+iGroup.entries[iGroup.entries.len()-1].read().desirability.max(0.0) as f64; // compute acc utility for this item
+                    e.write().accDesirability = newAcc; // update
     
-                    iGroup.entries.push(Rc::clone(&e)); // add entry
+                    iGroup.entries.push(Arc::clone(&e)); // add entry
                     return;
                 }
             }
@@ -232,45 +268,153 @@ fn addEntry2(goalSystem: &mut GoalSystem, e: Rc<RefCell<Entry>>) {
     
         { // case to add it as a new group
             chosenBatch.groups.push(EntryFoldedByTerm {
-                    term:(*(e.borrow().sentence.term)).clone(),
-                    entries:vec![Rc::clone(&e)],
+                    term:(*(e.read().sentence.term)).clone(),
+                    entries:vec![Arc::clone(&e)],
                 }
             );
 
-            match goalSystem.entriesByTerm.get_mut(&e.borrow().sentence.term) {
+            match goalSystem.write().entriesByTerm.get_mut(&e.read().sentence.term) {
                 Some(arr) => {
                     
                     let mut exists = false;
-                    for iItem in arr.borrow().iter() {
-                        let borrowedItem = iItem.borrow();
-                        if checkEqTerm(&borrowedItem.sentence.term, &e.borrow().sentence.term) && 
-                           NarStamp::checkOverlap(&borrowedItem.sentence.stamp, &e.borrow().sentence.stamp) {
+                    for iItem in arr.read().iter() {
+                        let borrowedItem = iItem.read();
+                        if checkEqTerm(&borrowedItem.sentence.term, &e.read().sentence.term) && 
+                           NarStamp::checkOverlap(&borrowedItem.sentence.stamp, &e.read().sentence.stamp) {
                             exists = true;
                             break; // OPT
                         }
                     }
                     
                     if !exists {
-                        arr.borrow_mut().push(Rc::clone(&e));
+                        arr.write().push(Arc::clone(&e));
                     }
+                    return;
                 },
-                None => { // by term doesn't exist
-                    // * insert new item if we are here
-                    goalSystem.entriesByTerm.insert((*(e.borrow().sentence.term)).clone(), RefCell::new(vec![Rc::clone(&e)])); // add to memory
-                }
+                None => {} // by term doesn't exist - fall through
             }
+
+            // by term doesn't exist
+            // * insert new item if we are here
+            goalSystem.write().entriesByTerm.insert((*(e.read().sentence.term)).clone(), RwLock::new(vec![Arc::clone(&e)])); // add to memory
         }
 	}
 }
 
+
+/// handler to build a procedural pseudo-event for proc / Q&A bridge
+pub struct QaProcHandlerImpl {
+    pub entry: Arc<RwLock<Entry>>,
+    pub goalSystem: Arc<RwLock<GoalSystem>>,
+}
+
+impl QHandler for QaProcHandlerImpl {
+    fn answer(&mut self, question:&Term, answer:&Sentence) {
+        // print question and send answer
+        let msg = "TRACE proc/Q&A bridge answer: ".to_owned() + &convTermToStr(&question) + "? " + &convSentenceTermPunctToStr(&answer, true);
+        println!("{}", &msg);
+
+        // queue up answer to be processed in NarProc.rs
+        self.goalSystem.write().queuedProcQaBridgeAnswers.push(QueuedProcQaBridgeAnswer{
+            entry: Arc::clone(&self.entry),
+            answer: answer.clone()
+        });
+
+    }
+}
+
+
+
+
+fn convProcTermToQaTerm(term: &Term) -> Term {
+    match term {
+        Term::QVar(name) => Term::QVar("Q_".to_owned()+name),
+        Term::DepVar(name)=> Term::QVar("D_".to_owned()+name),
+        Term::IndepVar(name)=> Term::QVar("I_".to_owned()+name),
+
+
+        Term::Stmt(cop, subj, pred) => 
+            Term::Stmt(*cop, Box::new(convProcTermToQaTerm(subj)), Box::new(convProcTermToQaTerm(pred)))
+        ,
+        Term::Name(name) => term.clone(),
+        Term::Seq(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::Seq(arr2)
+        }, // sequence
+        Term::SetInt(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::SetInt(arr2)
+        },
+        Term::SetExt(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::SetExt(arr2)
+        },
+        Term::Conj(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::Conj(arr2)
+        },
+        Term::Prod(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::Prod(arr2)
+        },
+        Term::Img(rel, idx, arr) => {
+            let rel2:Term = convProcTermToQaTerm(rel);
+
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+
+            Term::Img(Box::new(rel2), *idx, arr2)
+        },
+        Term::IntInt(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::IntInt(arr2)
+        },
+        Term::ExtInt(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::ExtInt(arr2)
+        },
+        Term::Par(arr) => {
+            let mut arr2 = vec![];
+            for i in arr {
+                arr2.push(Box::new(convProcTermToQaTerm(i)));
+            }
+            Term::Par(arr2)
+        },
+        Term::Neg(t) => Term::Neg(Box::new(convProcTermToQaTerm(t))),
+    }
+}
+
 // privte because helper
-fn checkSetContains(set: &Vec< Rc<RefCell<Entry>> >, s: &Sentence) -> bool {
+fn checkSetContains(set: &Vec< Arc<RwLock<Entry>> >, s: &Sentence) -> bool {
     // we check for same stamp - ignore it if the goal is exactly the same, because we don't need to store same goals
     for iv in set {
         if 
             // optimization< checking term first is faster! >
-            checkEqTerm(&iv.borrow().sentence.term, &s.term) && // is necessary, else we don't accept detached goals!
-            NarStamp::checkSame(&iv.borrow().sentence.stamp, &s.stamp)
+            checkEqTerm(&iv.read().sentence.term, &s.term) && // is necessary, else we don't accept detached goals!
+            NarStamp::checkSame(&iv.read().sentence.stamp, &s.stamp)
         {
             return true;
         }
@@ -280,18 +424,18 @@ fn checkSetContains(set: &Vec< Rc<RefCell<Entry>> >, s: &Sentence) -> bool {
 
 /// called when it has to stay under AIKR
 /// /param t is the procedural reasoner NAR time
-pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
-    let mut arr:Vec<Rc<RefCell<Entry>>> = retEntries(goalSystem); // working array with all entries
+pub fn limitMemory(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, t: i64) {
+    let mut arr:Vec<Arc<RwLock<Entry>>> = retEntries(&goalSystem.read()); // working array with all entries
     
-    for iv in &goalSystem.activeSet.set {
-        arr.push(Rc::clone(&iv));
+    for iv in &goalSystem.read().activeSet.set {
+        arr.push(Arc::clone(&iv));
     }
 
     dbg(&format!("nEntries={}", arr.len()));
 
     // * recalc utility
     for iv in &arr {
-        let mut iv2 = iv.borrow_mut();
+        let mut iv2 = iv.write();
         // consider age
         let age: i64 = t-iv2.createTime;
         let decay = ((age as f64)*-0.01).exp(); // compute decay by age
@@ -303,24 +447,25 @@ pub fn limitMemory(goalSystem: &mut GoalSystem, t: i64) {
     }
 
     // * sort by utility
-    arr.sort_by(|a, b| b.borrow().utility.partial_cmp(&a.borrow().utility).unwrap());
+    arr.sort_by(|a, b| b.read().utility.partial_cmp(&a.read().utility).unwrap());
 
     // * limit (AIKR)
-    while arr.len() as i64 > goalSystem.nMaxEntries {
-        arr.remove(goalSystem.nMaxEntries as usize);
+    while arr.len() as i64 > goalSystem.read().nMaxEntries {
+        arr.remove(goalSystem.read().nMaxEntries as usize);
     }
 
-    goalSystem.batchesByDepth = vec![]; // flush
+    goalSystem.write().batchesByDepth = vec![]; // flush
     // rebuild
-    for iDepth in 0..goalSystem.nMaxDepth {
-        goalSystem.batchesByDepth.push(Rc::new(RefCell::new(BatchByDepth{groups: vec![], depth:iDepth,})));
+    let nMaxDepth = goalSystem.read().nMaxDepth;
+    for iDepth in 0..nMaxDepth {
+        goalSystem.write().batchesByDepth.push(Arc::new(RwLock::new(BatchByDepth{groups: vec![], depth:iDepth,})));
     }
 
-    goalSystem.entriesByTerm.clear(); // flush, need to do this before calling addEntry2()
+    goalSystem.write().entriesByTerm.clear(); // flush, need to do this before calling addEntry2()
 
     // fill
     for iVal in arr {
-        addEntry2(goalSystem, iVal);
+        addEntry2(goalSystem, mem2, iVal);
     }
 }
 
@@ -331,7 +476,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     let selBatchRef = {
 
         let sumPriorities:f64 = goalSystem.batchesByDepth.iter().map(|iv| 
-            if iv.borrow().groups.len() > 0 {1.0} else {0.0} // only consider batches which have groups
+            if iv.read().groups.len() > 0 {1.0} else {0.0} // only consider batches which have groups
         ).sum();
     
         let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
@@ -350,15 +495,15 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
             }
         }
         */
-        let mut selBatch:Rc<RefCell<BatchByDepth>> = Rc::clone(&goalSystem.batchesByDepth[0]); // default, should never be used
+        let mut selBatch:Arc<RwLock<BatchByDepth>> = Arc::clone(&goalSystem.batchesByDepth[0]); // default, should never be used
         let mut sum:f64 = 0.0;
         for iv in &goalSystem.batchesByDepth {
             if sum >= selPriority {
                 break;
             }
-            if iv.borrow().groups.len() > 0 {
+            if iv.read().groups.len() > 0 {
                 sum+=1.0;
-                selBatch = Rc::clone(iv);
+                selBatch = Arc::clone(iv);
             };
         }
 
@@ -366,7 +511,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
 
         selBatch
     };
-    let selBatch = selBatchRef.borrow();
+    let selBatch = selBatchRef.read();
 
 
     
@@ -380,7 +525,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     
     let sumPriorities:f64 = entriesOfSelBatch.iter()
         .map(|iEntriesByTerm| { // map over entries-by-term
-            let lastEntry = &iEntriesByTerm.entries[iEntriesByTerm.entries.len()-1].borrow();
+            let lastEntry = &iEntriesByTerm.entries[iEntriesByTerm.entries.len()-1].read();
             let des2:f64 = lastEntry.accDesirability+lastEntry.desirability as f64;
             des2 // return inner sum
         }).sum();
@@ -393,14 +538,14 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
     for iv in &selBatch.groups {
         assert!(sum <= sumPriorities); // priorities are summed in the wrong way in this loop if this invariant is violated
         
-        let lastEntry = &iv.entries[iv.entries.len()-1].borrow();
+        let lastEntry = &iv.entries[iv.entries.len()-1].read();
         let des2:f64 = lastEntry.accDesirability+lastEntry.desirability as f64;
 
         if des2+sum > selPriority { // is the range of the selection inside this "group"?
 
             use crate::BinSearch::binSearch;
-            let selEntry3: Rc<RefCell<Entry>> = binSearch(&iv.entries, selPriority);
-            let selEntry2 = selEntry3.borrow();
+            let selEntry3: Arc<RwLock<Entry>> = binSearch(&iv.entries, selPriority);
+            let selEntry2 = selEntry3.read();
             selEntry = Some((Arc::clone(&selEntry2.sentence), selEntry2.depth));
             break;
 
@@ -492,11 +637,11 @@ fn retSubSeqAsSeqOrTerm(subseq:&[Box<Term>])->Term {
 
 /// select highest ranked goal for state
 /// returns entity and unified result
-pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, Option<(Rc<RefCell<Entry>>, Term)>) {
-    let mut res:(f64, Option<(Rc<RefCell<Entry>>, Term)>) = (0.0, None);
+pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, Option<(Arc<RwLock<Entry>>, Term)>) {
+    let mut res:(f64, Option<(Arc<RwLock<Entry>>, Term)>) = (0.0, None);
 
     for iv in &retEntries(goalSystem) {
-        match &(*(iv.borrow().sentence).term) {
+        match &(*(iv.read().sentence).term) {
             
             Term::Seq(seq) if seq.len() >= 1 => {
                 // try to unify first part of sequence with observed state
@@ -504,11 +649,11 @@ pub fn selHighestExpGoalByState(goalSystem: &GoalSystem, state:&Term) -> (f64, O
                 let asgnmts:Option<Vec<NarUnify::Asgnment>> = NarUnify::unify(&retSubSeqAsSeqOrTerm(&seq[..seq.len()-1]), &state);
 
                 if asgnmts.is_some() { // does first event of seq match to state with unification?, must unify!
-                    let exp = Tv::calcExp(&retTv(&iv.borrow().sentence).unwrap());
+                    let exp = Tv::calcExp(&retTv(&iv.read().sentence).unwrap());
                     let (resExp, _) = res;
                     if exp > resExp {
-                        let unifiedTerm: Term = NarUnify::unifySubst(&*(iv.borrow().sentence).term, &asgnmts.unwrap()); // unify because we need term with less or no variables!
-                        res = (exp, Some((Rc::clone(&iv), unifiedTerm)));
+                        let unifiedTerm: Term = NarUnify::unifySubst(&*(iv.read().sentence).term, &asgnmts.unwrap()); // unify because we need term with less or no variables!
+                        res = (exp, Some((Arc::clone(&iv), unifiedTerm)));
                     }
                 }
             },
@@ -583,9 +728,9 @@ fn deriveGoalsHelper(sampledGoal: &Sentence, sampledDepth:i64, strategy:EnumGoal
 
 
 /// /param t is the procedural reasoner NAR time
-pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
+pub fn sampleAndInference(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, t:i64, procMem:&NarMem::Mem, rng: &mut rand::rngs::ThreadRng) {
     // * sample goal from set of goals
-    let sampledGoalOpt: Option<(Arc<Sentence>, i64)> = sample(&goalSystem, rng);
+    let sampledGoalOpt: Option<(Arc<Sentence>, i64)> = sample(&goalSystem.write(), rng);
 
     if !sampledGoalOpt.is_some() {
         return; // no goal was sampled -> give up
@@ -618,7 +763,7 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
         //
         //    all conclusions are immediatly put back into the global set of goals!
         // >
-        for _iRound in 0..goalSystem.cfg__subworkingCycle_rounds {
+        for _iRound in 0..goalSystem.read().cfg__subworkingCycle_rounds {
             if workingSet.len() == 0 {
                 break; // no more goals -> we are done
             }
@@ -659,14 +804,14 @@ pub fn sampleAndInference(goalSystem: &mut GoalSystem, t:i64, procMem:&NarMem::M
             Some(e) => {Some(Arc::clone(e))}
             None => None
         };
-        addEntry(goalSystem, t, Arc::clone(iGoal), iEvidence2, *iDepth);
+        addEntry(goalSystem, mem2, t, Arc::clone(iGoal), iEvidence2, *iDepth);
     }
 }
 
 /// called from outside when event happened
 pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
     for iEntityRc in retEntries(goalSystem) {
-        let mut iEntity = iEntityRc.borrow_mut();
+        let mut iEntity = iEntityRc.write();
         if goalSystem.cfg__enGoalSatisfaction && // do we want to satisfy goals?
            checkEqTerm(&iEntity.sentence.term, eventTerm) // terms must of course to match up that a event can satify the goal
         {
@@ -675,7 +820,7 @@ pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
     }
 
     for iEntityRc in &goalSystem.activeSet.set {
-        let mut iEntity = iEntityRc.borrow_mut();
+        let mut iEntity = iEntityRc.write();
         if goalSystem.cfg__enGoalSatisfaction && // do we want to satisfy goals?
            checkEqTerm(&iEntity.sentence.term, eventTerm) // terms must of course to match up that a event can satify the goal
         {
@@ -685,20 +830,20 @@ pub fn event_occurred(goalSystem: &mut GoalSystem, eventTerm:&Term) {
 }
 
 /// returns the goal which matches with the term
-pub fn query(goalSystem: &GoalSystem, eventTerm:&Term) -> Option<Rc<RefCell<Entry>>> {
+pub fn query(goalSystem: &GoalSystem, eventTerm:&Term) -> Option<Arc<RwLock<Entry>>> {
     // TODO< select goal with highest exp! >
 
     for iEntityRc in retEntries(goalSystem) {
-        let iEntity = iEntityRc.borrow_mut();
+        let iEntity = iEntityRc.read();
         if checkEqTerm(&iEntity.sentence.term, eventTerm) { // terms must of course to match up
-            return Some(Rc::clone(&iEntityRc));
+            return Some(Arc::clone(&iEntityRc));
         }
     }
 
     for iEntityRc in &goalSystem.activeSet.set {
-        let iEntity = iEntityRc.borrow_mut();
+        let iEntity = iEntityRc.read();
         if checkEqTerm(&iEntity.sentence.term, eventTerm) { // terms must of course to match up
-            return Some(Rc::clone(&iEntityRc));
+            return Some(Arc::clone(&iEntityRc));
         }
     }
 
@@ -712,8 +857,8 @@ pub fn dbgRetGoalsAsText(goalSystem: &GoalSystem) -> String {
     let mut res:String = String::new();
 
     for iv in &retEntries(goalSystem) {
-        let sentenceAsStr = NarSentence::convSentenceTermPunctToStr(&(*iv).borrow().sentence, true);
-        res += &format!("{}   util={} depth={}\n", &sentenceAsStr, &(*iv).borrow().utility, iv.borrow().depth);
+        let sentenceAsStr = NarSentence::convSentenceTermPunctToStr(&(*iv).read().sentence, true);
+        res += &format!("{}   util={} depth={}\n", &sentenceAsStr, &(*iv).read().utility, iv.read().depth);
     }
 
     res

@@ -99,7 +99,7 @@ pub fn reasoner1Entry() -> f64 {
     }
 
     { // debug goals of goal system 
-        println!("{}", NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem));
+        println!("{}", NarGoalSystem::dbgRetGoalsAsText(&nar.procNar.goalSystem.read()));
     }
     
     { // print environment score

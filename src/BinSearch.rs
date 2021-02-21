@@ -1,16 +1,16 @@
-use std::rc::Rc;
-use core::cell::RefCell;
+use std::sync::{Arc};
+use parking_lot::RwLock;
 
 use crate::NarGoalSystem::*; // need it because it is hardcoded for goals
 
 // binary search
-pub fn binSearch(arr:&[Rc<RefCell<Entry>>], val:f64) -> Rc<RefCell<Entry>> {
+pub fn binSearch(arr:&[Arc<RwLock<Entry>>], val:f64) -> Arc<RwLock<Entry>> {
     //println!("{:?}",&arr);
     if arr.len() == 1 {
-        return Rc::clone(&arr[0]);
+        return Arc::clone(&arr[0]);
     }
     let idxMid = arr.len()/2;
-    binSearch(if arr[idxMid].borrow().accDesirability > val {&arr[..idxMid]} else {&arr[idxMid..]}, val)
+    binSearch(if arr[idxMid].read().accDesirability > val {&arr[..idxMid]} else {&arr[idxMid..]}, val)
 }
 
 /* testts were done for simple array, but code which was rewritten to access goalentries isn't tested
