@@ -500,6 +500,38 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
             }
         }
 
+        { // procedural / Q&A bridge
+            // see if the queued answers are good enough to cause an reaction/execution.
+            // we pretend that the answer did occur as an event
+
+            let mut writeGuard = nar.goalSystem.write();
+            for iQueuedAnswer in &writeGuard.queuedProcQaBridgeAnswers {
+
+                let exp:f64 = Tv::calcExp(&retTv(&iQueuedAnswer.answer).unwrap()); // TODO< calc exp() correctly! >
+
+                let nonunifiedSeq: Term = (*iQueuedAnswer.entry.read().sentence.term).clone();
+                let unifiedSeq: Term = nonunifiedSeq.clone(); // HACK< we just take the nonunified term > TODO< unify! >
+
+                match bestEntry2 { // is there best entry?
+                    Some(ref bestEntry4) => {
+                        if exp > bestEntry4.exp {
+                            bestEntry2 = Some(BestEntry{
+                                unifiedSeq: unifiedSeq.clone(), // pull out unified term
+                                exp:exp,
+                                evidence:cloneEvidence(&iQueuedAnswer.entry.read().evidence)});
+                        }
+                    },
+                    None => {
+                        bestEntry2 = Some(BestEntry{
+                            unifiedSeq: unifiedSeq.clone(), // pull out unified term
+                            exp:exp,
+                            evidence:cloneEvidence(&iQueuedAnswer.entry.read().evidence)});
+                    }
+                }
+            } // loop
+            writeGuard.queuedProcQaBridgeAnswers.clear();
+        }
+
         // MECHANISM< forward depth first prediction
         // tries to plan K steps ahead until it hopefully "hits" a goal
         //
@@ -635,7 +667,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                             
                             let pickedEvidence: Arc<RwLock<Sentence>> = Arc::clone(&evidence);
                             
-                            //println!("DBG7 {}", convTermToStr(&bestEntry3.unifiedSeq));
+                            println!("DBG7 {}", convTermToStr(&bestEntry3.unifiedSeq));
 
                             // extract op of seq
                             enforce(is_seq(&bestEntry3.unifiedSeq)); // must be sequence

@@ -113,8 +113,8 @@ pub struct BatchByDepth {
 
 /// answer of procedural / Q&A bridge - which is queued for processing in NarProc.rs
 pub struct QueuedProcQaBridgeAnswer {
-    entry: Arc<RwLock<Entry>>,
-    answer: Sentence,
+    pub entry: Arc<RwLock<Entry>>,
+    pub answer: Sentence,
 }
 
 pub fn makeGoalSystem(nMaxEntries:i64, nMaxDepth: i64) -> GoalSystem {
