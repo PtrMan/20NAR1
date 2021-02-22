@@ -1,0 +1,30 @@
+!por NOP ^run
+
+//Teacher session:
+//Run from orange things, they are dangerous!
+<(<#1 --> [orange]>,<{({SELF}*dummy0)} --> ^run>) =/> <{SELF} --> [safe]>>.
+
+//Garfield is an orange cat
+<{garfield} --> [orange]>.
+<{garfield} --> cat>.
+
+//Cats do meow
+<cat --> [meowing]>.
+
+!s100
+
+//Later, hearing something meow
+<{cat1} --> [meowing]>.
+<{SELF} --> [safe]>! :|:
+
+!spA
+!spB
+
+!s1
+!s1
+
+!spA
+!spB
+
+!s1
+!s1
