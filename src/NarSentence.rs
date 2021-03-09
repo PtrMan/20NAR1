@@ -30,6 +30,26 @@ pub struct Sentence {
     pub expDt:Option<i64>, // exponential time delta, used for =/>
 
     pub evi:Option<Evidence>, // option because questions don't have tv!
+
+    pub usage:Usage,
+}
+
+#[derive(Clone)]
+pub struct Usage {
+    pub lastUsed: i64, // time
+    pub useCount: i64,
+}
+
+pub fn usageUpdate(usage: &mut Usage, currentTime: i64) {
+    usage.lastUsed = currentTime;
+    usage.useCount += 1;
+}
+
+// see https://github.com/opennars/OpenNARS-for-Applications/blob/eeeb2ce1cc029f56f3b5eaf27fdf51f93b42a889/src/Usage.c#L27-L32
+pub fn calcUsageUsefulness(usage: &Usage, currentTime: i64) -> f64 {
+    let recency: f64 = (currentTime - usage.lastUsed) as f64;
+    let usefulnessToNormalize: f64 = (usage.useCount as f64) / (recency + 1.0);
+    usefulnessToNormalize / (usefulnessToNormalize + 1.0)
 }
 
 // create new eternal sentence
@@ -41,6 +61,7 @@ pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:S
         stamp:stamp,
         evi:if punct != EnumPunctation::QUESTION {Some(Evidence::TV(tv.clone()))} else {None},
         expDt:None, // not used
+        usage:Usage{lastUsed:0, useCount:0},
     }
 }
 

@@ -144,7 +144,7 @@ impl NarProc::Op for Op__nlp_rel_0 {
                 let cfg__maxComplexity = 64;
                 let cfg__nConceptBeliefs = 60;
 
-                NarWorkingCycle::memAddTask(Arc::clone(&memWrite.shared), &sentence, true, cfg__maxComplexity, cfg__nConceptBeliefs, 1.0);
+                NarWorkingCycle::memAddTask(Arc::clone(&memWrite.shared), &sentence, true, cfg__maxComplexity, cfg__nConceptBeliefs, 1.0, nar.t);
             },
             None => {} // can't add to decl memory, ignore
         }

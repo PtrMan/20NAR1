@@ -22,8 +22,8 @@ pub mod NarInfProcedural;
 
 // quality of life
 pub mod NarInteractive;
-pub mod NarModuleNlp;
-pub mod NarModuleNlp2;
+//pub mod NarModuleNlp;
+//pub mod NarModuleNlp2;
 pub mod NarServer;
 pub mod NarInputFacade;
 pub mod NarUtilReadn;

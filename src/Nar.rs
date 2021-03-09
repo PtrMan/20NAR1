@@ -89,14 +89,14 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
 
     if isTemporal {
         if punct == EnumPunctation::QUESTION { // temporal Q&A
-            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0);
+            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0, nar.procNar.t);
         }
         else if punct == EnumPunctation::JUGEMENT {
             // add to temporal knowledge
             sentence.evi = Some(Evidence::CNT{pos:10,cnt:10}); // we need to transcribe TV
                                                             // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
             
-            NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence, nar.cfg__nConceptBeliefs);
+            NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence, nar.cfg__nConceptBeliefs, nar.procNar.t);
         }
         else {
             println!("ERR : form is not supported!");
@@ -107,7 +107,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
             println!("ERR : eternal goals are not supported!");
         }
         else if punct == EnumPunctation::JUGEMENT {
-            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0);
+            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0, nar.procNar.t);
         }
         else {
             println!("ERR : form is not supported!");

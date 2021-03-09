@@ -102,7 +102,7 @@ pub struct ProcNar {
     /// array of workers
     pub storeWorkers: Vec<JoinHandle<()>>,
     /// sender to worker
-    pub storeWorkersTx: Vec<SyncSender<Sentence>>,
+    pub storeWorkersTx: Vec<SyncSender<(Sentence,i64)>>,
 }
 
 /// init and set to default values
@@ -162,7 +162,8 @@ pub fn narInit() -> ProcNar {
                 if !msgRes.is_ok() {
                     break; // other side has hung up, terminate this worker
                 }
-                let evidenceSentence = msgRes.unwrap(); // receive message
+                // currentTime: is the time when the sentence was added
+                let (evidenceSentence, currentTime) = msgRes.unwrap(); // receive message
                 //println!("[STORAGE WORKER] received MSG!");
 
                 /////////
@@ -200,7 +201,7 @@ pub fn narInit() -> ProcNar {
                 
                 if addEvidenceFlag.load(Ordering::Relaxed) {
                     // add evidence
-                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence, cfg__nConceptBeliefs);
+                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence, cfg__nConceptBeliefs, currentTime);
                 }
             }
         }));
@@ -230,7 +231,7 @@ pub fn narInit() -> ProcNar {
 }
 
 /// add procedural evidence to memory
-pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &Sentence, nBeliefs:usize) {
+pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &Sentence, nBeliefs:usize, currentTime: i64) {
     // enumerate subterms to decide concept names where we store the belief
     let subterms = {
         let mut subterms = vec![];
@@ -240,18 +241,24 @@ pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence:
         subterms
     };
 
-    NarMem::storeInConcepts2(&mut evidenceMem.write(), &evidenceSentence, &subterms, nBeliefs);
+    NarMem::storeInConcepts2(&mut evidenceMem.write(), &evidenceSentence, &subterms, nBeliefs, currentTime);
 }
 
 /// returns all evidence, can be overlapping!
 pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<RwLock<Sentence>>> {
     let mut res = vec![];
     for (ikey, _iConcept) in &procNar.evidenceMem.read().concepts {
-        let beliefsOfConcept = NarMem::ret_beliefs_of_concept(&procNar.evidenceMem.read(), &ikey);
+        let evidenceMemGuard = procNar.evidenceMem.read();
+        let beliefsOfConceptOpt = NarMem::ret_beliefs_of_concept(&evidenceMemGuard, &ikey);
 
-        // add to result
-        for iBelief in beliefsOfConcept.iter() {
-            res.push(Arc::clone(iBelief));
+        match beliefsOfConceptOpt {
+            Some(beliefsOfConcept) => {
+                // add to result
+                for iBelief in beliefsOfConcept {
+                    res.push(Arc::clone(iBelief));
+                }
+            },
+            None => {}
         }
     }
     res
@@ -426,11 +433,12 @@ pub fn narStep0(nar:&mut ProcNar) {
                             stamp:stamp,
                             expDt:Some(expDt),
                             term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
-                            evi:Some(Evidence::CNT{pos:nar.cfg__eviCnt,cnt:nar.cfg__eviCnt})
+                            evi:Some(Evidence::CNT{pos:nar.cfg__eviCnt,cnt:nar.cfg__eviCnt}),
+                            usage:Usage{lastUsed: 0, useCount: 0},
                         };
                         
                         let workerIdx = nar.rng.gen_range(0, nar.storeWorkersTx.len());
-                        nar.storeWorkersTx[workerIdx].send(evidenceSentence).unwrap(); // defer actual storage to worker
+                        nar.storeWorkersTx[workerIdx].send((evidenceSentence, nar.t)).unwrap(); // defer actual storage to worker
                     }
                 }
             }

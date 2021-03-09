@@ -21,8 +21,11 @@ use crate::NarSentence::Sentence;
 use crate::NarSentence::convSentenceTermPunctToStr;
 use crate::NarSentence::retTv;
 use crate::NarSentence::Evidence;
+use crate::NarSentence::Usage;
 
+use crate::NarMem::ret_beliefs_of_concept;
 use crate::NarMem;
+
 use crate::Tv::*;
 use crate::NarStamp::*;
 use crate::NarStamp;
@@ -874,7 +877,8 @@ pub fn inference2(
             stamp:merge(&paStamp, &pbStamp),
             t:None, // time of occurence 
             punct:punct,
-            expDt:None
+            expDt:None,
+            usage:Usage{lastUsed:0, useCount:0},
         },1.0));
     }
 
@@ -909,7 +913,8 @@ pub fn infSinglePremise2(pa:&Sentence) -> Vec<(Sentence,f64)> {
             stamp:pa.stamp.clone(),
             t:None, // time of occurence 
             punct:punct,
-            expDt:None
+            expDt:None,
+            usage:Usage{lastUsed:0, useCount:0},
         }, attBias));
     }
 
@@ -1046,6 +1051,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
         let sharedArc:Arc<RwLock<DeclarativeShared>> = Arc::clone(&resArc.read().shared);
         let globalQaHandlers = Arc::clone(&resArc.read().globalQaHandlers);
         let cfg__nConceptBeliefs = cfg__nConceptBeliefs;
+
         resArc.write().deriverWorkers.push(thread::spawn(move|| {
             let cfgEnInstrumentation = false;
             let mut rng = rand::thread_rng();
@@ -1057,6 +1063,8 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                 }
                 let msg:DeriverWorkMessage = msgRes.unwrap(); // receive message
                 //println!("[WORKER] received MSG!");//DBG
+
+                let currentTime: i64 = msg.cycleCounter; // HACK< we source the time here from the cycleCounter of the declarative reasoner >    TODO< maintain only one real time! >
 
                 /////////
                 // DERIVE
@@ -1156,14 +1164,21 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                             if false {println!("sample concept {}", convTermToStr(&concept.name))};
         
                             let processAllBeliefs:bool = true; // does the deriver process all beliefs?
-                            let processSampledBelief:bool = false; // does it just sample one belief?
+                            //let processSampledBelief:bool = false; // does it just sample one belief?
         
                             if processAllBeliefs { // code for processing all beliefs! is slower but should be more complete
                                 // MECHANISM<
                                 // process of all revelant beliefs of a concept as the first premise with a selected belief as the second premise
                                 // >
                                 // TODO< limit secondary beliefs to keep reasoning strictly under AIKR >
-                                for iBelief in &concept.beliefs {
+                                for iBelief in &concept.beliefsByExp {
+                                    let iBeliefGuard = iBelief.read();
+                                    // do inference and add conclusions to array
+                                    let mut wereRulesApplied = false;
+                                    let mut concl2: Vec<(Sentence,f64)> = inference(&msg.primary.read().sentence, &iBeliefGuard, &mut wereRulesApplied);
+                                    concl.append(&mut concl2);
+                                }
+                                for iBelief in &concept.beliefsByUsage {
                                     let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
@@ -1171,20 +1186,31 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                                     concl.append(&mut concl2);
                                 }
                             }
+                            /* commented because flag is false anyways
                             if processSampledBelief { // code for sampling, is faster
                                 // MECHANISM<
                                 // sample belief from concept
                                 // This has the advantage that it's super cheap, but it can "hit" not fruitful premises
                                 // >
                                 let selVal:f64 = rng.gen_range(0.0,1.0);
-                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &concept.beliefs);
-                                let selBelief:&Sentence = &concept.beliefs[selBeliefIdx].read();
-        
+                                
+                                let allBeliefs = vec![];
+                                for iv in concept.beliefsByExp.iter() {
+                                    allBeliefs.push(iv);
+                                }
+                                for iv in concept.beliefsByUsage.iter() {
+                                    allBeliefs.push(iv);
+                                }
+                                
+                                let selBeliefIdx:usize = conceptSelByAvRandom(selVal, &allBeliefs);
+                                let selBelief:&Sentence = &allBeliefs[selBeliefIdx].read();
+                                
                                 // do inference and add conclusions to array
                                 let mut wereRulesApplied = false;
                                 let mut concl2: Vec<(Sentence,f64)> = inference(&msg.primary.read().sentence, selBelief, &mut wereRulesApplied);
                                 concl.append(&mut concl2);
                             }
+                            */
                         },
                         None => {} // concept doesn't exist, ignore
                     }
@@ -1218,7 +1244,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                         //mulCredit *= 0.9; // inherit the priority from the parent, similar to ONA, leads to worse score when evaluating with Eval.sh
 
                         mulCredit *= iConclAttBias; // multiply by "attention bias" to get a lower attention value, to avoid repeating the same derivations over and over
-                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs, mulCredit);
+                        memAddTask(Arc::clone(&sharedArc), iConcl, true, cfg__maxComplexity, cfg__nConceptBeliefs, mulCredit, currentTime);
                     }
                 }
             }
@@ -1355,41 +1381,84 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                     Some(arcConcept) => {
                         match Arc::get_mut(arcConcept) {
                             Some(concept) => {
-                                let mut delBeliefIdx:Option<usize> = None;
+                                {
+                                    let mut delBeliefIdx:Option<usize> = None;
 
-                                let mut additionalBelief:Option<Sentence> = None; // stores the additional belief
-                                
-                                for iBeliefIdx in 0..concept.beliefs.len() {
-                                    let iBelief = &concept.beliefs[iBeliefIdx].read();
-                                    if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
-                                        let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
-                                        let tvA:Tv = retTv(&iBelief).unwrap();
-                                        let tvB:Tv = retTv(&sentence).unwrap();
-                                        let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
-                                        
-                                        delBeliefIdx = Some(iBeliefIdx);
-                                        additionalBelief = Some(Sentence{
-                                            term:iBelief.term.clone(),
-                                            t:iBelief.t,
-                                            punct:iBelief.punct,
-                                            stamp:stamp,
-                                            expDt:iBelief.expDt, // exponential time delta, used for =/>
-                                            evi:Some(evi),
-                                        }); // add revised belief!
-                                        res = additionalBelief.clone(); // result is the revision conclusion
-
-                                        wasRevised = true;
-                                        break; // breaking here is fine, because belief should be just once in table!
+                                    let mut additionalBelief:Option<Sentence> = None; // stores the additional belief
+                                    
+                                    for iBeliefIdx in 0..concept.beliefsByExp.len() {
+                                        let iBelief = &concept.beliefsByExp[iBeliefIdx].read();
+                                        if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
+                                            let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
+                                            let tvA:Tv = retTv(&iBelief).unwrap();
+                                            let tvB:Tv = retTv(&sentence).unwrap();
+                                            let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
+                                            
+                                            delBeliefIdx = Some(iBeliefIdx);
+                                            additionalBelief = Some(Sentence{
+                                                term:iBelief.term.clone(),
+                                                t:iBelief.t,
+                                                punct:iBelief.punct,
+                                                stamp:stamp,
+                                                expDt:iBelief.expDt, // exponential time delta, used for =/>
+                                                evi:Some(evi),
+                                                usage:Usage{lastUsed:0, useCount:0},
+                                            }); // add revised belief!
+                                            res = additionalBelief.clone(); // result is the revision conclusion
+    
+                                            wasRevised = true;
+                                            break; // breaking here is fine, because belief should be just once in table!
+                                        }
+                                    }
+    
+                                    if delBeliefIdx.is_some() {
+                                        concept.beliefsByExp.remove(delBeliefIdx.unwrap());
+                                    }
+    
+                                    if additionalBelief.is_some() {
+                                        concept.beliefsByExp.push(Arc::new(RwLock::new(additionalBelief.unwrap())));
                                     }
                                 }
 
-                                if delBeliefIdx.is_some() {
-                                    concept.beliefs.remove(delBeliefIdx.unwrap());
-                                }
+                                {
+                                    let mut delBeliefIdx:Option<usize> = None;
 
-                                if additionalBelief.is_some() {
-                                    concept.beliefs.push(Arc::new(RwLock::new(additionalBelief.unwrap())));
+                                    let mut additionalBelief:Option<Sentence> = None; // stores the additional belief
+                                    
+                                    for iBeliefIdx in 0..concept.beliefsByUsage.len() {
+                                        let iBelief = &concept.beliefsByUsage[iBeliefIdx].read();
+                                        if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
+                                            let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
+                                            let tvA:Tv = retTv(&iBelief).unwrap();
+                                            let tvB:Tv = retTv(&sentence).unwrap();
+                                            let evi:Evidence = Evidence::TV(rev(&tvA,&tvB));
+                                            
+                                            delBeliefIdx = Some(iBeliefIdx);
+                                            additionalBelief = Some(Sentence{
+                                                term:iBelief.term.clone(),
+                                                t:iBelief.t,
+                                                punct:iBelief.punct,
+                                                stamp:stamp,
+                                                expDt:iBelief.expDt, // exponential time delta, used for =/>
+                                                evi:Some(evi),
+                                                usage:Usage{lastUsed:0, useCount:0},
+                                            }); // add revised belief!
+                                            res = additionalBelief.clone(); // result is the revision conclusion
+    
+                                            wasRevised = true;
+                                            break; // breaking here is fine, because belief should be just once in table!
+                                        }
+                                    }
+    
+                                    if delBeliefIdx.is_some() {
+                                        concept.beliefsByUsage.remove(delBeliefIdx.unwrap());
+                                    }
+    
+                                    if additionalBelief.is_some() {
+                                        concept.beliefsByUsage.push(Arc::new(RwLock::new(additionalBelief.unwrap())));
+                                    }
                                 }
+                                
                             }
                             None => {
                                 println!("INTERNAL ERROR - couldn't aquire arc!");
@@ -1406,7 +1475,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
 }
 
 /// /param calcCredit compute the credit?
-pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize, mulCredit:f64) {
+pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, calcCredit:bool, cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize, mulCredit:f64, currentTime: i64) {
     if calcComplexity(&sentence.term) as i64 > cfg__maxComplexity { // don't add to complex terms because of AIKR god
         return;
     }
@@ -1422,7 +1491,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, cal
 
     if !wasRevised {
         // add it only if it wasn't revised
-        NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence, cfg__nConceptBeliefs); // store sentence in memory, adressed by concepts
+        NarMem::storeInConcepts(&mut shared.read().mem.write(), sentence, cfg__nConceptBeliefs, currentTime); // store sentence in memory, adressed by concepts
     }
 
     for iToAddToTasks in &toAddToTasks {
@@ -1608,15 +1677,17 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
                     Arc::clone(&sharedGuard.mem)
                 };
 
-                // * retrieve concept by subterm
-                match Arc::clone(&accessedMem).read().concepts.get(&iSubTerm) {
-                    Some(concept) => {
-                        // try to answer question with all beliefs which may be relevant
-                        for iBelief in &concept.beliefs {
+                // try to answer question with all beliefs which may be relevant
+                let accessedMemGuard = accessedMem.read();
+                let beliefsOpt = ret_beliefs_of_concept(&accessedMemGuard, &iSubTerm);
+                
+                match beliefsOpt {
+                    Some(beliefs) => {
+                        for iBelief in beliefs {
                             qaTryAnswer(&mut selTask, &iBelief.read(), &memGuard.globalQaHandlers.read());
                         }
                     },
-                    None => {} // concept doesn't exist, ignore
+                    None => {}
                 }
             };
         }
