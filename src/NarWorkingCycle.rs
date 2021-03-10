@@ -1826,6 +1826,16 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
     
     {
         if msg.is_some() { // do we have a message to send to worker?
+            // commented because the sentence is a copy and changing it doesn't change the actual belief!
+            /*
+            // update usage
+            usageUpdate(&mut msg.primary.read().sentence.usage, currentTime);
+            // update Usage
+            for iBeliefTask in msg.secondary {
+                usageUpdate(&mut iBeliefTask.read().sentence.usage, currentTime);
+            }
+            */
+            
             // submit message to worker
             let unwrappedMsg = msg.unwrap();
             let memGuard = mem.read();
