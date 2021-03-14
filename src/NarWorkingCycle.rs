@@ -1868,7 +1868,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>, currentTime: &AtomicI64) {
                 ).unwrap());
             sharedGuard.judgementTasks = sharedGuard.judgementTasks[0..maxJudgementTasks.min(sharedGuard.judgementTasks.len())].to_vec(); // limit to keep under AIKR
             
-            /// minimal priority which a work item can have
+            // minimal priority which a work item can have
             let cfg__minWorkItemPriority = 0.001;
             sharedGuard.judgementTasks = sharedGuard.judgementTasks.iter().filter(|iTask| taskCalcCredit(&iTask.read(), memCycleCounter) > cfg__minWorkItemPriority).cloned().collect();
 

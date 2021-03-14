@@ -1,6 +1,5 @@
 use rand::Rng;
 use std::time::{Instant};
-use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -460,7 +459,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
             unifiedSeq: Term, // unified sequence used for decision making
             exp: f64, // expectation
             evidence: Option<Arc<RwLock<Sentence>>>, // evidence, used for anticipation
-        };
+        }
 
         // helper to clone evidence
         fn cloneEvidence(v: &Option<Arc<RwLock<Sentence>>>) -> Option<Arc<RwLock<Sentence>>> {
@@ -848,7 +847,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
     // give goal system resources
     {
 
-        while true {
+        loop {
             let dt:f32 = (timeStart.elapsed().as_micros() as f32)/1000000.0;
 
             // decide about resource distribution with max utility

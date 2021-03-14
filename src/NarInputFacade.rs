@@ -7,10 +7,6 @@ use crate::Nar::*;
 use crate::NarWorkingCycle::{debugCreditsOfTasks, flushTasks};
 //use crate::NarModuleNlp;
 //use crate::NarModuleNlp2;
-use crate::Term::*;
-use crate::TermApi::*;
-use crate::NarSentence::{Sentence, EnumPunctation};
-use crate::Tv::{Tv};
 use crate::NarProc;
 use crate::OpLib;
 
