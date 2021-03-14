@@ -1600,11 +1600,15 @@ pub fn qaTryAnswer(qTask: &mut Task2, concl: &Sentence, globalQaHandlers: &Vec<A
 /// performs one reasoning cycle
 /// # Arguments
 /// * `mem` - memory
-pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
+pub fn reasonCycle(mem:Arc<RwLock<Mem2>>, currentTime: &AtomicI64) {
     let cfgEnInstrumentation:bool = false; // enable instrumentation
 
     mem.read().shared.read().cycleCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
     
+    // increment time here
+    // TODO< do it only once in the global reasoning function >
+    currentTime.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
+
     {
         let memGuard = mem.read();
         let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
@@ -1828,11 +1832,12 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>) {
         if msg.is_some() { // do we have a message to send to worker?
             // commented because the sentence is a copy and changing it doesn't change the actual belief!
             /*
+            let currentTime2: i64 = currentTime.load(Ordering::Relaxed);
             // update usage
-            usageUpdate(&mut msg.primary.read().sentence.usage, currentTime);
+            usageUpdate(&mut msg.primary.read().sentence.usage, currentTime2);
             // update Usage
             for iBeliefTask in msg.secondary {
-                usageUpdate(&mut iBeliefTask.read().sentence.usage, currentTime);
+                usageUpdate(&mut iBeliefTask.read().sentence.usage, currentTime2);
             }
             */
             

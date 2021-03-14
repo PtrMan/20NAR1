@@ -3,7 +3,7 @@
 
 use std::rc::Rc;
 use std::sync::{Arc};
-use std::sync::atomic::{Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 use parking_lot::RwLock;
 
 use crate::Tv::*;
@@ -27,6 +27,9 @@ pub struct Nar {
     /// actual (declarative) memory
     pub mem:Arc<RwLock<Mem2>>,
 
+    /// used to track "Usage" by competing for recent accessed beliefs
+    pub currentTime: AtomicI64,
+
     /// verbosity of input
     pub cfgVerbosityInput:i32,
 
@@ -45,9 +48,10 @@ pub fn createNar() -> Nar {
     Nar{
         procNar:NarProc::narInit(),
         mem:createMem2(cfg__maxComplexity, cfg__nConceptBeliefs),
+        currentTime:AtomicI64::new(0),
         cfgVerbosityInput:0, // enable verbose input by default
         cfg__nConceptBeliefs:cfg__nConceptBeliefs,
-        cfg__maxComplexity: cfg__maxComplexity,
+        cfg__maxComplexity: cfg__maxComplexity,        
     }
 }
 
@@ -138,5 +142,5 @@ pub fn inputN(nar:&mut Nar, narsese:&String) -> bool {
 /// give NAR compute time in the form of one cycle
 // PUBLICAPI
 pub fn cycle(nar:&mut Nar) {
-    reasonCycle(Arc::clone(&nar.mem));
+    reasonCycle(Arc::clone(&nar.mem), &nar.currentTime);
 }
