@@ -22,6 +22,7 @@ use crate::NarSentence::convSentenceTermPunctToStr;
 use crate::NarSentence::retTv;
 use crate::NarSentence::Evidence;
 use crate::NarSentence::Usage;
+use crate::NarSentence::usageUpdate;
 use crate::NarSentence::shallowCopySentence;
 
 use crate::NarMem::ret_beliefs_of_concept;
@@ -1837,19 +1838,18 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>, currentTime: &AtomicI64) {
     
     {
         if msg.is_some() { // do we have a message to send to worker?
+            let unwrappedMsg = msg.unwrap();
+            
             // commented because the sentence is a copy and changing it doesn't change the actual belief!
-            /*
             let currentTime2: i64 = currentTime.load(Ordering::Relaxed);
             // update usage
-            usageUpdate(&mut msg.primary.read().sentence.usage, currentTime2);
+            usageUpdate(&mut unwrappedMsg.primary.read().sentence.usage.write(), currentTime2);
             // update Usage
-            for iBeliefTask in msg.secondary {
-                usageUpdate(&mut iBeliefTask.read().sentence.usage, currentTime2);
+            for iBeliefTask in &unwrappedMsg.secondary {
+                usageUpdate(&mut iBeliefTask.read().sentence.usage.write(), currentTime2);
             }
-            */
             
             // submit message to worker
-            let unwrappedMsg = msg.unwrap();
             let memGuard = mem.read();
             memGuard.deriverWorkersTx[0].send(unwrappedMsg).unwrap();
         }
