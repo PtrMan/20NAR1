@@ -25,6 +25,7 @@ use crate::NarSentence::Sentence;
 use crate::NarSentence::retTv;
 use crate::NarSentence::newEternalSentenceByTv;
 use crate::NarSentence::convSentenceTermPunctToStr;
+use crate::NarSentence::shallowCopySentence;
 use crate::NarMem;
 use crate::NarUnify;
 use crate::NarInfProcedural;
@@ -316,7 +317,7 @@ impl QHandler for QaProcHandlerImpl {
         // queue up answer to be processed in NarProc.rs
         self.goalSystem.write().queuedProcQaBridgeAnswers.push(QueuedProcQaBridgeAnswer{
             entry: Arc::clone(&self.entry),
-            answer: answer.clone()
+            answer: shallowCopySentence(&answer),
         });
 
     }

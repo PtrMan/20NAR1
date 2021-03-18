@@ -15,6 +15,7 @@ use crate::NarStamp;
 use crate::NarSentence::EnumPunctation;
 use crate::NarSentence::Sentence;
 use crate::NarSentence::retTv;
+use crate::NarSentence::shallowCopySentence;
 
 use crate::NarSentence::calcUsageUsefulness;
 
@@ -65,7 +66,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                             }
                             
                             if !exists { // add belief only if it doesn't already exist!
-                                concept.beliefsByExp.push(Arc::new(RwLock::new((*s).clone()))); // add belief
+                                concept.beliefsByExp.push(Arc::new(RwLock::new(shallowCopySentence(&(*s))))); // add belief
     
                                 // order by importance
                                 let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.beliefsByExp.iter().map(|iv| {
@@ -91,12 +92,12 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                             }
                             
                             if !exists { // add belief only if it doesn't already exist!
-                                concept.beliefsByUsage.push(Arc::new(RwLock::new((*s).clone()))); // add belief
+                                concept.beliefsByUsage.push(Arc::new(RwLock::new(shallowCopySentence(&(*s))))); // add belief
     
                                 // order by importance
                                 let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.beliefsByUsage.iter().map(|iv| {
                                         let ivGuard = iv.read();
-                                        let usage: f64 = calcUsageUsefulness(&ivGuard.usage, currentTime);
+                                        let usage: f64 = calcUsageUsefulness(&(*ivGuard).usage.read(), currentTime);
                                         (usage, Arc::clone(iv))
                                     }).collect(); // compute usage for each element, necessary because else we have a deadlock
                                 temp.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap()); // do actual sorting by exp
@@ -118,8 +119,8 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                 
                 let concept = Arc::new(Concept {
                     name:iTerm.clone(),
-                    beliefsByExp:vec![Arc::new(RwLock::new((*s).clone()))],
-                    beliefsByUsage:vec![Arc::new(RwLock::new((*s).clone()))],
+                    beliefsByExp:vec![Arc::new(RwLock::new(shallowCopySentence(&(*s))))],
+                    beliefsByUsage:vec![Arc::new(RwLock::new(shallowCopySentence(&(*s))))],
                 });
                 
                 mem.concepts.insert(iTerm.clone(), concept); // add concept to memory

@@ -1,9 +1,11 @@
 use std::sync::{Arc};
+use parking_lot::RwLock;
 
 use crate::Term::Term;
 use crate::Tv;
 use crate::Term::convTermToStr;
 use crate::NarStamp::*;
+
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum EnumPunctation {
@@ -31,8 +33,34 @@ pub struct Sentence {
 
     pub evi:Option<Evidence>, // option because questions don't have tv!
 
-    pub usage:Usage,
+    pub usage:Arc<RwLock<Usage>>,
 }
+
+pub fn shallowCopySentence(s: &Sentence)->Sentence {
+    Sentence {
+        term:Arc::clone(&s.term),
+        t:s.t,
+        punct:s.punct,
+        stamp:s.stamp.clone(),
+        expDt:s.expDt,
+        evi:s.evi.clone(),
+        usage:Arc::clone(&s.usage),
+    }
+}
+
+/*
+pub fn deepCopySentence(s: &Sentence)->Sentence {
+    Sentence {
+        term:Arc::clone(&s.term),
+        t:s.t,
+        punct:s.punct,
+        stamp:s.stamp.clone(),
+        expDt:s.expDt,
+        evi:s.evi.clone(),
+        usage:Arc::new(&s.usage.clone()),
+    }
+}
+*/
 
 #[derive(Clone)]
 pub struct Usage {
@@ -61,7 +89,7 @@ pub fn newEternalSentenceByTv(term:&Term,punct:EnumPunctation,tv:&Tv::Tv,stamp:S
         stamp:stamp,
         evi:if punct != EnumPunctation::QUESTION {Some(Evidence::TV(tv.clone()))} else {None},
         expDt:None, // not used
-        usage:Usage{lastUsed:0, useCount:0},
+        usage:Arc::new(RwLock::new(Usage{lastUsed:0, useCount:0})),
     }
 }
 

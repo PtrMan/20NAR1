@@ -433,7 +433,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                             expDt:Some(expDt),
                             term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
                             evi:Some(Evidence::CNT{pos:nar.cfg__eviCnt,cnt:nar.cfg__eviCnt}),
-                            usage:Usage{lastUsed: 0, useCount: 0},
+                            usage:Arc::new(RwLock::new(Usage{lastUsed: 0, useCount: 0})),
                         };
                         
                         let workerIdx = nar.rng.gen_range(0, nar.storeWorkersTx.len());

@@ -22,6 +22,7 @@ use crate::NarSentence::convSentenceTermPunctToStr;
 use crate::NarSentence::retTv;
 use crate::NarSentence::Evidence;
 use crate::NarSentence::Usage;
+use crate::NarSentence::shallowCopySentence;
 
 use crate::NarMem::ret_beliefs_of_concept;
 use crate::NarMem;
@@ -878,7 +879,7 @@ pub fn inference2(
             t:None, // time of occurence 
             punct:punct,
             expDt:None,
-            usage:Usage{lastUsed:0, useCount:0},
+            usage:Arc::new(RwLock::new(Usage{lastUsed:0, useCount:0})),
         },1.0));
     }
 
@@ -914,7 +915,7 @@ pub fn infSinglePremise2(pa:&Sentence) -> Vec<(Sentence,f64)> {
             t:None, // time of occurence 
             punct:punct,
             expDt:None,
-            usage:Usage{lastUsed:0, useCount:0},
+            usage:Arc::new(RwLock::new(Usage{lastUsed:0, useCount:0})),
         }, attBias));
     }
 
@@ -1370,6 +1371,8 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
     // revises beliefs if the term matches and if the stamps don't overlap
     // >
     
+    // BUG< we have a problem here because we return only res from second table if it was added to second table >
+
     // try to revise
     let mut wasRevised = false;
     let mut res:Option<Sentence> = None;
@@ -1402,9 +1405,9 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                                                 stamp:stamp,
                                                 expDt:iBelief.expDt, // exponential time delta, used for =/>
                                                 evi:Some(evi),
-                                                usage:Usage{lastUsed:0, useCount:0},
+                                                usage:Arc::new(RwLock::new(Usage{lastUsed:0, useCount:0})),
                                             }); // add revised belief!
-                                            res = additionalBelief.clone(); // result is the revision conclusion
+                                            res = Some(shallowCopySentence(&additionalBelief.as_ref().unwrap())); // result is the revision conclusion
     
                                             wasRevised = true;
                                             break; // breaking here is fine, because belief should be just once in table!
@@ -1416,7 +1419,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                                     }
     
                                     if additionalBelief.is_some() {
-                                        concept.beliefsByExp.push(Arc::new(RwLock::new(additionalBelief.unwrap())));
+                                        concept.beliefsByExp.push(Arc::new(RwLock::new(shallowCopySentence(&additionalBelief.unwrap()))));
                                     }
                                 }
 
@@ -1441,9 +1444,9 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                                                 stamp:stamp,
                                                 expDt:iBelief.expDt, // exponential time delta, used for =/>
                                                 evi:Some(evi),
-                                                usage:Usage{lastUsed:0, useCount:0},
+                                                usage:Arc::new(RwLock::new(Usage{lastUsed:0, useCount:0})),
                                             }); // add revised belief!
-                                            res = additionalBelief.clone(); // result is the revision conclusion
+                                            res = Some(shallowCopySentence(&additionalBelief.as_ref().unwrap())); // result is the revision conclusion
     
                                             wasRevised = true;
                                             break; // breaking here is fine, because belief should be just once in table!
@@ -1455,7 +1458,7 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                                     }
     
                                     if additionalBelief.is_some() {
-                                        concept.beliefsByUsage.push(Arc::new(RwLock::new(additionalBelief.unwrap())));
+                                        concept.beliefsByUsage.push(Arc::new(RwLock::new(shallowCopySentence(&additionalBelief.unwrap()))));
                                     }
                                 }
                                 
@@ -1485,9 +1488,13 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, cal
     // try to revise
     let revisionConcl:Option<Sentence> = memReviseBelief(Arc::clone(&shared.read().mem), sentence);
     let wasRevised = revisionConcl.is_some();
-    if wasRevised {
-        toAddToTasks.push(revisionConcl.unwrap().clone());
+    match revisionConcl {
+        Some(revConcl) => {
+            toAddToTasks.push(revConcl.clone());
+        },
+        None => {}
     }
+
 
     if !wasRevised {
         // add it only if it wasn't revised
@@ -1510,7 +1517,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, cal
     
                     let taskId:i64 = sharedGuard.taskIdCounter.fetch_add(1, Ordering::SeqCst); // TODO< is this ordering ok? >
                     let mut task = Task {
-                        sentence:iToAddToTasks.clone(),
+                        sentence:shallowCopySentence(&iToAddToTasks),
                         credit:1.0,
                         qaCredit:0.0, // no question was posed!
                         mulCredit:mulCredit,
@@ -1541,7 +1548,7 @@ pub fn memAddTask(shared:Arc<RwLock<DeclarativeShared>>, sentence:&Sentence, cal
                 
                 let sharedGuard = shared.read();
                 sharedGuard.questionTasks.write().push(Box::new(Task2 {
-                    sentence:iToAddToTasks.clone(),
+                    sentence:shallowCopySentence(&iToAddToTasks.clone()),
                     handler:None,
                     bestAnswerExp:0.0, // because has no answer yet
                     prio:1.0,
