@@ -77,6 +77,9 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
             // add to goals
             NarGoalSystem::addEntry(&mut nar.procNar.goalSystem, &nar.mem.read(), nar.procNar.t, Arc::new(sentence), None, 0);
         }
+        else if punct == EnumPunctation::QUESTION {
+            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0, nar.procNar.t);
+        }
         else {
             // add event
             nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:term.clone(),evi:nar.procNar.t,occT:nar.procNar.t}));
@@ -93,7 +96,8 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
 
     if isTemporal {
         if punct == EnumPunctation::QUESTION { // temporal Q&A
-            memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0, nar.procNar.t);
+            // quesion was already added
+            //memAddTask(Arc::clone(&nar.mem.read().shared), &sentence, true, nar.cfg__maxComplexity, nar.cfg__nConceptBeliefs, 1.0, nar.procNar.t);
         }
         else if punct == EnumPunctation::JUGEMENT {
             // add to temporal knowledge
