@@ -12,8 +12,6 @@ extern crate nom;
 use std::sync::Arc;
 
 pub fn main() {
-    //NnTrain::testTrainingNn0();
-
     let runEnv:String = std::env::args().nth(1).expect("no environment given");
 
     if runEnv == "it" { // run interactive
