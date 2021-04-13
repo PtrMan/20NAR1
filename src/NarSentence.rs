@@ -75,9 +75,11 @@ pub fn usageUpdate(usage: &mut Usage, currentTime: i64) {
 
 // see https://github.com/opennars/OpenNARS-for-Applications/blob/eeeb2ce1cc029f56f3b5eaf27fdf51f93b42a889/src/Usage.c#L27-L32
 pub fn calcUsageUsefulness(usage: &Usage, currentTime: i64) -> f64 {
-    let recency: f64 = (currentTime - usage.lastUsed) as f64;
+    let recency: f64 = (currentTime - usage.lastUsed).max(0) as f64; // max(0) to prevent underflow!
     let usefulnessToNormalize: f64 = (usage.useCount as f64) / (recency + 1.0);
-    usefulnessToNormalize / (usefulnessToNormalize + 1.0)
+    let result:f64 = usefulnessToNormalize / (usefulnessToNormalize + 1.0);
+    //println!("[d99] recn={} result={}", recency, result);
+    result
 }
 
 // create new eternal sentence
