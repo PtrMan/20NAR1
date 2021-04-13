@@ -21,7 +21,11 @@ pub fn main() {
         for iFilepathIdx in 0..std::env::args().len()-2 { // iterate over paths of nars files to load
             let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
             
-            nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
+            let mut quit:bool = false;
+            nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath, &mut quit);
+            if quit {
+                return;
+            }
         }
 
         nar20_1::NarInteractive::runInteractive(&mut nar);
@@ -64,7 +68,8 @@ pub fn main() {
             
             let iFilePath:String = std::env::args().nth(2+iFilepathIdx).unwrap();
             
-            nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
+            let mut quit:bool = false; // quit is ignored
+            nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath, &mut quit);
 
 
             let evalRes:Option<i64> = nar20_1::Eval::run(&mut nar);
@@ -97,7 +102,9 @@ pub fn main() {
                 
                 let iFilePath:String = std::env::args().nth(3+iFilepathIdx).unwrap();
                 
-                nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath);
+                let mut quit:bool = false;
+                nar20_1::NarUtilReadn::readNarseseFile(&mut nar, &iFilePath, &mut quit);
+                // quit is ignored!
 
                 let evalRes:Option<i64> = nar20_1::Eval::run(&mut nar);
                 match evalRes {

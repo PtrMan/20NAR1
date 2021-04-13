@@ -8,14 +8,16 @@ use crate::NarInputFacade;
 
 // see/from https://doc.rust-lang.org/stable/rust-by-example/std_misc/file/read_lines.html
 
-pub fn readNarseseFile(nar: &mut Nar, path:&String) {
+pub fn readNarseseFile(nar: &mut Nar, path:&String, quit:&mut bool) {
     // File hosts must exist in current path before this produces output
     if let Ok(lines) = read_lines(path) {
         // Consumes the iterator, returns an (Optional) String
         for line in lines {
             if let Ok(line2) = line {
-                let mut quit = false;
-                NarInputFacade::input(nar, &line2, &mut quit); // pass line into facade
+                NarInputFacade::input(nar, &line2, quit); // pass line into facade
+                if *quit {
+                    break; // break reading of file because we are exiting anyways
+                }
             }
         }
     }
