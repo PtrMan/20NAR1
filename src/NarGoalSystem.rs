@@ -479,7 +479,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
             if iv.read().groups.len() > 0 {1.0} else {0.0} // only consider batches which have groups
         ).sum();
     
-        let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
+        let selPriority:f64 = rng.gen_range(0.0..1.0) * sumPriorities;
 
         //dbg(&format!("sample sum prio={} selPrio={}", sumPriorities, selPriority));
     
@@ -530,7 +530,7 @@ pub fn sample(goalSystem: &GoalSystem, rng: &mut rand::rngs::ThreadRng) -> Optio
             des2 // return inner sum
         }).sum();
     
-    let selPriority:f64 = rng.gen_range(0.0, 1.0) * sumPriorities;
+    let selPriority:f64 = rng.gen_range(0.0..1.0) * sumPriorities;
 
     // select
     let mut sum:f64 = 0.0;
@@ -710,7 +710,7 @@ fn deriveGoalsHelper(sampledGoal: &Sentence, sampledDepth:i64, strategy:EnumGoal
                 SAMPLE_2 => {
                     for _it in 0..2 {
                         if evidenceCandidates.len() > 0 {
-                            let idx = rng.gen_range(0, evidenceCandidates.len());
+                            let idx = rng.gen_range(0..evidenceCandidates.len());
                             let conclOpt:Option<Sentence> = NarInfProcedural::infGoalBelief(&sampledGoal, &evidenceCandidates[idx].read());
                             if conclOpt.is_some() {
                                 concls.push(H{goal:Arc::new(conclOpt.unwrap()), evidence:Some(Arc::clone(&evidenceCandidates[idx])), depth:sampledDepth+1});
@@ -771,7 +771,7 @@ pub fn sampleAndInference(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, t:i
             // sample goal from workingSet
 
             let sampledWsEntry: Rc<WsEntry> = {
-                let selIdx = rng.gen_range(0, workingSet.len());
+                let selIdx = rng.gen_range(0..workingSet.len());
                 workingSet.swap_remove(selIdx) // select and remove element
             };
 

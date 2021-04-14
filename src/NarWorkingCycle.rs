@@ -1083,7 +1083,7 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
 
                 if enInferenceSampleSecondaryByCredit { // sample secondary premise randomly by credit?
                     // sample from secondaryElligable by priority
-                    let selVal:f64 = rng.gen_range(0.0,1.0);
+                    let selVal:f64 = rng.gen_range(0.0..1.0);
                     let secondarySelTaskIdx = taskSelByCreditRandom(selVal, &msg.secondary, msg.cycleCounter);
                     let secondarySelTask: &Arc<RwLock<Task>> = &msg.secondary[secondarySelTaskIdx];
 
@@ -1665,7 +1665,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>, currentTime: &AtomicI64) {
 
         let len = sharedGuard.questionTasks.read().len();
         if len > 0 {
-            let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
+            let selVal:f64 = mem.read().rng.write().gen_range(0.0..1.0);
 
             //let memGuard = mem.read();
             //let sharedGuard = memGuard.shared.read();
@@ -1721,7 +1721,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>, currentTime: &AtomicI64) {
                 // old mechanism which selects random task by credit
                 
                 let sharedGuard = memGuard.shared.read(); // get read guard because we need only read here
-                let selVal:f64 = mem.read().rng.write().gen_range(0.0,1.0);
+                let selVal:f64 = mem.read().rng.write().gen_range(0.0..1.0);
                 let selIdx = taskSelByCreditRandom(selVal, &sharedGuard.judgementTasks, sharedGuard.cycleCounter.load(Ordering::Relaxed));
                 
                 selPrimaryTask = Some(Arc::clone(&sharedGuard.judgementTasks[selIdx]));

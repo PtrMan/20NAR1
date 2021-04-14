@@ -134,9 +134,9 @@ pub fn simStep(env:&mut EnvState, rng:&mut ThreadRng) {
         }
     }
     if env.ballY == 0 || env.ballX == 0 || env.ballX >= env.szX-1 {
-        env.ballY = (env.szY/2)+rng.gen_range(0, env.szY/2);
-        env.ballX = rng.gen_range(0,env.szX);
-        env.vX = if rng.gen_range(0,2) == 0 {1} else {-1};
+        env.ballY = (env.szY/2)+rng.gen_range(0..env.szY/2);
+        env.ballX = rng.gen_range(0..env.szX);
+        env.vX = if rng.gen_range(0..2) == 0 {1} else {-1};
 
         println!("env: respawn ball");
     }

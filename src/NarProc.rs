@@ -356,7 +356,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                     
                     let nSelOps = // how many ops do we try to select
                         if nar.cfg__nOpsMax == 1 {1}
-                        else if nar.rng.gen_range(0.0, 1.0) < nar.cfg__multiOpProbability {
+                        else if nar.rng.gen_range(0.0..1.0) < nar.cfg__multiOpProbability {
                             idxsOfOps.len().min(nar.cfg__nOpsMax as usize)
                         }
                         else {1};
@@ -364,7 +364,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                     // select ops
                     let mut selIdxOfOps = vec![];
                     loop {
-                        let idx1Idx = nar.rng.gen_range(0, idxsOfOps.len());
+                        let idx1Idx = nar.rng.gen_range(0..idxsOfOps.len());
                         let selIdx = idxsOfOps[idx1Idx] as usize;
                         if !selIdxOfOps.contains(&selIdx) {
                             selIdxOfOps.push(selIdx);
@@ -381,7 +381,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                 if selIdxOfOps.len() > 0 && *selIdxOfOps.iter().min().unwrap() > 0 { // is there a valid index for a op which is not the last item in the trace?
                     
                     let selTraceItems: Vec<Rc<SimpleSentence>> = {
-                        let idxFirst = nar.rng.gen_range(0, selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
+                        let idxFirst = nar.rng.gen_range(0..*selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
                         let mut idxLast = nar.trace.len()-1; // last event is last
 
                         // TODO< rewrite to logic which scans for the first op between idxLast and selIdxOfOps, select random event as idxLast between these!
@@ -389,7 +389,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                         // check if we can select previous event
                         {
                             let sel = nar.trace[nar.trace.len()-1-1].clone();
-                            let rng0:i64 = nar.rng.gen_range(0, 2);
+                            let rng0:i64 = nar.rng.gen_range(0..2);
                             if rng0 == 1 && nar.trace.len()-1-1 > *selIdxOfOps.iter().max().unwrap() && !checkIsCallableOp(&nar, &sel.name) {
                                 idxLast = nar.trace.len()-1-1;
                             }
@@ -436,7 +436,7 @@ pub fn narStep0(nar:&mut ProcNar) {
                             usage:Arc::new(RwLock::new(Usage{lastUsed: 0, useCount: 0})),
                         };
                         
-                        let workerIdx = nar.rng.gen_range(0, nar.storeWorkersTx.len());
+                        let workerIdx = nar.rng.gen_range(0..nar.storeWorkersTx.len());
                         nar.storeWorkersTx[workerIdx].send((evidenceSentence, nar.t)).unwrap(); // defer actual storage to worker
                     }
                 }
@@ -642,7 +642,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
 
                     // select random
                     let sel: &Arc<RwLock<Sentence>> = {
-                        let selIdx:usize = nar.rng.gen_range(0, queryResult.len());
+                        let selIdx:usize = nar.rng.gen_range(0..queryResult.len());
                         &queryResult[selIdx]
                     };
 
@@ -789,7 +789,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         None => {
             if nar.cfgEnBabbling && nar.ops.len() > 0 { // we have to have ops to sample from
                 // TODO< better distribution >
-                let p = nar.rng.gen_range(0, nar.ops.len()*9);
+                let p = nar.rng.gen_range(0..nar.ops.len()*9);
                 if p < nar.ops.len() {
                     let idx = p;
 

@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 async-std = "1.6.3"
-rand = "0.7.3"
+rand = "0.8.0"
 
 nom = "5"
 

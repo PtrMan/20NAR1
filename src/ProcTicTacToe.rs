@@ -163,14 +163,14 @@ pub fn run(maxEpochs:i64) {
                         }
                     }
                     if player == 'r' { // random agent?
-                        let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
+                        let isValidMove = tryMove(&mut gamestate, rng.gen_range(0..9));
                         if isValidMove {
                             break;
                         }
                     }
                     /*
                     else if moveCnt == 0 { // let first move be a random move for more exploration!
-                        let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
+                        let isValidMove = tryMove(&mut gamestate, rng.gen_range(0..9));
                         if isValidMove {
                             break;
                         }
@@ -233,7 +233,7 @@ pub fn run(maxEpochs:i64) {
                     
                     
                     // random opponent - try random move until we hit a valid move
-                    let isValidMove = tryMove(&mut gamestate, rng.gen_range(0,9));
+                    let isValidMove = tryMove(&mut gamestate, rng.gen_range(0..9));
                     if isValidMove {
                         break;
                     }
