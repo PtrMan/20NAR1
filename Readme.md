@@ -3,7 +3,7 @@ This is a NARS inspired General Machine Intelligence (GMI) system. The current i
 
 working definition of intelligence:<br />
 `solving complex and complicated problems under  adaptation with insufﬁcient knowledge and resources.`<br />
-is a composition of the definition of [On Defining Artificial Intelligence](https://sciendo.com/article/10.2478/jagi-2019-0002) and the definition of intelligence from Dr. Ben Gortzel.
+is a composition of the definition of [On Defining Artificial Intelligence](https://sciendo.com/article/10.2478/jagi-2019-0002) and the definition of intelligence from Dr. Ben Goertzel.
 
 # commands
 The system accepts either Narsese or commands as inputs. Commands are used to give the reasoner compute in the form of cycles. Commands also can be used to change parameters of the input/output and/or the reasoner itself. Commands also allow to invoke special functionality of the NARS+ implementation, for example for the NLP module.<br />
