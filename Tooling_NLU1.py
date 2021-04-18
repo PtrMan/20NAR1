@@ -14,14 +14,14 @@ def conv(text):
     print("")
     
     rel = textTokens[0]
-    if rel == "is": # "is" relation
+    if True: # code block
         lhs = textTokens[2]
         rhs = textTokens[3]
         
         print("// relation for reflection on relations")
         print("<({}*{})-->{}>.".format(lhs,rhs,rel))
         
-        if rel == "is":
+        if rel == "is": # "is" relation
             print("// relation as inheritance")
             print("<{}-->{}>.".format(lhs,rhs))
     
