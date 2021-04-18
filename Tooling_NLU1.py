@@ -13,14 +13,17 @@ def conv(text):
     print("// [d1 ] tokens = {}".format(textTokens))
     print("")
     
-    if textTokens[0] == "is": # "is" relation
+    rel = textTokens[0]
+    if rel == "is": # "is" relation
         lhs = textTokens[2]
         rhs = textTokens[3]
         
         print("// relation for reflection on relations")
-        print("<({}*{})-->IS>.".format(lhs,rhs))
-        print("// relation as inheritance")
-        print("<{}-->{}>.".format(lhs,rhs))
+        print("<({}*{})-->{}>.".format(lhs,rhs,rel))
+        
+        if rel == "is":
+            print("// relation as inheritance")
+            print("<{}-->{}>.".format(lhs,rhs))
     
 #conv("is(tom fat)")
 
