@@ -42,5 +42,5 @@ Robot examples need pybullet, install with `pip install pybullet`
 * Q&A
 # what is missing?
 * unification of =/> by pred
-* use of non-temporal knowledge for temporal inference
+* use of non-temporal knowledge for temporal inference    *halfdone*
 * quests
