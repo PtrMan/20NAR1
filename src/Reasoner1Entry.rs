@@ -67,7 +67,7 @@ pub fn reasoner1Entry() -> f64 {
                 println!("{} ballX={} batX={} diff={}", convTermToStr(&nar.procNar.trace[nar.procNar.trace.len()-1].name), (*envPongRc).borrow().ballX, (*envPongRc).borrow().batX, (*envPongRc).borrow().ballX - (*envPongRc).borrow().batX);
             }
             
-            NarProc::narStep1(&mut nar.procNar, &None);
+            NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
             
             let mut envPong = (*envPongRc).borrow_mut();
             EnvPong3::simStep(&mut envPong, &mut rng);
