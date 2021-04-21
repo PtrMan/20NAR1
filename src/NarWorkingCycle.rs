@@ -343,15 +343,18 @@ pub fn infGeneralizedJudgJudg(
 
 
 /// a --> x.  a --> y.  |- x <-> y.
+/// a --> x.  a <-> y.  |- x <-> y.
+/// a <-> x.  a <-> y.  |- x <-> y.
+/// a <-> x.  a --> y.  |- x <-> y.
 pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
     
     match a {
-        Term::Stmt(Copula::INH, asubj, apred) => {
+        Term::Stmt(copa, asubj, apred) if *copa == Copula::INH || *copa == Copula::SIM => {
             match b {
-                Term::Stmt(Copula::INH, bsubj, bpred) => {
+                Term::Stmt(copb, bsubj, bpred) if *copb == Copula::INH || *copb == Copula::SIM => {
                     if !checkEqTerm(&apred, &bpred) && checkEqTerm(&asubj, &bsubj) {
                         return Some(( Term::Stmt(Copula::SIM, Box::clone(apred), Box::clone(bpred)), comp(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT)); // a.subj --> b.pred
                     }
@@ -366,15 +369,18 @@ pub fn infCompPred(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, p
 
 
 /// x --> a.  y --> a.  |- x <-> y.
+/// x --> a.  y <-> a.  |- x <-> y.
+/// x <-> a.  y --> a.  |- x <-> y.
+/// x <-> a.  y <-> a.  |- x <-> y.
 pub fn infCompSubj(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>, b: &Term, punctB:EnumPunctation, bTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation)> {
     if punctA != EnumPunctation::JUGEMENT || punctB != EnumPunctation::JUGEMENT {
         return None;
     }
     
     match a {
-        Term::Stmt(Copula::INH, asubj, apred) => {
+        Term::Stmt(copa, asubj, apred)  if *copa == Copula::INH || *copa == Copula::SIM => {
             match b {
-                Term::Stmt(Copula::INH, bsubj, bpred) => {
+                Term::Stmt(copb, bsubj, bpred) if *copb == Copula::INH || *copb == Copula::SIM  => {
                     if !checkEqTerm(&asubj, &bsubj) && checkEqTerm(&apred, &bpred) {
                         return Some(( Term::Stmt(Copula::SIM, Box::clone(asubj), Box::clone(bsubj)), comp(&aTv.as_ref().unwrap(),&bTv.as_ref().unwrap()), EnumPunctation::JUGEMENT)); // a.subj --> b.pred
                     }
