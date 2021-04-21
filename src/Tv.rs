@@ -14,6 +14,16 @@ pub fn ded(a:&Tv,b:&Tv)->Tv {
     Tv{f:f,c:c}
 }
 
+// special function of ded for goals
+// as suggested by Patrick on ~19.04.2021 in #nars
+// /param a TV of goal
+// /param b TV of belief
+pub fn dedGoal(a:&Tv,b:&Tv)->Tv {
+    let res1: Tv = ded(a, b);
+    let res2: Tv = neg(&ded(&neg(a), b));
+    if res1.c >= res2.c {res1} else {res2}
+}
+
 pub fn abd(a:&Tv,b:&Tv)->Tv {
     let w = b.f*a.c*b.c;
     let f = a.f;

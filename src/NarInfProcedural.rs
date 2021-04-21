@@ -13,7 +13,7 @@ use crate::NarSentence::newEternalSentenceByTv;
 /// we need to derive goals from matching implSeqs by goal deduction
 /// a =/> b.
 /// b!
-/// |- ded
+/// |-dedGoal
 /// a!
 ///
 /// returns derivation
@@ -37,11 +37,11 @@ pub fn infGoalBelief(goal: &Sentence, belief: &Sentence)-> Option<Sentence> {
 
     // a =/> b.
     // b!
-    // |- ded
+    // |-dedGoal
     // a!
     let tvCompound = retTv(&belief).unwrap();
     let tvComponent = retDesire(&goal);
-    let tvConcl = Tv::ded(&tvCompound, &tvComponent);
+    let tvConcl = Tv::dedGoal(&tvComponent, &tvCompound);
     
     let stamp = NarStamp::merge(&goal.stamp, &belief.stamp);
 
