@@ -254,8 +254,8 @@ pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence:
 /// returns all evidence, can be overlapping!
 pub fn mem_ret_evidence_all_nonunique(procNar:&ProcNar) -> Vec<Arc<RwLock<Sentence>>> {
     let mut res = vec![];
-    for (ikey, _iConcept) in &procNar.evidenceMem.read().concepts {
-        let evidenceMemGuard = procNar.evidenceMem.read();
+    let evidenceMemGuard = procNar.evidenceMem.read();
+    for (ikey, _iConcept) in &evidenceMemGuard.concepts {
         let beliefsOfConceptOpt = NarMem::ret_beliefs_of_concept(&evidenceMemGuard, &ikey);
 
         match beliefsOfConceptOpt {
@@ -702,7 +702,8 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
                             // (a, b) a! |- b!
                             {
                                 let conclTerm:Term = opTerm.clone();
-                                let sentence = newEternalSentenceByTv(&conclTerm,EnumPunctation::GOAL,&retTv(&pickedEvidence.read()).unwrap(),pickedEvidence.read().stamp.clone());
+                                let tv = retTv(&pickedEvidence.read()).unwrap().clone();
+                                let sentence = newEternalSentenceByTv(&conclTerm,EnumPunctation::GOAL,&tv,pickedEvidence.read().stamp.clone());
 
                                 NarGoalSystem::addEntry(&mut nar.goalSystem, &declMem.as_ref().unwrap().read(), nar.t, Arc::new(sentence), Some(pickedEvidence), 0); 
                             }
