@@ -183,9 +183,17 @@ pub fn narInit() -> ProcNar {
                                 checkEqTerm(&iEE.term, &evidenceSentence.term)
                             {
                                 iEE.stamp = merge(&iEE.stamp, &evidenceSentence.stamp);
+
+                                let (otherCntPos, otherCnt) = match evidenceSentence.evi.as_ref().unwrap() {
+                                    Evidence::CNT{pos,cnt} => {
+                                        (pos, cnt)
+                                    },
+                                    _ => {panic!("expected CNT!");}
+                                };
+
                                 match iEE.evi.as_ref().unwrap() {
                                     Evidence::CNT{pos,cnt} => {
-                                        iEE.evi = Some(Evidence::CNT{pos:pos+1,cnt:cnt+1}); // bump positive counter
+                                        iEE.evi = Some(Evidence::CNT{pos:pos+otherCntPos,cnt:cnt+otherCnt}); // bump positive counter
                                     },
                                     _ => {panic!("expected CNT!");}
                                 }
