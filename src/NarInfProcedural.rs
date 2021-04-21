@@ -16,47 +16,13 @@ use crate::NarSentence::newEternalSentenceByTv;
 /// |- ded
 /// a!
 ///
-///
-/// a =/> --b.
-/// b!
-/// |- ded
-/// --a
-///
 /// returns derivation
 pub fn infGoalBelief(goal: &Sentence, belief: &Sentence)-> Option<Sentence> {
-    let mut is_neg_case:bool = false; // is negated case, special handling for --X in consequence
-    
     // check if term is same and inference can be done
     match &*belief.term {
-        
         Term::Stmt(Copula::PREDIMPL, _subj, pred) => {
-            match &**pred {
-                Term::Neg(negPred) => {
-                    // neg goal handling
-                    // justification: we need to propagate negative consequences to not do the actions which cause them.
-                    // 
-                    // a =/> --b.
-                    // b!
-                    // |- ded
-                    // --a!
-                    //
-                    //
-                    // ex: infer --a from a =/> --alive, alive!
-                    is_neg_case = true;
-                    if !checkEqTerm(&goal.term, &negPred) {
-                        return None; // can't do inference because terms have to be equal
-                    }
-                },
-                _ => {
-                    // a =/> b.
-                    // b!
-                    // |- ded
-                    // a!
-                    is_neg_case = false;
-                    if !checkEqTerm(&goal.term, &pred) {
-                        return None; // can't do inference because terms have to be equal
-                    }
-                }
+            if !checkEqTerm(&goal.term, &pred) {
+                return None; // can't do inference because terms have to be equal
             }
         },
         _ => {
@@ -73,13 +39,6 @@ pub fn infGoalBelief(goal: &Sentence, belief: &Sentence)-> Option<Sentence> {
     // b!
     // |- ded
     // a!
-    //
-    // or
-    //
-    // a =/> --b.
-    // b!
-    // |- ded
-    // --a!
     let tvCompound = retTv(&belief).unwrap();
     let tvComponent = retDesire(&goal);
     let tvConcl = Tv::ded(&tvCompound, &tvComponent);
@@ -88,16 +47,7 @@ pub fn infGoalBelief(goal: &Sentence, belief: &Sentence)-> Option<Sentence> {
 
     match &*belief.term {
         Term::Stmt(Copula::PREDIMPL, subj, _) => {
-            if is_neg_case {
-                // a =/> --b.
-                // b!
-                // |- ded
-                // --a!
-                return Some(newEternalSentenceByTv(&Term::Neg(subj.clone()),EnumPunctation::GOAL,&tvConcl,stamp));
-            }
-            else {
-                return Some(newEternalSentenceByTv(&subj,EnumPunctation::GOAL,&tvConcl,stamp));
-            }
+            return Some(newEternalSentenceByTv(&subj,EnumPunctation::GOAL,&tvConcl,stamp));
         },
         _ => {
             // don't do anything here
