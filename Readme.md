@@ -1,5 +1,5 @@
 # 
-This is a NARS inspired General Machine Intelligence (GMI) system. The current implementation only implements a NAR(non-axiomatic reasoner) for NAL1-7 and NAL8-9.
+This is a NARS inspired General Machine Intelligence (GMI) system. The current implementation only implements a NAR(non-axiomatic reasoner) for NAL1-6 and NAL7-8. NAL-9 is currently only supported with a special operator.
 
 working definition of intelligence:<br />
 `solving complex and complicated problems under  adaptation with insufﬁcient knowledge and resources`<br />
