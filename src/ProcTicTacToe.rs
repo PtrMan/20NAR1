@@ -199,7 +199,7 @@ pub fn run(maxEpochs:i64) {
 
                             for _iCycle in 0..4 {
                                 NarProc::narStep0(&mut nar.procNar);
-                                NarProc::narStep1(&mut nar.procNar, &None);
+                                NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
         
                                 if moveRc.borrow().is_some() { // did NARS make a move?
                                     let mut x = moveRc.borrow_mut();
@@ -291,7 +291,7 @@ pub fn run(maxEpochs:i64) {
 
                     for _iStep in 0..50 { // give reasoner time
                         NarProc::narStep0(&mut nar.procNar);
-                        NarProc::narStep1(&mut nar.procNar, &None);
+                        NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
                     }    
 
 
@@ -332,12 +332,12 @@ pub fn run(maxEpochs:i64) {
 
                 NarProc::narStep0(&mut nar.procNar);
                 nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
-                NarProc::narStep1(&mut nar.procNar, &None);
+                NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
             }
 
             for _iStep in 0..50 { // give reasoner time
                 NarProc::narStep0(&mut nar.procNar);
-                NarProc::narStep1(&mut nar.procNar, &None);
+                NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
             }
 
             
