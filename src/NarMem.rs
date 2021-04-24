@@ -132,6 +132,27 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
 
 /// limit size of memory
 pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
+    if true { // DEBUG - count concepts and beliefs
+        let mut cnt_concepts = 0; // count of concepts
+        let mut cnt_beliefs = 0; // count of beliefs
+
+        for (_key, mut iConcept) in &mut mem.concepts {
+            let mut rating:f64 = 0.0;
+            match Arc::get_mut(&mut iConcept) {
+                Some(concept) => {
+                    cnt_concepts+=1;
+                    cnt_beliefs+=concept.beliefsByExp.len();
+                    cnt_beliefs+=concept.beliefsByUsage.len();
+                }
+                None => {
+                    println!("INTERNAL ERROR - couldn't aquire arc!");
+                }
+            }
+        }
+
+        println!("[d9 ] nConcepts={} nBeliefs={}", cnt_concepts, cnt_beliefs);
+    }
+    
     if mem.concepts.len() <= nConcepts {
         return; // not enough concepts to limit
     }
@@ -154,7 +175,7 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
 
         concepts.push((Arc::clone(&iConcept), rating));
     }
-    mem.concepts.clear();
+    mem.concepts = HashMap::new();
 
     // sort
     concepts.sort_by(|(_, aRating), (_, bRating)| bRating.partial_cmp(aRating).unwrap());

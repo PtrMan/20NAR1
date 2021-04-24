@@ -217,12 +217,24 @@ fn addEntry2(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, e: Arc<RwLock<En
 
                 // add question to Q&A system
                 let sharedGuard = mem2.shared.read();
-                sharedGuard.questionTasks.write().push(Box::new(Task2 {
+                let questionTasksGuard = sharedGuard.questionTasks.write();
+                
+                /*
+                24.04.2021 commented this because
+                           * it's not useful
+                           * it leaks memory because it's not kept under AIKR
+                           * the functionality to reason about declarative stuff is better solved by a more unified reasoner where we reason on events directly like in ONA
+
+                questionTasksGuard.push(Box::new(Task2 {
                     sentence:newEternalSentenceByTv(&seqCondQaTerm,EnumPunctation::QUESTION,&Tv::Tv{f:1.0,c:0.0},newStamp(&vec![])),
                     handler:Some(Arc::new(RwLock::new(QaProcHandlerImpl{entry:Arc::clone(&e), goalSystem:Arc::clone(goalSystem)}))),
                     bestAnswerExp:0.0, // because has no answer yet
                     prio:1.0,
                 }));
+
+                // keep under AIKR (hard)
+                questionTasksGuard = questionTasksGuard[..questionTasksGuard.len().min(50)].to_vec();
+                */
             }
             _ => {}
         }
@@ -461,7 +473,8 @@ pub fn limitMemory(goalSystem: &Arc<RwLock<GoalSystem>>, mem2: &Mem2, t: i64) {
         goalSystem.write().batchesByDepth.push(Arc::new(RwLock::new(BatchByDepth{groups: vec![], depth:iDepth,})));
     }
 
-    goalSystem.write().entriesByTerm.clear(); // flush, need to do this before calling addEntry2()
+    goalSystem.write().entriesByTerm = HashMap::new(); // flush, need to do this before calling addEntry2()
+    goalSystem.write().activeSet.set = vec![];
 
     // fill
     for iVal in arr {

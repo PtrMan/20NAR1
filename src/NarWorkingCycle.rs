@@ -1916,7 +1916,7 @@ pub fn reasonCycle(mem:Arc<RwLock<Mem2>>, currentTime: &AtomicI64) {
 
 
     let intervalCheckConcepts = 173;
-    let nConcepts = 10000; // number of concepts
+    let nConcepts = 3000; // number of concepts
 
     { // limit number of concepts
         let memGuard = mem.read();
