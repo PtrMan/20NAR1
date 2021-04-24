@@ -394,4 +394,5 @@ impl NarProc::Op for OpCheckers {
         println!("CALL {}", &self.selfName);
     }
     fn isBabbleable(&self) -> bool {true}
+    fn ret_evi_cnt(&self) -> i64 {10000 /*almost axiomatic*/}
 }

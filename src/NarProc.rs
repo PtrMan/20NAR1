@@ -434,7 +434,26 @@ pub fn narStep0(nar:&mut ProcNar) {
                             newStamp(&stampEvi)
                         };
 
-                        let cfg__eviCnt = 3; // how many pieces of evidence are added?
+                        let mut cfg__eviCnt = 3; // how many pieces of evidence are added?
+
+
+                        { // try to lookup eviCnt of op by op-name
+                            let implSeqOpTerm: Term = retImplSeqOp(&candidateTerm);
+
+                            let (opArgs, opName) = decodeOp(&implSeqOpTerm).unwrap();
+
+                            match decodeOp(&implSeqOpTerm) {
+                                Some((opArgs, opName)) => {
+
+                                    // search for action with name
+                                    cfg__eviCnt = match ret_op_by_name(nar, &opName) {
+                                        Some(op) => {op.ret_evi_cnt()},
+                                        None => {cfg__eviCnt}
+                                    }
+                                },
+                                None => {}
+                            }
+                        }
 
                         let evidenceSentence: Sentence = Sentence {
                             punct:EnumPunctation::JUGEMENT,
@@ -1077,4 +1096,6 @@ pub trait Op {
     fn call(&self, nar:&mut ProcNar, narMem:&Option<Arc<RwLock<Mem2>>>, args:&Vec<Term>);
     /// can the op be called with motor babbling?
     fn isBabbleable(&self) -> bool;
+    /// how much evidence is added or removed when this op is involved?
+    fn ret_evi_cnt(&self) -> i64;
 }

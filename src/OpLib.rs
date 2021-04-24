@@ -25,6 +25,7 @@ impl NarProc::Op for OpNop {
     fn call(&self, _nar:&mut NarProc::ProcNar, _narMem:&Option<Arc<RwLock<NarWorkingCycle::Mem2>>>, _args:&Vec<Term>) {
     }
     fn isBabbleable(&self) -> bool {true}
+    fn ret_evi_cnt(&self) -> i64 {3}
 }
 
 /// NAL9 operator to execute a sequence of operations and inject a event as input after doing so
@@ -79,6 +80,7 @@ impl NarProc::Op for Op_nal9__exec_and_inject {
         nar.trace.push(Rc::new(NarProc::SimpleSentence {name:injEvent.clone(),evi:nar.t,occT:nar.t}));
     }
     fn isBabbleable(&self) -> bool {false} // can't be used for babbling because it doesn't make any sense
+    fn ret_evi_cnt(&self) -> i64 {3}
 }
 
 
@@ -150,4 +152,5 @@ impl NarProc::Op for Op__nlp_rel_0 {
         }
     }
     fn isBabbleable(&self) -> bool {false} // can't be used for babbling because it is not useful to babble it
+    fn ret_evi_cnt(&self) -> i64 {3}
 }
