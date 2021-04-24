@@ -340,6 +340,8 @@ pub fn run(maxEpochs:i64) {
                 NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
             }
 
+            Nar::cycle(&mut nar); // give chance to limit memory
+
             
 
 
