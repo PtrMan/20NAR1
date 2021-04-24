@@ -2,7 +2,7 @@
 This is a NARS inspired General Machine Intelligence (GMI) system. The current implementation only implements a NAR(non-axiomatic reasoner) for NAL1-7 and NAL8-9.
 
 working definition of intelligence:<br />
-`solving complex and complicated problems under  adaptation with insufﬁcient knowledge and resources.`<br />
+`solving complex and complicated problems under  adaptation with insufﬁcient knowledge and resources`<br />
 is a composition of the definition of intelligence from Dr. Pei Wang [paper](https://sciendo.com/article/10.2478/jagi-2019-0002) and the definition of intelligence from Dr. Ben Goertzel.
 
 # commands
