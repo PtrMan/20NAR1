@@ -43,8 +43,8 @@ pub struct ProcNar {
     /// how high is the proability to select multiple ops for seq impl candidates
     pub cfg__multiOpProbability:f64,
 
-    /// how many pieces of evidence are assigned to an observation, usually low numbers, high numbers make the observation more axiomatic
-    pub cfg__eviCnt:i64,
+    // how many pieces of evidence are assigned to an observation, usually low numbers, high numbers make the observation more axiomatic
+    //pub cfg__eviCnt:i64,
 
     /// is anticipation enabled? disable for specialized functionality
     pub cfg__enAnticipation: bool,
@@ -116,7 +116,7 @@ pub fn narInit() -> ProcNar {
         cfgEnBabbling: true,
         cfg__nOpsMax: 1,
         cfg__multiOpProbability: 0.2,
-        cfg__eviCnt: 3, // non-axiomatic
+        //cfg__eviCnt: 3, // non-axiomatic
         cfg__enAnticipation: true, // by default
 
         cfg__nConcepts: 1000,
@@ -434,13 +434,15 @@ pub fn narStep0(nar:&mut ProcNar) {
                             newStamp(&stampEvi)
                         };
 
+                        let cfg__eviCnt = 3; // how many pieces of evidence are added?
+
                         let evidenceSentence: Sentence = Sentence {
                             punct:EnumPunctation::JUGEMENT,
                             t:None,
                             stamp:stamp,
                             expDt:Some(expDt),
                             term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
-                            evi:Some(Evidence::CNT{pos:nar.cfg__eviCnt,cnt:nar.cfg__eviCnt}),
+                            evi:Some(Evidence::CNT{pos:cfg__eviCnt,cnt:cfg__eviCnt}),
                             usage:Arc::new(RwLock::new(Usage{lastUsed: 0, useCount: 0})),
                         };
                         
