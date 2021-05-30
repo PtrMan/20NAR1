@@ -52,3 +52,6 @@ pub mod mlutils;
 
 //pub mod narPerception; // not include because file has issues
 
+
+// Modules (batteries included)
+pub mod ModNlpA;
