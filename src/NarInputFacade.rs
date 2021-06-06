@@ -7,6 +7,7 @@ use crate::Nar::*;
 use crate::NarWorkingCycle::{debugCreditsOfTasks, flushTasks};
 //use crate::NarModuleNlp;
 //use crate::NarModuleNlp2;
+use crate::NarModuleNlp3;
 use crate::NarProc;
 use crate::OpLib;
 
@@ -93,9 +94,14 @@ pub fn input(nar:&mut Nar, line: &String, quit: &mut bool) -> Vec<String> {
     else if input == "!peb 1" {
         nar.procNar.cfgEnBabbling = true;
     }
+
+    else if input.len() > 6 && &input[..6] == "!.nlp " {
+        let natural = &input[6..].to_string();
+        NarModuleNlp3::process(nar, &natural);
+    }
     /*
     else if input.len() > 7 && &input[..7] == "!.nlp2 " {
-        let natural = &input[6..].to_string();
+        let natural = &input[7..].to_string();
         NarModuleNlp2::process(nar, &natural);
     }
     else if input.len() > 6 && &input[..6] == "!.nlp " { // command to stuff nlp input into nlp module

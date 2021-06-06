@@ -24,6 +24,7 @@ pub mod NarInfProcedural;
 pub mod NarInteractive;
 //pub mod NarModuleNlp;
 //pub mod NarModuleNlp2;
+pub mod NarModuleNlp3;
 pub mod NarServer;
 pub mod NarInputFacade;
 pub mod NarUtilReadn;
