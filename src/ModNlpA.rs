@@ -708,11 +708,8 @@ pub fn conv_rel_to_narsese(rel:&Relation) -> String {
     // TODO< handle isNegated >
 
     if rel.args.len() == 2 {
-        return format!("<({}*{})-->{}>. {{{} {}}}", &rel.head, &rel.args[0], &rel.args[1],  1.0, rel.conf);
+        return format!("<({}*{}) --> {}>. {{{} {}}}", &rel.args[0], &rel.args[1], &rel.head,   1.0, rel.conf);
     }
-    //else if rel.args.len() == 3 {
-    //    return format!("<({}*{})-->{}>.", &rel.head, &rel.args[0], &rel.args[1]);
-    //}
     else {
         panic!("not implemented!");
     }

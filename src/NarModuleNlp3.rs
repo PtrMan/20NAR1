@@ -27,6 +27,7 @@ pub fn process(parentNar: &mut Nar, natural:&String) {
     // convert relations to narsese and put it into NAR
     for i_relation in &relations {
         let i_narsese:String = ModNlpA::conv_rel_to_narsese(i_relation);
+        println!("// DBG {}", i_narsese);
         inputN(parentNar, &i_narsese);
     }
 }
