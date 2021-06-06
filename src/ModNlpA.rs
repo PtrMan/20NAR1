@@ -673,6 +673,30 @@ pub fn network_run(stimulus_words: &[String]) -> (Vec<i64>, Vec<Relation>) {
                     conf: 0.998, 
                 });
             }
+            else if current_action_idx == 2 {
+                // action to build relation [3]([0], [4])
+        
+                log(&format!("//REL {}({}, {})", stimulus_words[3], stimulus_words[0], stimulus_words[4]));
+                log(&format!("{}({}, {}).", stimulus_words[3], stimulus_words[0], stimulus_words[4]));
+                extracted_relations.push(Relation {
+                    head: stimulus_words[3].clone(),
+                    args: vec![stimulus_words[0].clone(), stimulus_words[4].clone()],
+                    isNegated: false,
+                    conf: 0.998, 
+                });
+            }
+            else if current_action_idx == 3 {
+                // action to build relation [3]([2], [4])
+        
+                log(&format!("//REL {}({}, {})", stimulus_words[3], stimulus_words[2], stimulus_words[4]));
+                log(&format!("{}({}, {}).", stimulus_words[3], stimulus_words[2], stimulus_words[4]));
+                extracted_relations.push(Relation {
+                    head: stimulus_words[3].clone(),
+                    args: vec![stimulus_words[2].clone(), stimulus_words[4].clone()],
+                    isNegated: false,
+                    conf: 0.998, 
+                });
+            }
             else if current_action_idx == 7 {
                 // action to build relation [1]([0], [4])
         
