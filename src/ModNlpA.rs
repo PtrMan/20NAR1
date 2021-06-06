@@ -582,13 +582,13 @@ fn network_test() {
     // NNP VBZ JJ CC JJ
     let stimulus_words: Vec<String> = vec!["Tom".to_string(), "is".to_string(), "fast".to_string(), "and".to_string(), "fat".to_string()];
 
-    let control_seq: Vec<i64> = network_run(&stimulus_words);
+    let (control_seq, relations) = network_run(&stimulus_words);
 }
 
 // load the network from the file and run it
 // /param stimulus_words the actual words of the stimulus
-// /return control seuence which was returned from the NN
-fn network_run(stimulus_words: &[String]) -> Vec<i64> {
+// /return (control sequence which was returned from the NN, extracted relations)
+pub fn network_run(stimulus_words: &[String]) -> (Vec<i64>, Vec<Relation>) {
     let nn:NeuralNetwork = nn_load().unwrap();
 
 
@@ -627,7 +627,7 @@ fn network_run(stimulus_words: &[String]) -> Vec<i64> {
 
     let mut control_log: Vec<i64> = vec![];
 
-    
+    let mut extracted_relations: Vec<Relation> = vec![]; // array of extracted relations
     
     let mut current_stimulus: Vec<i64> = prot_pos0(conv_tokens_to_poss(&stimulus_words)); //prot_pos0(vec!["NNP".to_string(), "VBZ".to_string(), "JJ".to_string(), "CC".to_string(), "JJ".to_string()]);
 
@@ -655,25 +655,67 @@ fn network_run(stimulus_words: &[String]) -> Vec<i64> {
         if current_action_idx == 0 { // is FIN action? then we are done with interpreting actions
             break;
         }
-        else if current_action_idx == 1 {
-            // action to build relation [1]([0], [2])
 
-            log(&format!("//REL {}({}, {})", stimulus_words[1], stimulus_words[0], stimulus_words[2]));
-            log(&format!("{}({}, {}).", stimulus_words[1], stimulus_words[0], stimulus_words[2]));
-        }
-        else if current_action_idx == 7 {
-            // action to build relation [1]([0], [4])
-
-            log(&format!("//REL {}({}, {})", stimulus_words[1], stimulus_words[0], stimulus_words[4]));
-            log(&format!("{}({}, {}).", stimulus_words[1], stimulus_words[0], stimulus_words[4]));
-        }
         
+        { // debug + build relations
+            if current_action_idx == 0 { // is FIN action? then we are done with interpreting actions
+                // do nothing
+            }
+            else if current_action_idx == 1 {
+                // action to build relation [1]([0], [2])
+        
+                log(&format!("//REL {}({}, {})", stimulus_words[1], stimulus_words[0], stimulus_words[2]));
+                log(&format!("{}({}, {}).", stimulus_words[1], stimulus_words[0], stimulus_words[2]));
+                extracted_relations.push(Relation {
+                    head: stimulus_words[1].clone(),
+                    args: vec![stimulus_words[0].clone(), stimulus_words[2].clone()],
+                    isNegated: false,
+                    conf: 0.998, 
+                });
+            }
+            else if current_action_idx == 7 {
+                // action to build relation [1]([0], [4])
+        
+                log(&format!("//REL {}({}, {})", stimulus_words[1], stimulus_words[0], stimulus_words[4]));
+                log(&format!("{}({}, {}).", stimulus_words[1], stimulus_words[0], stimulus_words[4]));
+                extracted_relations.push(Relation {
+                    head: stimulus_words[1].clone(),
+                    args: vec![stimulus_words[0].clone(), stimulus_words[4].clone()],
+                    isNegated: false,
+                    conf: 0.998, 
+                });
+            }
+        }
+
         
         // add selected action to sequence to tell network that the action was indeed executed
         current_stimulus.push(pos_ret_codes() + current_action_idx);
     }
     
-    control_log
+    (control_log, extracted_relations)
+}
+
+/// structure for an relation extracted from natural language
+pub struct Relation {
+    pub head: String, // head
+    pub args: Vec<String>, // arguments
+    pub isNegated: bool,
+    pub conf: f64, // confidence
+}
+
+/// convert relation to narsese
+pub fn conv_rel_to_narsese(rel:&Relation) -> String {
+    // TODO< handle isNegated >
+
+    if rel.args.len() == 2 {
+        return format!("<({}*{})-->{}>. {{{} {}}}", &rel.head, &rel.args[0], &rel.args[1],  1.0, rel.conf);
+    }
+    //else if rel.args.len() == 3 {
+    //    return format!("<({}*{})-->{}>.", &rel.head, &rel.args[0], &rel.args[1]);
+    //}
+    else {
+        panic!("not implemented!");
+    }
 }
 
 // dot product
