@@ -195,7 +195,7 @@ pub fn train() {
     { // build layer[0]
         let mut layer0: Vec<WeightBias> = vec![];
 
-        for _i_neuron in 0..6 {
+        for _i_neuron in 0../*6*/9 {
             layer0.push(WeightBias{weights:vec![],bias:(0.0,0.0)});
             {
                 let len1 = layer0.len()-1;
@@ -307,7 +307,7 @@ pub fn train() {
         // Cat want to dance 
         // NN VBT PRT_TO VB
         stimulus_with_control.push(StimulusWithControl{
-            stimulus_seq:prot_pos0(vec!["NN".to_string(), "VBT".to_string(), "PRT_TO".to_string(), "VB".to_string(), "JJ".to_string()]),
+            stimulus_seq:prot_pos0(vec!["NN".to_string(), "VBT".to_string(), "PRT_TO".to_string(), "VB".to_string()]),
             control:vec![ 4, 0],
         });
 
@@ -635,7 +635,10 @@ pub fn network_run(stimulus_words: &[String]) -> (Vec<i64>, Vec<Relation>) {
 
     let mut extracted_relations: Vec<Relation> = vec![]; // array of extracted relations
     
-    let mut current_stimulus: Vec<i64> = prot_pos0(conv_tokens_to_poss(&stimulus_words)); //prot_pos0(vec!["NNP".to_string(), "VBZ".to_string(), "JJ".to_string(), "CC".to_string(), "JJ".to_string()]);
+    let pos: Vec<String> = conv_tokens_to_poss(&stimulus_words);
+    println!("pos = {:?}", &pos); // DGB pos
+
+    let mut current_stimulus: Vec<i64> = prot_pos0(pos); //prot_pos0(vec!["NNP".to_string(), "VBZ".to_string(), "JJ".to_string(), "CC".to_string(), "JJ".to_string()]);
 
     for _i_iteration in 0..10 { // iterate only till the maximal iterations aren't reached, we do this to prevent infinite loops
         println!(""); // only do this if debug level is aproriate
@@ -699,6 +702,18 @@ pub fn network_run(stimulus_words: &[String]) -> (Vec<i64>, Vec<Relation>) {
                 extracted_relations.push(Relation {
                     head: stimulus_words[3].clone(),
                     args: vec![stimulus_words[2].clone(), stimulus_words[4].clone()],
+                    isNegated: false,
+                    conf: 0.998, 
+                });
+            }
+            else if current_action_idx == 4 {
+                // action to build relation want_to([0], [3])
+        
+                log(&format!("//REL {}({}, {})", "want_to", stimulus_words[0], stimulus_words[3]));
+                log(&format!("{}({}, {}).", "want_to", stimulus_words[0], stimulus_words[3]));
+                extracted_relations.push(Relation {
+                    head: "want_to".to_string(),
+                    args: vec![stimulus_words[0].clone(), stimulus_words[3].clone()],
                     isNegated: false,
                     conf: 0.998, 
                 });
@@ -1034,17 +1049,26 @@ pub fn conv_tokens_to_poss(tokens:&[String]) -> Vec<String> {
         else if i_token == &"can".to_string()  {res.push("MD".to_string());}
         else if i_token == &"are".to_string()  {res.push("VBP".to_string());}
         else if i_token == &"?".to_string()  {res.push("?".to_string());}
-        else if i_token == &"to".to_string()  {res.push(" PRT_TO".to_string());}
+        else if i_token == &"to".to_string()  {res.push("PRT_TO".to_string());}
         else if i_token == &"of".to_string()  {res.push("IN".to_string());}
         else if i_token == &"the".to_string()  {res.push("DT".to_string());}
         else if i_token == &"what".to_string()  {res.push("WP".to_string());}
         else if i_token == &"and".to_string()  {res.push("CC".to_string());}
         else if i_token == &"fast".to_string()  {res.push("JJ".to_string());}
+        else if i_token == &"slow".to_string()  {res.push("JJ".to_string());}
         else if i_token == &"fat".to_string()  {res.push("JJ".to_string());}
+        else if i_token == &"thin".to_string()  {res.push("JJ".to_string());}
+        else if i_token == &"good".to_string()  {res.push("JJ".to_string());}
+        else if i_token == &"bad".to_string()  {res.push("JJ".to_string());}
+        else if i_token == &"dance".to_string()  {res.push("VB".to_string());}
         else if i_token == &"hunting".to_string()  {res.push("NN".to_string());}
         else if i_token == &"purpose".to_string()  {res.push("NN".to_string());}
         else if i_token == &"food".to_string()  {res.push("NN".to_string());} // is this right?
-        else {panic!("unknown word");}
+
+        else if i_token == &"Cat".to_string() {res.push("NN".to_string());} // is this right?
+
+        else if i_token == &"want".to_string() {res.push("VBT".to_string());} // not always right
+        else {panic!(format!("unknown word \"{}\"", &i_token));}
     }
     res
 }
