@@ -126,5 +126,8 @@ pub fn main() {
         println!("SCORE {}", acc); // print score
 
     }
+    else if runEnv == "nnTrain.nlp" { // train NN network
+        nar20_1::ModNlpA::train();
+    }
     
 }

@@ -178,8 +178,8 @@ fn nn_load() -> Result<(NeuralNetwork)> {
 }
 
 
-
-fn main() {
+/// entry for training (new) NN
+pub fn train() {
     let mut rngi:i64 = 8737; // iterator for rng
 
 
@@ -303,6 +303,24 @@ fn main() {
 
 
 
+
+        // Cat want to dance 
+        // NN VBT PRT_TO VB
+        stimulus_with_control.push(StimulusWithControl{
+            stimulus_seq:prot_pos0(vec!["NN".to_string(), "VBT".to_string(), "PRT_TO".to_string(), "VB".to_string(), "JJ".to_string()]),
+            control:vec![ 4, 0],
+        });
+
+        // Cat want food 
+        // NN VBP NN
+        stimulus_with_control.push(StimulusWithControl{
+            stimulus_seq:prot_pos0(vec!["NN".to_string(), "VBP".to_string(), "NN".to_string()]),
+            control:vec![ 1, 0],
+        });
+
+
+
+
         /*
 
         // Tim and Tom are fat and fat
@@ -321,12 +339,6 @@ fn main() {
 
 
 
-        // Cat want food 
-        // NN VBP NN
-        stimulus_with_control.push(StimulusWithControl{
-            stimulus_seq:prot_pos0(vec!["NN".to_string(), "VBP".to_string(), "NN".to_string()]),
-            control:vec![ 1, 0],
-        });
         
         // what is SYSTEM doing ?
         // WP VBZ NNP VBG ?
@@ -359,12 +371,6 @@ fn main() {
 
 
 
-        // Cat want to dance 
-        // NN VBT PRT_TO VB
-        stimulus_with_control.push(StimulusWithControl{
-            stimulus_seq:prot_pos0(vec!["NN".to_string(), "VBT".to_string(), "PRT_TO".to_string(), "VB".to_string(), "JJ".to_string()]),
-            control:vec![ 4, 0],
-        });
         */
 
 
@@ -448,7 +454,7 @@ fn main() {
         b.push((0.0,0.0));
     }
 
-    let train:bool = false; // train the model before loading and running it?
+    let train:bool = true; // train the model before loading and running it?
 
     if train {
         // let pieces_of_compute = 5; // 5 was sufficient for simple function
@@ -462,7 +468,7 @@ fn main() {
 
 
         //let pieces_of_compute = 120; // worked fine
-        let pieces_of_compute = 30; // smaller training for testing
+        let pieces_of_compute = 90; //90; // smaller training for testing
 
         let epoch_max:i64 = 5000000*pieces_of_compute; // how many epochs do we train?
 
