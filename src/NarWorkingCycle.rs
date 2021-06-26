@@ -239,6 +239,40 @@ pub fn infStructImg1(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option
 
 
 
+/// structural - decompose PAR
+/// X =/> (A ; B).
+/// |-
+/// X =/> A.
+/// (for all terms in the PAR)
+pub fn infStructDecomposePar(a: &Term, punct:EnumPunctation, aTv: &Option<Tv>) -> Option<Vec<(Term, Tv, EnumPunctation, f64)>> {
+    if punct != EnumPunctation::JUGEMENT {
+        return None;
+    }
+
+    match a {
+        Term::Stmt(Copula::PREDIMPL, subj, pred) => {
+            match &**pred {
+                Term::Par(arr) => {
+                    let mut res = vec![];
+
+                    for iTerm in &*arr {
+                        let concl = Term::Stmt(Copula::PREDIMPL, Box::clone(&subj), Box::clone(&iTerm));
+                        res.push((concl,aTv.as_ref().unwrap().clone(),EnumPunctation::JUGEMENT, 0.9));
+                    }
+
+                    return Some(res);
+                },
+                _ => {}
+            }
+        },
+        _ => {},
+    }
+    None
+}
+
+
+
+
 /// see ONA
 /// [a] <-> [b]. |- a <-> b.
 pub fn infStructSetInt(a: &Term, punctA:EnumPunctation, aTv:&Option<Tv>) -> Option<(Term,Tv,EnumPunctation, f64)> {
@@ -755,6 +789,15 @@ pub fn infSinglePremise(a: &Term, punct:EnumPunctation, aTv:&Option<Tv>) -> Vec<
     }
     match infStructSetExt(&a, punct, &aTv) {
         Some(x) => { res.push(x); } _ => {}
+    }
+
+    match infStructDecomposePar(&a, punct, &aTv) {
+        Some(arr) => {
+            for iRes in arr {
+                res.push(iRes);
+            }
+        }
+        _ => {}
     }
 
     res
