@@ -82,7 +82,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
         }
         else {
             // add event
-            nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:term.clone(),evi:nar.procNar.t,occT:nar.procNar.t}));
+            nar.procNar.trace.event_happened( Rc::new(NarProc::SimpleSentence {name:term.clone(),evi:nar.procNar.t,occT:nar.procNar.t}) );
         }
 
         return;

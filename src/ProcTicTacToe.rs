@@ -97,7 +97,7 @@ pub fn run(maxEpochs:i64) {
         let mut gamestate = Gamestate{field: vec![' '; 9], player:true,}; // create(reset) gamestate
 
         // flush trace  because it shouldn't confuse moves
-        nar.procNar.trace = vec![];
+        nar.procNar.trace.force_flush();
 
         let mut moveCnt:i64 = 0;
 
@@ -181,7 +181,7 @@ pub fn run(maxEpochs:i64) {
 
                         loop {
                             // flush trace  because it shouldn't confuse moves
-                            nar.procNar.trace = vec![];
+                            nar.procNar.trace.force_flush();
                             // flush anticipations   because anticipations don't matter, and because the moves can happen in fast succession to NARS
                             nar.procNar.anticipatedEvents = vec![];
 
@@ -193,7 +193,7 @@ pub fn run(maxEpochs:i64) {
                                 println!("NARS stimulus: {}", stimulusVec);
     
                                 //NarProc::narStep0(&mut nar.procNar);
-                                nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
+                                nar.procNar.trace.event_happened( Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}) );
                                 //NarProc::narStep1(&mut nar.procNar);    
                             }
 
@@ -331,7 +331,7 @@ pub fn run(maxEpochs:i64) {
                 println!("NARS stimulus: {}", stimulusVec);
 
                 NarProc::narStep0(&mut nar.procNar);
-                nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}));
+                nar.procNar.trace.event_happened( Rc::new(NarProc::SimpleSentence {name:Term::Name(stimulusVec.clone()),evi:nar.procNar.t,occT:nar.procNar.t}) );
                 NarProc::narStep1(&mut nar.procNar, &Some(Arc::clone(&nar.mem)));
             }
 

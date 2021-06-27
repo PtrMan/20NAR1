@@ -75,7 +75,8 @@ pub struct ProcNar {
     pub evidenceMem: Arc<RwLock<NarMem::Mem>>,
 
     /// trace of some past events under AIKR
-    pub trace: Vec<Rc<SimpleSentence>>,
+    pub trace: Box<dyn Trace>,
+    
     /// all anticipated events "in flight"
     pub anticipatedEvents: Vec<AnticipationEvent>,
 
@@ -102,6 +103,228 @@ pub struct ProcNar {
     pub storeWorkers: Vec<JoinHandle<()>>,
     /// sender to worker
     pub storeWorkersTx: Vec<SyncSender<(Sentence,i64)>>,
+}
+
+/// trait for trace implementations
+/// 
+/// allows to select the implementation of the trace at runtime and overwrite it with custom one
+pub trait Trace {
+    /// return name of implementation of trait
+    fn retImplName(&self) -> String;
+
+    // return last events which happened in parallel
+    //fn retLastEvents(&self) -> Vec<SimpleSentence>;
+
+    fn step(&self, nar:&ProcNar);
+
+    fn limit(&self);
+
+    /// adds a event which happened at the current moment
+    fn event_happened(&self, event: Rc<SimpleSentence>);
+
+    /// flushes all events in the datastructure
+    fn force_flush(&self);
+
+    /// return concurrent last events
+    ///
+    /// result can be None if no event happened yet
+    fn ret_last_events(&self) -> Option<Vec<Rc<SimpleSentence>>>;
+
+    /// returns a view of all events
+    ///
+    /// can be a expensive operation
+    fn ret_view(&self) -> Vec<Rc<SimpleSentence>>;
+}
+
+pub struct TraceDefault {
+    /// trace of some past events under AIKR
+    pub trace: Arc<RwLock<Vec<Rc<SimpleSentence>>>>,
+
+    pub rng: Arc<RwLock<rand::rngs::ThreadRng>>,
+}
+
+/// standard implementation of "Trace"
+impl Trace for TraceDefault {
+    fn retImplName(&self) -> String {
+        "default".to_string()
+    }
+
+    fn step(&self, nar:&ProcNar) {
+        {
+            // neutralize goals which are fullfilled by current event
+            let mut traceGuard = self.trace.write();
+            if traceGuard.len() > 0 {
+                let last_events: Vec<Rc<SimpleSentence>> = {
+                    let mut last_events: Vec<Rc<SimpleSentence>> = vec![]; // concurrently happened last events
+                    last_events.push(Rc::clone(&traceGuard[traceGuard.len()-1]));
+                    last_events
+                };
+                for i_last_event in last_events {
+                    NarGoalSystem::event_occurred(&mut nar.goalSystem.write(), &i_last_event.name);
+                }
+            }
+        }
+
+        let traceGuard = self.trace.read();
+        if traceGuard.len() >= 3 { // add evidence
+            for _sampleIt in 0..nar.cfg__perceptionSamplesPerStep {
+                // filter middle by ops and select random first event before that!
+                let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &traceGuard);
+                if idxsOfOps.len() > 0 { // there must be at least one op to sample
+
+
+                    let selIdxOfOps: Vec<usize> = {// indices of selected ops
+                        
+                        let nSelOps = // how many ops do we try to select
+                            if nar.cfg__nOpsMax == 1 {1}
+                            else if self.rng.write().gen_range(0.0..1.0) < nar.cfg__multiOpProbability {
+                                idxsOfOps.len().min(nar.cfg__nOpsMax as usize)
+                            }
+                            else {1};
+
+                        // select ops
+                        let mut selIdxOfOps = vec![];
+                        loop {
+                            let idx1Idx = self.rng.write().gen_range(0..idxsOfOps.len());
+                            let selIdx = idxsOfOps[idx1Idx] as usize;
+                            if !selIdxOfOps.contains(&selIdx) {
+                                selIdxOfOps.push(selIdx);
+                            }
+
+                            if selIdxOfOps.len() == nSelOps { // do we have selected the ops?
+                                break;
+                            }
+                        }
+
+                        selIdxOfOps
+                    };
+                    
+                    if selIdxOfOps.len() > 0 && *selIdxOfOps.iter().min().unwrap() > 0 { // is there a valid index for a op which is not the last item in the trace?
+                        
+                        let selTraceItems: Vec<Rc<SimpleSentence>> = {
+                            let idxFirst = self.rng.write().gen_range(0..*selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
+                            let mut idxLast = traceGuard.len()-1; // last event is last
+
+                            // TODO< rewrite to logic which scans for the first op between idxLast and selIdxOfOps, select random event as idxLast between these!
+                            
+                            // check if we can select previous event
+                            {
+                                let sel = traceGuard[traceGuard.len()-1-1].clone();
+                                let rng0:i64 = self.rng.write().gen_range(0..2);
+                                if rng0 == 1 && traceGuard.len()-1-1 > *selIdxOfOps.iter().max().unwrap() && !checkIsCallableOp(&nar, &sel.name) {
+                                    idxLast = traceGuard.len()-1-1;
+                                }
+                            }
+                            let idxs = { // compose indices of selected events
+                                let mut idxs = vec![idxFirst];
+                                idxs.extend(selIdxOfOps);
+                                idxs.push(idxLast);
+                                idxs.sort();
+                                idxs
+                            };
+
+                            idxs.iter().map(|idx| Rc::clone(&traceGuard[*idx])).collect() // select trace items
+                        };
+                        
+                        let termsOfSelVecItems:Vec<Term> = selTraceItems.iter().map(|iv| iv.name.clone()).collect();
+                        let implSeqOpt: Option<Term> = try_build_implSeq(nar, &termsOfSelVecItems); // try to build impl seq from selected trace items
+                        if implSeqOpt.is_some() { // was building of impl seq successful?
+                            let candidateTerm:Term = implSeqOpt.unwrap().clone();
+                            
+                            if nar.cfgVerbosity > 0 {println!("perceive {}", convTermToStr(&candidateTerm));};
+                            
+                            // compute time between last event and the element before the last event
+                            let dt:i64 = selTraceItems[selTraceItems.len()-1].occT - selTraceItems[selTraceItems.len()-2].occT;
+                            // compute exponential delta time
+                            let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
+                            
+
+
+                            
+                            let stamp:Stamp = {
+                                // compute merged stamp from evidence of all events
+                                let stampEvi = selTraceItems.iter().map(|iv| iv.evi).collect();
+                                newStamp(&stampEvi)
+                            };
+
+                            let mut cfg__eviCnt = 3; // how many pieces of evidence are added?
+
+
+                            { // try to lookup eviCnt of op by op-name
+                                let implSeqOpTerm: Term = retImplSeqOp(&candidateTerm);
+
+                                let (opArgs, opName) = decodeOp(&implSeqOpTerm).unwrap();
+
+                                match decodeOp(&implSeqOpTerm) {
+                                    Some((opArgs, opName)) => {
+
+                                        // search for action with name
+                                        cfg__eviCnt = match ret_op_by_name(nar, &opName) {
+                                            Some(op) => {op.ret_evi_cnt()},
+                                            None => {cfg__eviCnt}
+                                        }
+                                    },
+                                    None => {}
+                                }
+                            }
+
+                            let evidenceSentence: Sentence = Sentence {
+                                punct:EnumPunctation::JUGEMENT,
+                                t:None,
+                                stamp:stamp,
+                                expDt:Some(expDt),
+                                term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
+                                evi:Some(Evidence::CNT{pos:cfg__eviCnt,cnt:cfg__eviCnt}),
+                                usage:Arc::new(RwLock::new(Usage{lastUsed: 0, useCount: 0})),
+                            };
+                            
+                            let workerIdx = self.rng.write().gen_range(0..nar.storeWorkersTx.len());
+                            nar.storeWorkersTx[workerIdx].send((evidenceSentence, nar.t)).unwrap(); // defer actual storage to worker
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn limit(&self) {
+        let mut writeGuard = self.trace.write();
+        // limit trace (AIKR)
+        if writeGuard.len() > 20 {
+            *writeGuard = (&writeGuard[(*writeGuard).len()-20..]).to_vec();
+        }
+    }
+
+    
+    fn event_happened(&self, event: Rc<SimpleSentence>) {
+        self.trace.write().push(Rc::clone(&event));
+    }
+    
+    fn force_flush(&self) {
+        self.trace.write().clear();
+    }
+
+    fn ret_last_events(&self) -> Option<Vec<Rc<SimpleSentence>>> {
+        let readGuard = self.trace.read();
+        match readGuard.len() {
+            0 => {None}
+            _ => {
+                // TODO< scan for events with the same occurence time from the back!? >
+
+                let last_event: Rc<SimpleSentence> = Rc::clone(&readGuard[readGuard.len()-1]);
+                Some(vec![last_event])
+            }
+        }
+    }
+
+    fn ret_view(&self) -> Vec<Rc<SimpleSentence>> {
+        let mut res = vec![];
+        let read_guard = self.trace.read();
+        for i_event in &*read_guard {
+            res.push(Rc::clone(&i_event));
+        }
+        res
+    }
 }
 
 /// init and set to default values
@@ -132,7 +355,8 @@ pub fn narInit() -> ProcNar {
         //evidence: Vec::new(),
         evidenceMem: Arc::new(RwLock::new(NarMem::make())),
 
-        trace: Vec::new(),
+        //trace: Vec::new(),
+        trace: Box::new(TraceDefault{trace: Arc::new(RwLock::new(vec![])),rng: Arc::new(RwLock::new(rand::thread_rng())),}),
         anticipatedEvents: Vec::new(),
         ops: Vec::new(),
         t: 0,
@@ -299,20 +523,24 @@ pub fn narStep0(nar:&mut ProcNar) {
     if nar.cfgVerbosity > 0 {println!("ae# = {}", nar.anticipatedEvents.len());}; // debug number of anticipated events
     
     // remove confirmed anticipations
-    for perceptIdx in 0..nar.cfgPerceptWindow as usize {
-        if nar.trace.len() > perceptIdx {
-            let curEvent:&Term = &nar.trace[nar.trace.len()-1-perceptIdx].name;
-            
-            let mut newanticipatedEvents = Vec::new();
-            for iDeadline in &nar.anticipatedEvents {
-                let evi = iDeadline.evi.read();
-                if !checkEqTerm( &retPred(& evi.term), &curEvent) { // is predicted event not current event?
-                    newanticipatedEvents.push(iDeadline.clone());
+    {
+        let trace_view = nar.trace.ret_view();
+        for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+            if trace_view.len() > perceptIdx {
+                let curEvent:&Term = &trace_view[trace_view.len()-1-perceptIdx].name;
+                
+                let mut newanticipatedEvents = Vec::new();
+                for iDeadline in &nar.anticipatedEvents {
+                    let evi = iDeadline.evi.read();
+                    if !checkEqTerm( &retPred(& evi.term), &curEvent) { // is predicted event not current event?
+                        newanticipatedEvents.push(iDeadline.clone());
+                    }
                 }
+                nar.anticipatedEvents = newanticipatedEvents;
             }
-            nar.anticipatedEvents = newanticipatedEvents;
         }
     }
+    
 
     
     { // neg confirm for anticipated events
@@ -347,133 +575,8 @@ pub fn narStep0(nar:&mut ProcNar) {
         nar.anticipatedEvents = nar.anticipatedEvents.iter().filter(|&iDeadline| iDeadline.deadline > nar.t).map(|v| v.clone()).collect();
     }
 
-    // neutralize goals which are fullfilled by current event
-    if nar.trace.len() > 0 {
-        let lastEvent:&SimpleSentence = &*nar.trace[nar.trace.len()-1];
-        NarGoalSystem::event_occurred(&mut nar.goalSystem.write(), &lastEvent.name);
-    }
-
-    if nar.trace.len() >= 3 { // add evidence
-        for _sampleIt in 0..nar.cfg__perceptionSamplesPerStep {
-            // filter middle by ops and select random first event before that!
-            let idxsOfOps:Vec<i64> = calcIdxsOfOps(&nar, &nar.trace);
-            if idxsOfOps.len() > 0 { // there must be at least one op to sample
-
-
-                let selIdxOfOps: Vec<usize> = {// indices of selected ops
-                    
-                    let nSelOps = // how many ops do we try to select
-                        if nar.cfg__nOpsMax == 1 {1}
-                        else if nar.rng.gen_range(0.0..1.0) < nar.cfg__multiOpProbability {
-                            idxsOfOps.len().min(nar.cfg__nOpsMax as usize)
-                        }
-                        else {1};
-
-                    // select ops
-                    let mut selIdxOfOps = vec![];
-                    loop {
-                        let idx1Idx = nar.rng.gen_range(0..idxsOfOps.len());
-                        let selIdx = idxsOfOps[idx1Idx] as usize;
-                        if !selIdxOfOps.contains(&selIdx) {
-                            selIdxOfOps.push(selIdx);
-                        }
-
-                        if selIdxOfOps.len() == nSelOps { // do we have selected the ops?
-                            break;
-                        }
-                    }
-
-                    selIdxOfOps
-                };
-                
-                if selIdxOfOps.len() > 0 && *selIdxOfOps.iter().min().unwrap() > 0 { // is there a valid index for a op which is not the last item in the trace?
-                    
-                    let selTraceItems: Vec<Rc<SimpleSentence>> = {
-                        let idxFirst = nar.rng.gen_range(0..*selIdxOfOps.iter().min().unwrap()); // select index of event before first selected op
-                        let mut idxLast = nar.trace.len()-1; // last event is last
-
-                        // TODO< rewrite to logic which scans for the first op between idxLast and selIdxOfOps, select random event as idxLast between these!
-                        
-                        // check if we can select previous event
-                        {
-                            let sel = nar.trace[nar.trace.len()-1-1].clone();
-                            let rng0:i64 = nar.rng.gen_range(0..2);
-                            if rng0 == 1 && nar.trace.len()-1-1 > *selIdxOfOps.iter().max().unwrap() && !checkIsCallableOp(&nar, &sel.name) {
-                                idxLast = nar.trace.len()-1-1;
-                            }
-                        }
-                        let idxs = { // compose indices of selected events
-                            let mut idxs = vec![idxFirst];
-                            idxs.extend(selIdxOfOps);
-                            idxs.push(idxLast);
-                            idxs.sort();
-                            idxs
-                        };
-
-                        idxs.iter().map(|idx| Rc::clone(&nar.trace[*idx])).collect() // select trace items
-                    };
-                    
-                    let termsOfSelVecItems:Vec<Term> = selTraceItems.iter().map(|iv| iv.name.clone()).collect();
-                    let implSeqOpt: Option<Term> = try_build_implSeq(nar, &termsOfSelVecItems); // try to build impl seq from selected trace items
-                    if implSeqOpt.is_some() { // was building of impl seq successful?
-                        let candidateTerm:Term = implSeqOpt.unwrap().clone();
-                        
-                        if nar.cfgVerbosity > 0 {println!("perceive {}", convTermToStr(&candidateTerm));};
-                        
-                        // compute time between last event and the element before the last event
-                        let dt:i64 = selTraceItems[selTraceItems.len()-1].occT - selTraceItems[selTraceItems.len()-2].occT;
-                        // compute exponential delta time
-                        let expDt:i64 = findMinTableIdx(dt, &nar.expIntervalsTable);
-                        
-
-
-                        
-                        let stamp:Stamp = {
-                            // compute merged stamp from evidence of all events
-                            let stampEvi = selTraceItems.iter().map(|iv| iv.evi).collect();
-                            newStamp(&stampEvi)
-                        };
-
-                        let mut cfg__eviCnt = 3; // how many pieces of evidence are added?
-
-
-                        { // try to lookup eviCnt of op by op-name
-                            let implSeqOpTerm: Term = retImplSeqOp(&candidateTerm);
-
-                            let (opArgs, opName) = decodeOp(&implSeqOpTerm).unwrap();
-
-                            match decodeOp(&implSeqOpTerm) {
-                                Some((opArgs, opName)) => {
-
-                                    // search for action with name
-                                    cfg__eviCnt = match ret_op_by_name(nar, &opName) {
-                                        Some(op) => {op.ret_evi_cnt()},
-                                        None => {cfg__eviCnt}
-                                    }
-                                },
-                                None => {}
-                            }
-                        }
-
-                        let evidenceSentence: Sentence = Sentence {
-                            punct:EnumPunctation::JUGEMENT,
-                            t:None,
-                            stamp:stamp,
-                            expDt:Some(expDt),
-                            term:Arc::new(candidateTerm.clone()), // ex: (e0 &/ e1) =/> e2
-                            evi:Some(Evidence::CNT{pos:cfg__eviCnt,cnt:cfg__eviCnt}),
-                            usage:Arc::new(RwLock::new(Usage{lastUsed: 0, useCount: 0})),
-                        };
-                        
-                        let workerIdx = nar.rng.gen_range(0..nar.storeWorkersTx.len());
-                        nar.storeWorkersTx[workerIdx].send((evidenceSentence, nar.t)).unwrap(); // defer actual storage to worker
-                    }
-                }
-            }
-        }
-        
-    }
-    
+    // do stuff of the trace
+    nar.trace.step(nar);
 }
 
 /// does second part of reasoner step
@@ -501,40 +604,44 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         let mut bestEntry2: Option<BestEntry> = None;
 
         // * search if we can satisfy goal
-        for perceptIdx in 0..nar.cfgPerceptWindow as usize {
-            if nar.trace.len() > perceptIdx {
-
-                let checkedState:Term = nar.trace[nar.trace.len()-1-perceptIdx].name.clone();
-
-                // check if current state "leads" to action
-                // tuple is (exp, entity)
-                let thisEntry: (f64, Option<(Arc<RwLock<NarGoalSystem::Entry>>, Term)>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem.read(), &checkedState);
-
-                match thisEntry.1 {
-                    Some(e) => { // was a candidate found?
-
-
-                        match bestEntry2 { // is there best entry?
-                            Some(ref bestEntry4) => {
-                                if thisEntry.0 > bestEntry4.exp {
+        {
+            let trace_view = nar.trace.ret_view();
+            for perceptIdx in 0..nar.cfgPerceptWindow as usize {
+                if trace_view.len() > perceptIdx {
+    
+                    let checkedState:Term = trace_view[trace_view.len()-1-perceptIdx].name.clone();
+    
+                    // check if current state "leads" to action
+                    // tuple is (exp, entity)
+                    let thisEntry: (f64, Option<(Arc<RwLock<NarGoalSystem::Entry>>, Term)>) = NarGoalSystem::selHighestExpGoalByState(&nar.goalSystem.read(), &checkedState);
+    
+                    match thisEntry.1 {
+                        Some(e) => { // was a candidate found?
+    
+    
+                            match bestEntry2 { // is there best entry?
+                                Some(ref bestEntry4) => {
+                                    if thisEntry.0 > bestEntry4.exp {
+                                        bestEntry2 = Some(BestEntry{
+                                            unifiedSeq: e.1.clone(), // pull out unified term
+                                            exp:thisEntry.0,
+                                            evidence:cloneEvidence(&e.0.read().evidence)});
+                                    }
+                                },
+                                None => {
                                     bestEntry2 = Some(BestEntry{
                                         unifiedSeq: e.1.clone(), // pull out unified term
                                         exp:thisEntry.0,
                                         evidence:cloneEvidence(&e.0.read().evidence)});
                                 }
-                            },
-                            None => {
-                                bestEntry2 = Some(BestEntry{
-                                    unifiedSeq: e.1.clone(), // pull out unified term
-                                    exp:thisEntry.0,
-                                    evidence:cloneEvidence(&e.0.read().evidence)});
                             }
-                        }
-                    },
-                    None => {}
+                        },
+                        None => {}
+                    }
                 }
             }
         }
+
 
         { // procedural / Q&A bridge
             // see if the queued answers are good enough to cause an reaction/execution.
@@ -574,124 +681,130 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         // motivation: agent can do actions even when the consequences aren't full sure
         // >
         {
-            if nar.trace.len() > 0 {
-                // TODO< don't plan forward if term is a op! >
+            match nar.trace.ret_last_events() {
+                Some(concurrent_events) => {
+                    for i_concurrent_event in &concurrent_events {
 
-                // sel last event
-                let checkedState:Term = nar.trace[nar.trace.len()-1].name.clone();
-                //let mut carriedGoalTerm:Term = checkedState.clone();
+                        // TODO< don't plan forward if term is a op! >
 
-                // build predicated event with term and TV
-                let mut predictedTerm: Term = checkedState.clone();
-                //let mut predictedTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
+                        // sel last event
+                        let checkedState:Term = i_concurrent_event.name.clone();
+                        //let mut carriedGoalTerm:Term = checkedState.clone();
 
-                //let mut firstExecEvidence: Option<Arc<RwLock<Sentence>>> = None; // used to remember evidence of first impl seq
+                        // build predicated event with term and TV
+                        let mut predictedTerm: Term = checkedState.clone();
+                        //let mut predictedTv: Tv::Tv = Tv::Tv{f:1.0,c:0.99999}; // axiomatic TV
 
-                let mut execEvidence: Vec<Arc<RwLock<Sentence>>> = vec![]; // used to remember chain till hit goal, necessary for correct TV/desire computation
+                        //let mut firstExecEvidence: Option<Arc<RwLock<Sentence>>> = None; // used to remember evidence of first impl seq
 
-                let cfg__forwardPredication_steps:i64 = 3; // how many steps are maximaly utilized for forward planning with prediction?, set to 0 to disable feature, IS EXPERIMENTAL
-                for iStep in 0..cfg__forwardPredication_steps {
-                    
-                    // check if prediction did hit a goal
-                    if iStep > 0 {
-                        let hitGoalEntryOpt: Option<Arc<RwLock<NarGoalSystem::Entry>>> = NarGoalSystem::query(&nar.goalSystem.read(), &predictedTerm);
-                        match hitGoalEntryOpt {
-                            Some(hitGoalEntry) => {
-                                if execEvidence.len() > 0 {
-                                    // build decision by deriving goal
+                        let mut execEvidence: Vec<Arc<RwLock<Sentence>>> = vec![]; // used to remember chain till hit goal, necessary for correct TV/desire computation
 
-                                    let mut carriedGoalTv: Tv::Tv = retTv(&hitGoalEntry.read().sentence).unwrap();
-                                    let mut carriedGoalTerm: Term = predictedTerm.clone();
+                        let cfg__forwardPredication_steps:i64 = 3; // how many steps are maximaly utilized for forward planning with prediction?, set to 0 to disable feature, IS EXPERIMENTAL
+                        for iStep in 0..cfg__forwardPredication_steps {
+                            
+                            // check if prediction did hit a goal
+                            if iStep > 0 {
+                                let hitGoalEntryOpt: Option<Arc<RwLock<NarGoalSystem::Entry>>> = NarGoalSystem::query(&nar.goalSystem.read(), &predictedTerm);
+                                match hitGoalEntryOpt {
+                                    Some(hitGoalEntry) => {
+                                        if execEvidence.len() > 0 {
+                                            // build decision by deriving goal
 
-                                    let mut unifiedSeqOpt: Option<Term> = None; // uified last sequence
+                                            let mut carriedGoalTv: Tv::Tv = retTv(&hitGoalEntry.read().sentence).unwrap();
+                                            let mut carriedGoalTerm: Term = predictedTerm.clone();
 
-                                    for iBelief in execEvidence.iter().rev() { // iterate from back becaue we have to derive from goal to goal
-                                        // create synthetic sentence for the current goal
-                                        let goal:Sentence = newEternalSentenceByTv(&carriedGoalTerm, EnumPunctation::GOAL, &carriedGoalTv, newStamp(&vec![-1]));
-                                        //println!("DBG X {}", convSentenceTermPunctToStr(&goal, true));
-                                        //println!("DBG Y {}", convSentenceTermPunctToStr(&iBelief.read(), true));
+                                            let mut unifiedSeqOpt: Option<Term> = None; // uified last sequence
 
-                                        let iConcl:Sentence = NarInfProcedural::infGoalBelief(&goal, &iBelief.read()).unwrap();
+                                            for iBelief in execEvidence.iter().rev() { // iterate from back becaue we have to derive from goal to goal
+                                                // create synthetic sentence for the current goal
+                                                let goal:Sentence = newEternalSentenceByTv(&carriedGoalTerm, EnumPunctation::GOAL, &carriedGoalTv, newStamp(&vec![-1]));
+                                                //println!("DBG X {}", convSentenceTermPunctToStr(&goal, true));
+                                                //println!("DBG Y {}", convSentenceTermPunctToStr(&iBelief.read(), true));
 
-                                        // return subj of iConcl and carry over carriedGoalTerm and TV
-                                        // TODO< unify somehow ! >
-                                        let unifiedSeqTerm: Term = (*(iConcl.term)).clone(); // sequence which has unified vars
-                                        carriedGoalTv = retTv(&iConcl).unwrap();
-                                        //println!("DBG Z {}", &convTermToStr(&unifiedSeqTerm));
-                                        carriedGoalTerm = retSeqCond2(&unifiedSeqTerm);
-                                        unifiedSeqOpt = Some(unifiedSeqTerm.clone()); // remember
-                                    }
+                                                let iConcl:Sentence = NarInfProcedural::infGoalBelief(&goal, &iBelief.read()).unwrap();
 
-                                    match unifiedSeqOpt {
-                                        Some(unifiedSeq) => { // must always have a value!
-                                            let firstExecEvidence = Arc::clone(&execEvidence[0]);
-                                            let exp: f64 = Tv::calcExp(&carriedGoalTv);
-
-                                            let dbg__verbosity_predictionDescMkgn = 1; // verbosity of prediction based decision making
-                                            if dbg__verbosity_predictionDescMkgn > 0 {
-                                                println!("DBG pred: made prediction based descn {}  exp={}", convTermToStr(&unifiedSeq), exp);
+                                                // return subj of iConcl and carry over carriedGoalTerm and TV
+                                                // TODO< unify somehow ! >
+                                                let unifiedSeqTerm: Term = (*(iConcl.term)).clone(); // sequence which has unified vars
+                                                carriedGoalTv = retTv(&iConcl).unwrap();
+                                                //println!("DBG Z {}", &convTermToStr(&unifiedSeqTerm));
+                                                carriedGoalTerm = retSeqCond2(&unifiedSeqTerm);
+                                                unifiedSeqOpt = Some(unifiedSeqTerm.clone()); // remember
                                             }
-                                            
-                                            match bestEntry2 { // is there best entry?
-                                                Some(ref bestEntry4) => {
-                                                    if exp > bestEntry4.exp {
-                                                        bestEntry2 = Some(BestEntry{
-                                                            unifiedSeq: unifiedSeq,
-                                                            exp:exp,
-                                                            evidence:Some(Arc::clone(&firstExecEvidence))});
+
+                                            match unifiedSeqOpt {
+                                                Some(unifiedSeq) => { // must always have a value!
+                                                    let firstExecEvidence = Arc::clone(&execEvidence[0]);
+                                                    let exp: f64 = Tv::calcExp(&carriedGoalTv);
+
+                                                    let dbg__verbosity_predictionDescMkgn = 1; // verbosity of prediction based decision making
+                                                    if dbg__verbosity_predictionDescMkgn > 0 {
+                                                        println!("DBG pred: made prediction based descn {}  exp={}", convTermToStr(&unifiedSeq), exp);
+                                                    }
+                                                    
+                                                    match bestEntry2 { // is there best entry?
+                                                        Some(ref bestEntry4) => {
+                                                            if exp > bestEntry4.exp {
+                                                                bestEntry2 = Some(BestEntry{
+                                                                    unifiedSeq: unifiedSeq,
+                                                                    exp:exp,
+                                                                    evidence:Some(Arc::clone(&firstExecEvidence))});
+                                                            }
+                                                        },
+                                                        None => {
+                                                            bestEntry2 = Some(BestEntry{
+                                                                unifiedSeq: unifiedSeq,
+                                                                exp:exp,
+                                                                evidence:Some(Arc::clone(&firstExecEvidence))});
+                                                        }
                                                     }
                                                 },
-                                                None => {
-                                                    bestEntry2 = Some(BestEntry{
-                                                        unifiedSeq: unifiedSeq,
-                                                        exp:exp,
-                                                        evidence:Some(Arc::clone(&firstExecEvidence))});
-                                                }
+                                                None => {}
                                             }
-                                        },
-                                        None => {}
-                                    }
 
-                                    break; // break because we found a goal which was hit
+                                            break; // break because we found a goal which was hit
+                                        }
+                                    },
+                                    None => {}
                                 }
-                            },
-                            None => {}
+                            }
+
+                            
+                            let queryResult: Vec<Arc<RwLock<Sentence>>> = NarGoalSystem::query_by_antecedent(&predictedTerm, &nar.evidenceMem.read());
+                            if queryResult.len() == 0 {
+                                // no result for query of chain, give up
+
+                                //firstExecEvidence = None; // discard decision because it didn't hit goal
+                                execEvidence = vec![];
+                                break;
+                            }
+
+                            // select random
+                            let sel: &Arc<RwLock<Sentence>> = {
+                                let selIdx:usize = nar.rng.gen_range(0..queryResult.len());
+                                &queryResult[selIdx]
+                            };
+
+                            /*
+                            if iStep == 0 { // we need to remember op of first impl seq
+                                // remember first impl seq
+                                firstExecEvidence = Some(Arc::clone(sel));
+                            }*/
+
+                            //let tvOfSelEvidence: Tv::Tv = retTv(&sel.read()).unwrap();
+
+                            //let conclTv: Tv::Tv = Tv::ded(&predictedTv, &tvOfSelEvidence); // TODO< check if math for TV checks out >
+
+                            // ** set predicted TV as TV of concl
+                            //predictedTv = conclTv;
+                            // ** extract consequent of belief
+                            predictedTerm = retPred(&sel.read().term);
+
+                            execEvidence.push(Arc::clone(sel)); // record the part of the chain!
                         }
                     }
-
-                    
-                    let queryResult: Vec<Arc<RwLock<Sentence>>> = NarGoalSystem::query_by_antecedent(&predictedTerm, &nar.evidenceMem.read());
-                    if queryResult.len() == 0 {
-                        // no result for query of chain, give up
-
-                        //firstExecEvidence = None; // discard decision because it didn't hit goal
-                        execEvidence = vec![];
-                        break;
-                    }
-
-                    // select random
-                    let sel: &Arc<RwLock<Sentence>> = {
-                        let selIdx:usize = nar.rng.gen_range(0..queryResult.len());
-                        &queryResult[selIdx]
-                    };
-
-                    /*
-                    if iStep == 0 { // we need to remember op of first impl seq
-                        // remember first impl seq
-                        firstExecEvidence = Some(Arc::clone(sel));
-                    }*/
-
-                    //let tvOfSelEvidence: Tv::Tv = retTv(&sel.read()).unwrap();
-
-                    //let conclTv: Tv::Tv = Tv::ded(&predictedTv, &tvOfSelEvidence); // TODO< check if math for TV checks out >
-
-                    // ** set predicted TV as TV of concl
-                    //predictedTv = conclTv;
-                    // ** extract consequent of belief
-                    predictedTerm = retPred(&sel.read().term);
-
-                    execEvidence.push(Arc::clone(sel)); // record the part of the chain!
-                }
+                },
+                None => {}
             }
         }
 
@@ -849,7 +962,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
             
                 println!("{}!", &convTermToStr(&term)); // print execution
     
-                nar.trace.push(Rc::new(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t}));
+                nar.trace.event_happened( Rc::new(SimpleSentence {name:term.clone(),evi:nar.t,occT:nar.t}) );
             }
             else {
                 // op which was searched was not registered
@@ -859,11 +972,7 @@ pub fn narStep1(nar:&mut ProcNar, declMem:&Option<Arc<RwLock<Mem2>>>) {
         None => {},
     }
     
-    
-    // limit trace (AIKR)
-    if nar.trace.len() > 20 {
-        nar.trace = (&nar.trace[nar.trace.len()-20..]).to_vec();
-    }
+    nar.trace.limit(); // limit trace (AIKR)
 
     // limit evidence (AIKR)
     if nar.t % 101 == 1 {

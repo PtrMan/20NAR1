@@ -37,7 +37,7 @@ pub fn procChaosEntry() {
         
         NarProc::narStep0(&mut nar.procNar);
 
-        nar.procNar.trace.push(Rc::new(NarProc::SimpleSentence {name:Term::Name(format!("{}",t)),evi:nar.procNar.t,occT:nar.procNar.t}));
+        nar.procNar.trace.event_happened( Rc::new(NarProc::SimpleSentence {name:Term::Name(format!("{}",t)),evi:nar.procNar.t,occT:nar.procNar.t}) );
 
         NarProc::narStep1(&mut nar.procNar, &None);
         
