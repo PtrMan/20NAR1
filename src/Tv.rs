@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone,Copy)]
 pub struct Tv {
     pub f:f64,
     pub c:f64,
