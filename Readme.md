@@ -17,6 +17,8 @@ connect to server with for example netcat: `nc 127.0.0.1 2039`<br />
 `cargo test && cargo run --release bQA nalExp/ExTimAnimalProd0.nal`
 ## build documentation
 `cargo doc --lib`
+## how to train the NN for NLP
+`rm -f ./logX.txt && cargo test && cargo run --release nnTrain.nlp`
 
 # Documentation
 Documentation will follow when the features(mechanisms) and implementation has settled to a "stable" state.<br />
