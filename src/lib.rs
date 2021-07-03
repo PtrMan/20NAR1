@@ -58,3 +58,5 @@ pub mod TvVec;
 
 // Modules (batteries included)
 pub mod ModNlpA;
+
+pub mod ModVisionB;
