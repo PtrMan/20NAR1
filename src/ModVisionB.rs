@@ -3,7 +3,7 @@ use crate::TvVec::*;
 
 // function to prototype vision
 pub fn prototypeV2() {
-    { // prototyping: compute similarity between vectors
+    if false { // prototyping: compute similarity between vectors
 
         let aVec = vec![Tv{f:1.0, c:0.1}, Tv{f:0.0, c:0.1}];
         let bVec = vec![Tv{f:0.0, c:0.1}, Tv{f:1.0, c:0.1}];
@@ -16,10 +16,11 @@ pub fn prototypeV2() {
 
     let mut cls: PrototypeClassifier = PrototypeClassifier{prototypes:vec![]};
     { // fill prototypes with test-prototyping for prototyping
-        {
+        /*{
             let aVec = vec![Tv{f:1.0, c:0.1}, Tv{f:0.0, c:0.1}, Tv{f:0.0, c:0.1}];
             cls.prototypes.push(Prototype{v:aVec});
         }
+         */
     }
 
     { // classify stimulus
@@ -30,7 +31,19 @@ pub fn prototypeV2() {
         println!("{:?}", prototypes_sim);
 
         // do actual classification
-        // TODO< implement >
+        match classify_max(&prototypes_sim) {
+            Some((idx, sim)) => {
+                println!("[d ] found prototype!");
+                
+                println!("TODO - revise evidence!");
+                println!("TODO - update time!");
+            },
+            None => {
+                // no match -> create new prototype
+                println!("[d ] create new prototype");
+                cls.prototypes.push(Prototype{v:stimulus.clone()});
+            }
+        }
     }
 }
 
@@ -59,4 +72,28 @@ pub fn calc_sims(stimulus: &Vec<Tv>, cls: &PrototypeClassifier) -> Vec<f64> {
     }
 
     prototypes_sim
+}
+
+pub fn classify_max(prototypes_sim: &[f64]) -> Option<(i64, f64)> {
+    if prototypes_sim.len() == 0 {
+        return None;
+    }
+
+    let mut max_sim = 0.0;
+    let mut max_idx = 0;
+
+    let mut idx = 0;
+    for iv in prototypes_sim {
+        if *iv > max_sim {
+            max_sim = *iv;
+            max_idx = idx;
+        }
+        idx+=1;
+    }
+
+    if max_sim < 0.5 {
+        return None; // no positive match -> no match at all
+    }
+
+    Some((max_idx, max_sim))
 }
