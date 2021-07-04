@@ -42,6 +42,7 @@ pub mod Eval;
 
 // utils
 pub mod Utils;
+pub mod Map2d;
 
 // ML
 pub mod Nn;

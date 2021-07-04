@@ -1,5 +1,6 @@
 use crate::Tv::*;
 use crate::TvVec::*;
+use crate::Map2d::*;
 
 // function to prototype vision
 pub fn prototypeV2() {
@@ -8,9 +9,9 @@ pub fn prototypeV2() {
         let aVec = vec![Tv{f:1.0, c:0.1}, Tv{f:0.0, c:0.1}];
         let bVec = vec![Tv{f:0.0, c:0.1}, Tv{f:1.0, c:0.1}];
         let tvSim: Tv = foldVec(&compVec(&aVec, &bVec));
-    
+        
         let sim: f64 = calcExp(&tvSim); // we interpret expectation as similarity of the TV-vectors
-    
+        
         println!("comp sim = {}", sim);    
     }
 
@@ -25,25 +26,27 @@ pub fn prototypeV2() {
 
     { // classify stimulus
         let stimulus_conf: f64 = 0.05; // confidence of the perceived stimulus
-        let stimulus: Vec<Tv> = vec![Tv{f:1.0, c:stimulus_conf}, Tv{f:0.0, c:stimulus_conf}, Tv{f:0.0, c:stimulus_conf}];
+        //let mut stimulus: Vec<Tv> = vec![Tv{f:1.0, c:stimulus_conf}, Tv{f:0.0, c:stimulus_conf}, Tv{f:0.0, c:stimulus_conf}];
+        let mut stimulus: Vec<Tv> = vec![];
 
-        let prototypes_sim: Vec<f64> = calc_sims(&stimulus, &cls);
-        println!("{:?}", prototypes_sim);
+        println!("TODO - quantize image from Map2d");
 
-        // do actual classification
-        match classify_max(&prototypes_sim) {
-            Some((idx, sim)) => {
-                println!("[d ] found prototype!");
-                
-                println!("TODO - revise evidence!");
-                println!("TODO - update time!");
-            },
-            None => {
-                // no match -> create new prototype
-                println!("[d ] create new prototype");
-                cls.prototypes.push(Prototype{v:stimulus.clone()});
+        let map: Map2d<f64> = makeMap2d(4, 4);
+
+        //stimulus.extend(&conv_to_tv_vec(0.1, 3, stimulus_conf));
+        //stimulus.extend(&conv_to_tv_vec(0.9, 3, stimulus_conf));
+        //stimulus.extend(&conv_to_tv_vec(0.3, 3, stimulus_conf));
+
+        let n_quantize:i64 = 3; // how many quatization steps are used?
+
+        for iy in 0..map.h {
+            for ix in 0..map.w {
+                let v:f64 = readAt(&map, iy,ix);
+                stimulus.extend(&conv_to_tv_vec(v, n_quantize, stimulus_conf));
             }
         }
+
+        classify(&mut cls, &stimulus, true);
     }
 }
 
@@ -60,7 +63,7 @@ pub struct PrototypeClassifier {
     pub prototypes: Vec<Prototype>,
 }
 
-pub fn calc_sims(stimulus: &Vec<Tv>, cls: &PrototypeClassifier) -> Vec<f64> {
+pub fn calc_sims(stimulus: &[Tv], cls: &PrototypeClassifier) -> Vec<f64> {
     let mut prototypes_sim: Vec<f64> = vec![]; // similarities of prototypes to stimulus
 
     // compute similarities of all prototypes
@@ -74,7 +77,7 @@ pub fn calc_sims(stimulus: &Vec<Tv>, cls: &PrototypeClassifier) -> Vec<f64> {
     prototypes_sim
 }
 
-pub fn classify_max(prototypes_sim: &[f64]) -> Option<(i64, f64)> {
+pub fn classify_max(prototypes_sim: &[f64]) -> Option<(usize, f64)> {
     if prototypes_sim.len() == 0 {
         return None;
     }
@@ -96,4 +99,58 @@ pub fn classify_max(prototypes_sim: &[f64]) -> Option<(i64, f64)> {
     }
 
     Some((max_idx, max_sim))
+}
+
+/// classify stimulus
+///
+/// returns the index of the prototype
+///
+/// /param add do we want to add the new prototype or revise if we found similar one? useful to only classify without addig anything
+pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], add: bool) -> Option<usize> {
+    { // classify stimulus
+        let prototypes_sim: Vec<f64> = calc_sims(stimulus, &cls);
+        println!("{:?}", prototypes_sim);
+
+        // do actual classification
+        match classify_max(&prototypes_sim) {
+            Some((idx, sim)) => {
+                println!("[d ] found prototype!");
+                
+                if add {
+                    // revise evidence
+                    let revised: Vec<Tv> = revVec(&cls.prototypes[idx].v, &stimulus);
+                    cls.prototypes[idx].v = revised;
+
+                    println!("TODO - update time!");
+                }
+
+                return Some(idx);
+            },
+            None => {
+                if add {
+                    // no match -> create new prototype
+                    println!("[d ] create new prototype");
+                    cls.prototypes.push(Prototype{v:stimulus.to_vec()});
+                    return Some(cls.prototypes.len()-1); // return index at added entry
+                }
+                else {
+                    return None; // no prototype was found
+                }
+            }
+        }
+    }
+}
+
+
+
+// helper
+pub fn quantisize(v:f64, n:i64) -> i64 {
+    (v / (n as f64)) as i64
+}
+
+pub fn conv_to_tv_vec(v:f64, n:i64, conf:f64) -> Vec<Tv> {
+    let quantisized: i64 = quantisize(v,n);
+    let mut vec = vec![Tv{f:0.0, c:conf};n as usize];
+    vec[quantisized as usize] = Tv{f:1.0, c:conf};
+    vec
 }
