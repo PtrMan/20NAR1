@@ -34,7 +34,8 @@ pub fn prototypeV2() {
         let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, n_quantize, stimulus_conf);
 
         // * classify
-        classify(&mut cls, &stimulus, true);
+        let current_time = 0;
+        classify(&mut cls, &stimulus, current_time, true);
     }
 
     { // classify stimulus
@@ -49,7 +50,8 @@ pub fn prototypeV2() {
         let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, n_quantize, stimulus_conf);
 
         // * classify
-        classify(&mut cls, &stimulus, true);
+        let current_time = 0;
+        classify(&mut cls, &stimulus, current_time, true);
     }
 }
 
@@ -71,8 +73,8 @@ pub fn conv_img_to_tv_vec(map: &Map2d<f64>, n_quantize:i64, stimulus_conf:f64) -
 pub struct Prototype {
     /// TV vector of evidence
     pub v: Vec<Tv>,
-    // time of last use, used for forgetting policy
-    //pub lastUseTime: i64,
+    /// time of last use, used for forgetting policy
+    pub last_use_time: i64,
 }
 
 /// classifier based on prototypes
@@ -123,22 +125,24 @@ pub fn classify_max(prototypes_sim: &[f64]) -> Option<(usize, f64)> {
 /// returns the index of the prototype
 ///
 /// /param add do we want to add the new prototype or revise if we found similar one? useful to only classify without addig anything
-pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], add: bool) -> Option<usize> {
+pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], current_time:i64, add: bool) -> Option<usize> {
+    let dbg:i64 = 0;
+    
     { // classify stimulus
         let prototypes_sim: Vec<f64> = calc_sims(stimulus, &cls);
-        println!("{:?}", prototypes_sim);
+        if dbg>0{println!("{:?}", prototypes_sim);}
 
         // do actual classification
         match classify_max(&prototypes_sim) {
             Some((idx, sim)) => {
-                println!("[d ] found prototype!");
+                if dbg>0{println!("[d ] found prototype!");}
                 
                 if add {
                     // revise evidence
                     let revised: Vec<Tv> = revVec(&cls.prototypes[idx].v, &stimulus);
                     cls.prototypes[idx].v = revised;
 
-                    println!("TODO - update time!");
+                    cls.prototypes[idx].last_use_time = current_time; // update time
                 }
 
                 return Some(idx);
@@ -146,8 +150,8 @@ pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], add: bool) -> Op
             None => {
                 if add {
                     // no match -> create new prototype
-                    println!("[d ] create new prototype");
-                    cls.prototypes.push(Prototype{v:stimulus.to_vec()});
+                    if dbg>0{println!("[d ] create new prototype");}
+                    cls.prototypes.push(Prototype{v:stimulus.to_vec(), last_use_time:current_time});
                     return Some(cls.prototypes.len()-1); // return index at added entry
                 }
                 else {
