@@ -15,9 +15,11 @@ pub fn prototypeV2() {
         println!("comp sim = {}", sim);    
     }
 
-    let mut cls: PrototypeClassifier = PrototypeClassifier{prototypes:vec![]};
-    let n_quantize:i64 = 3; // how many quatization steps are used?
-    let stimulus_conf: f64 = 0.05; // confidence of the perceived stimulus
+    let mut cls: PrototypeClassifier = PrototypeClassifier{
+        prototypes:vec![],
+        n_quantize:3,
+        stimulus_conf:0.05,
+    };
     
     { // fill prototypes with test-prototyping for prototyping
         /*{
@@ -31,7 +33,7 @@ pub fn prototypeV2() {
         let map: Map2d<f64> = makeMap2d(4, 4);
 
         // * quantize image from Map2d
-        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, n_quantize, stimulus_conf);
+        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, cls.n_quantize, cls.stimulus_conf);
 
         // * classify
         let current_time = 0;
@@ -47,12 +49,14 @@ pub fn prototypeV2() {
         }
 
         // * quantize image from Map2d
-        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, n_quantize, stimulus_conf);
+        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, cls.n_quantize, cls.stimulus_conf);
 
         // * classify
         let current_time = 0;
         classify(&mut cls, &stimulus, current_time, true);
     }
+
+    println!("H DONE");
 }
 
 /// helper to convert image to TV-vector
@@ -80,6 +84,11 @@ pub struct Prototype {
 /// classifier based on prototypes
 pub struct PrototypeClassifier {
     pub prototypes: Vec<Prototype>,
+
+    /// how many quatization steps are used?
+    pub n_quantize: i64,
+    /// confidence of the perceived stimulus
+    pub stimulus_conf: f64,
 }
 
 pub fn calc_sims(stimulus: &[Tv], cls: &PrototypeClassifier) -> Vec<f64> {
