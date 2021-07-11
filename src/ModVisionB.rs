@@ -16,6 +16,9 @@ pub fn prototypeV2() {
     }
 
     let mut cls: PrototypeClassifier = PrototypeClassifier{prototypes:vec![]};
+    let n_quantize:i64 = 3; // how many quatization steps are used?
+    let stimulus_conf: f64 = 0.05; // confidence of the perceived stimulus
+    
     { // fill prototypes with test-prototyping for prototyping
         /*{
             let aVec = vec![Tv{f:1.0, c:0.1}, Tv{f:0.0, c:0.1}, Tv{f:0.0, c:0.1}];
@@ -25,29 +28,43 @@ pub fn prototypeV2() {
     }
 
     { // classify stimulus
-        let stimulus_conf: f64 = 0.05; // confidence of the perceived stimulus
-        //let mut stimulus: Vec<Tv> = vec![Tv{f:1.0, c:stimulus_conf}, Tv{f:0.0, c:stimulus_conf}, Tv{f:0.0, c:stimulus_conf}];
-        let mut stimulus: Vec<Tv> = vec![];
-
-        println!("TODO - quantize image from Map2d");
-
         let map: Map2d<f64> = makeMap2d(4, 4);
 
-        //stimulus.extend(&conv_to_tv_vec(0.1, 3, stimulus_conf));
-        //stimulus.extend(&conv_to_tv_vec(0.9, 3, stimulus_conf));
-        //stimulus.extend(&conv_to_tv_vec(0.3, 3, stimulus_conf));
+        // * quantize image from Map2d
+        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, n_quantize, stimulus_conf);
 
-        let n_quantize:i64 = 3; // how many quatization steps are used?
+        // * classify
+        classify(&mut cls, &stimulus, true);
+    }
 
+    { // classify stimulus
+        let mut map: Map2d<f64> = makeMap2d(4, 4);
         for iy in 0..map.h {
             for ix in 0..map.w {
-                let v:f64 = readAt(&map, iy,ix);
-                stimulus.extend(&conv_to_tv_vec(v, n_quantize, stimulus_conf));
+                writeAt(&mut map, iy,ix,1.0);
             }
         }
 
+        // * quantize image from Map2d
+        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&map, n_quantize, stimulus_conf);
+
+        // * classify
         classify(&mut cls, &stimulus, true);
     }
+}
+
+/// helper to convert image to TV-vector
+pub fn conv_img_to_tv_vec(map: &Map2d<f64>, n_quantize:i64, stimulus_conf:f64) -> Vec<Tv> {
+    let mut stimulus: Vec<Tv> = vec![];
+
+    for iy in 0..map.h {
+        for ix in 0..map.w {
+            let v:f64 = readAt(&map, iy,ix);
+            stimulus.extend(&conv_to_tv_vec(v, n_quantize, stimulus_conf));
+        }
+    }
+
+    stimulus
 }
 
 /// learned prototype
@@ -145,7 +162,7 @@ pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], add: bool) -> Op
 
 // helper
 pub fn quantisize(v:f64, n:i64) -> i64 {
-    (v / (n as f64)) as i64
+    (v * ((n-1) as f64)) as i64
 }
 
 pub fn conv_to_tv_vec(v:f64, n:i64, conf:f64) -> Vec<Tv> {
