@@ -20,6 +20,39 @@ pub fn prototypeV2() {
         n_quantize:3,
         stimulus_conf:0.05,
     };
+
+
+    /// hint where a object was located
+    struct ObjectHint {
+        /// center (y,x)
+        pub center: (i32,i32),
+        /// size of the object-crop
+        pub size: (i32,i32),
+    }
+
+    let mut object_hints: Vec<ObjectHint> = vec![];
+
+
+
+    let mut canvas: Map2d<f64> = makeMap2d(80, 60);
+
+    for i_object_hint in &object_hints {
+        let x = i_object_hint.center.1 - i_object_hint.size.1/2;
+        let y = i_object_hint.center.0 - i_object_hint.size.0/2;
+        let cropped: Map2d<f64> = crop(&canvas,  x, y, i_object_hint.size.1, i_object_hint.size.0);
+
+        // * quantize image from Map2d
+        let stimulus: Vec<Tv>  = conv_img_to_tv_vec(&cropped, cls.n_quantize, cls.stimulus_conf);
+
+        // * classify
+        let current_time = 0;
+        // BUG< returns index, we need to get the class manually >
+        let class: usize = classify(&mut cls, &stimulus, current_time, true).unwrap();
+    }
+
+    
+
+
     
     { // fill prototypes with test-prototyping for prototyping
         /*{
