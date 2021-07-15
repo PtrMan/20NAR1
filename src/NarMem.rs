@@ -23,6 +23,10 @@ use crate::NarSentence::calcUsageUsefulness;
 pub struct Concept {
     pub name:Term,
 
+    pub payload: Payload,
+}
+
+pub struct Payload {
     /// beliefs ordered by exp()
     pub beliefsByExp:Vec<Arc<RwLock<Sentence>>>,
     /// beliefs ordered only by usage as in ONA
@@ -57,7 +61,7 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                     Some(concept) => {
                         { // beliefs by exp
                             let mut exists = false;
-                            for iBelief in &concept.beliefsByExp {
+                            for iBelief in &concept.payload.beliefsByExp {
                                 let iBeliefGuard = iBelief.read();
                                 if checkEqTerm(&iBeliefGuard.term, &s.term) && NarStamp::checkOverlap(&iBeliefGuard.stamp, &s.stamp) {
                                     exists = true;
@@ -66,24 +70,24 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                             }
                             
                             if !exists { // add belief only if it doesn't already exist!
-                                concept.beliefsByExp.push(Arc::new(RwLock::new(shallowCopySentence(&(*s))))); // add belief
+                                concept.payload.beliefsByExp.push(Arc::new(RwLock::new(shallowCopySentence(&(*s))))); // add belief
     
                                 // order by importance
-                                let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.beliefsByExp.iter().map(|iv| {
+                                let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.payload.beliefsByExp.iter().map(|iv| {
                                         let ivGuard = iv.read();
                                         (calcExp(&retTv(&ivGuard).unwrap()), Arc::clone(iv))
                                     }).collect(); // compute exp for each element, necessary because else we have a deadlock
                                 temp.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap()); // do actual sorting by exp
-                                concept.beliefsByExp = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
+                                concept.payload.beliefsByExp = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
                                 
                                 // keep under AIKR
-                                concept.beliefsByExp = concept.beliefsByExp[..concept.beliefsByExp.len().min(nBeliefs)].to_vec();
+                                concept.payload.beliefsByExp = concept.payload.beliefsByExp[..concept.payload.beliefsByExp.len().min(nBeliefs)].to_vec();
                             }
                         }
 
                         { // beliefs by usage
                             let mut exists = false;
-                            for iBelief in &concept.beliefsByUsage {
+                            for iBelief in &concept.payload.beliefsByUsage {
                                 let iBeliefGuard = iBelief.read();
                                 if checkEqTerm(&iBeliefGuard.term, &s.term) && NarStamp::checkOverlap(&iBeliefGuard.stamp, &s.stamp) {
                                     exists = true;
@@ -92,19 +96,19 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                             }
                             
                             if !exists { // add belief only if it doesn't already exist!
-                                concept.beliefsByUsage.push(Arc::new(RwLock::new(shallowCopySentence(&(*s))))); // add belief
+                                concept.payload.beliefsByUsage.push(Arc::new(RwLock::new(shallowCopySentence(&(*s))))); // add belief
     
                                 // order by importance
-                                let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.beliefsByUsage.iter().map(|iv| {
+                                let mut temp:Vec<(f64,Arc<RwLock<Sentence>>)> = concept.payload.beliefsByUsage.iter().map(|iv| {
                                         let ivGuard = iv.read();
                                         let usage: f64 = calcUsageUsefulness(&(*ivGuard).usage.read(), currentTime);
                                         (usage, Arc::clone(iv))
                                     }).collect(); // compute usage for each element, necessary because else we have a deadlock
                                 temp.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap()); // do actual sorting by exp
-                                concept.beliefsByUsage = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
+                                concept.payload.beliefsByUsage = temp.iter().map(|v| Arc::clone(&v.1)).collect(); // extract Arc back
                                 
                                 // keep under AIKR
-                                concept.beliefsByUsage = concept.beliefsByUsage[..concept.beliefsByUsage.len().min(nBeliefs)].to_vec();
+                                concept.payload.beliefsByUsage = concept.payload.beliefsByUsage[..concept.payload.beliefsByUsage.len().min(nBeliefs)].to_vec();
                             }
                         }
                         
@@ -119,8 +123,10 @@ pub fn storeInConcepts2(mem: &mut Mem, s:&Sentence, subterms: &Vec<Term>, nBelie
                 
                 let concept = Arc::new(Concept {
                     name:iTerm.clone(),
-                    beliefsByExp:vec![Arc::new(RwLock::new(shallowCopySentence(&(*s))))],
-                    beliefsByUsage:vec![Arc::new(RwLock::new(shallowCopySentence(&(*s))))],
+                    payload:Payload{
+                        beliefsByExp:vec![Arc::new(RwLock::new(shallowCopySentence(&(*s))))],
+                        beliefsByUsage:vec![Arc::new(RwLock::new(shallowCopySentence(&(*s))))],
+                    },
                 });
                 
                 mem.concepts.insert(iTerm.clone(), concept); // add concept to memory
@@ -141,8 +147,8 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
             match Arc::get_mut(&mut iConcept) {
                 Some(concept) => {
                     cnt_concepts+=1;
-                    cnt_beliefs+=concept.beliefsByExp.len();
-                    cnt_beliefs+=concept.beliefsByUsage.len();
+                    cnt_beliefs+=concept.payload.beliefsByExp.len();
+                    cnt_beliefs+=concept.payload.beliefsByUsage.len();
                 }
                 None => {
                     println!("INTERNAL ERROR - couldn't aquire arc!");
@@ -163,7 +169,7 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
         let mut rating:f64 = 0.0;
         match Arc::get_mut(&mut iConcept) {
             Some(concept) => {
-                for iBelief in &concept.beliefsByExp {
+                for iBelief in &concept.payload.beliefsByExp {
                     let iBeliefGuard = iBelief.read();
                     rating = rating.max(calcExp(&retTv(&iBeliefGuard).unwrap()));
                 }
@@ -196,23 +202,11 @@ pub fn limitMemory(mem: &mut Mem, nConcepts: usize) {
 pub fn ret_beliefs_of_concept<'a>(mem: &'a Mem, selTerm: &'a Term) -> Option< std::iter::Chain<std::slice::Iter<'a, Arc<parking_lot::lock_api::RwLock<parking_lot::RawRwLock, crate::NarSentence::Sentence>>>, std::slice::Iter<'a, Arc<parking_lot::lock_api::RwLock<parking_lot::RawRwLock, crate::NarSentence::Sentence>>>> > {
     match mem.concepts.get(&selTerm) {
         Some(concept) => {
-            Some(concept.beliefsByExp.iter().chain(
-                concept.beliefsByUsage.iter()
+            Some(concept.payload.beliefsByExp.iter().chain(
+                concept.payload.beliefsByUsage.iter()
             ))
-
-            //concept.beliefsByExp.iter().map(|iv| Arc::clone(iv)).collect().iter().chain(
-            //    concept.beliefsByUsage.iter().map(|iv| Arc::clone(iv)).collect().iter()
-            //)
-
-            /*
-            let res = concept.beliefsByExp.iter().map(|iv| Arc::clone(iv)).collect();
-
-            println!("TODO - add beliefsByUsage");
-
-            res*/
         },
         None => { // concept doesn't exist
-            //core::iter::empty().chain(core::iter::empty())
             None
         }
     } 

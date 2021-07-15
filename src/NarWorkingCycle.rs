@@ -1222,14 +1222,14 @@ pub fn createMem2(cfg__maxComplexity: i64, cfg__nConceptBeliefs:usize)->Arc<RwLo
                                 // process of all revelant beliefs of a concept as the first premise with a selected belief as the second premise
                                 // >
                                 // TODO< limit secondary beliefs to keep reasoning strictly under AIKR >
-                                for iBelief in &concept.beliefsByExp {
+                                for iBelief in &concept.payload.beliefsByExp {
                                     let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
                                     let mut concl2: Vec<(Sentence,f64)> = inference(&msg.primary.read().sentence, &iBeliefGuard, &mut wereRulesApplied);
                                     concl.append(&mut concl2);
                                 }
-                                for iBelief in &concept.beliefsByUsage {
+                                for iBelief in &concept.payload.beliefsByUsage {
                                     let iBeliefGuard = iBelief.read();
                                     // do inference and add conclusions to array
                                     let mut wereRulesApplied = false;
@@ -1439,8 +1439,8 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
 
                                     let mut additionalBelief:Option<Sentence> = None; // stores the additional belief
                                     
-                                    for iBeliefIdx in 0..concept.beliefsByExp.len() {
-                                        let iBelief = &concept.beliefsByExp[iBeliefIdx].read();
+                                    for iBeliefIdx in 0..concept.payload.beliefsByExp.len() {
+                                        let iBelief = &concept.payload.beliefsByExp[iBeliefIdx].read();
                                         if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
                                             let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
                                             let tvA:Tv = retTv(&iBelief).unwrap();
@@ -1465,11 +1465,11 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                                     }
     
                                     if delBeliefIdx.is_some() {
-                                        concept.beliefsByExp.remove(delBeliefIdx.unwrap());
+                                        concept.payload.beliefsByExp.remove(delBeliefIdx.unwrap());
                                     }
     
                                     if additionalBelief.is_some() {
-                                        concept.beliefsByExp.push(Arc::new(RwLock::new(shallowCopySentence(&additionalBelief.unwrap()))));
+                                        concept.payload.beliefsByExp.push(Arc::new(RwLock::new(shallowCopySentence(&additionalBelief.unwrap()))));
                                     }
                                 }
 
@@ -1478,8 +1478,8 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
 
                                     let mut additionalBelief:Option<Sentence> = None; // stores the additional belief
                                     
-                                    for iBeliefIdx in 0..concept.beliefsByUsage.len() {
-                                        let iBelief = &concept.beliefsByUsage[iBeliefIdx].read();
+                                    for iBeliefIdx in 0..concept.payload.beliefsByUsage.len() {
+                                        let iBelief = &concept.payload.beliefsByUsage[iBeliefIdx].read();
                                         if checkEqTerm(&iBelief.term, &sentence.term) && !NarStamp::checkOverlap(&iBelief.stamp, &sentence.stamp) {
                                             let stamp = NarStamp::merge(&iBelief.stamp, &sentence.stamp);
                                             let tvA:Tv = retTv(&iBelief).unwrap();
@@ -1504,11 +1504,11 @@ pub fn memReviseBelief(mem:Arc<RwLock<NarMem::Mem>>, sentence:&Sentence) -> Opti
                                     }
     
                                     if delBeliefIdx.is_some() {
-                                        concept.beliefsByUsage.remove(delBeliefIdx.unwrap());
+                                        concept.payload.beliefsByUsage.remove(delBeliefIdx.unwrap());
                                     }
     
                                     if additionalBelief.is_some() {
-                                        concept.beliefsByUsage.push(Arc::new(RwLock::new(shallowCopySentence(&additionalBelief.unwrap()))));
+                                        concept.payload.beliefsByUsage.push(Arc::new(RwLock::new(shallowCopySentence(&additionalBelief.unwrap()))));
                                     }
                                 }
                                 
