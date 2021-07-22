@@ -105,3 +105,16 @@ pub fn drawLine<T:Copy>(m:&mut Map2d<T>, ax:i32,ay:i32,bx:i32,by:i32,v:T) {
         }
     }
 }
+
+/// subtract two maps
+pub fn sub(a:&Map2d<f64>, b:&Map2d<f64>) -> Map2d<f64> {
+    let mut res = makeMap2d(a.h, a.w);
+    for iy in 0..a.h {
+        for ix in 0..a.w {
+            let av = readAt(a, iy, ix);
+            let bv = readAt(b, iy, ix);
+            writeAt(&mut res,iy,ix, av-bv);
+        }
+    }
+    res
+}
