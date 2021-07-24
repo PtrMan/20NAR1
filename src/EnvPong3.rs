@@ -18,6 +18,8 @@ pub struct EnvState {
     pub hits:i64,
     pub misses:i64,
     pub t:i64,
+    /// was the ball spawned in the last frame?
+    pub was_ball_spawned:bool,
     
     pub verbosity:i64,
 }
@@ -41,6 +43,7 @@ pub fn makeEnvState() -> EnvState {
         hits:0,
         misses:0,
         t:0,
+        was_ball_spawned:false,
         verbosity:1,
     }
 }
@@ -133,12 +136,15 @@ pub fn simStep(env:&mut EnvState, rng:&mut ThreadRng) {
             env.misses+=1;
         }
     }
+
+    env.was_ball_spawned = false;
     if env.ballY == 0 || env.ballX == 0 || env.ballX >= env.szX-1 {
         env.ballY = (env.szY/2)+rng.gen_range(0..env.szY/2);
         env.ballX = rng.gen_range(0..env.szX);
         env.vX = if rng.gen_range(0..2) == 0 {1} else {-1};
+        env.was_ball_spawned = true;
 
-        println!("env: respawn ball");
+        if env.verbosity > 0 {println!("env: respawn ball");};
     }
     /*
     if(opLeft.triggered) {
