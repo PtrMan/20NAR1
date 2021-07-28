@@ -61,3 +61,4 @@ pub mod TvVec;
 pub mod ModNlpA;
 
 pub mod ModVisionB;
+pub mod ModVisionC;
