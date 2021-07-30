@@ -39,14 +39,17 @@ pub fn rev(a:&Tv,b:&Tv)->Tv {
     let w1:f64 = c2w(a.c);
     let w2:f64 = c2w(b.c);
     let w:f64 = w1 + w2;
-    let f:f64 = (w1 * a.f + w2 * b.f) / w;
+    let mut f:f64 = 0.0;
+    if w > 0.0 {
+        f = (w1 * a.f + w2 * b.f) / w;
+    }
     let c:f64 = w2c(w);
     Tv{f:f,c:c}
 }
 
 pub fn comp(a:&Tv,b:&Tv)->Tv {
     let f0 = or(a.f, b.f);
-    let f = if f0 == 0.0 {0.0} else { (a.f*b.f) / f0 };
+    let f = if f0.abs()<1.0e-8 {0.0} else { (a.f*b.f) / f0 };
     let c = w2c(f0 * a.c * b.c);
     Tv{f:f,c:c}
 }
