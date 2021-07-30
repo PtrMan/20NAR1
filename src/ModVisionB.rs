@@ -2,6 +2,7 @@ use crate::Tv::*;
 use crate::TvVec::*;
 use crate::Map2d::*;
 
+/* commented because it wasn't updated for Multichannel classifier, was only built for singlechannel classifier
 // function to prototype vision
 pub fn prototypeV2() {
     if false { // prototyping: compute similarity between vectors
@@ -91,6 +92,7 @@ pub fn prototypeV2() {
 
     println!("H DONE");
 }
+ */
 
 /// helper to convert image to TV-vector
 pub fn conv_img_to_tv_vec(map: &Map2d<f64>, n_quantize:i64, stimulus_conf:f64) -> Vec<Tv> {
@@ -106,10 +108,17 @@ pub fn conv_img_to_tv_vec(map: &Map2d<f64>, n_quantize:i64, stimulus_conf:f64) -
     stimulus
 }
 
-/// learned prototype
-pub struct Prototype {
+/// channel of visual information
+#[derive(Clone)]
+pub struct Channel {
     /// TV vector of evidence
     pub v: Vec<Tv>,
+}
+
+/// learned prototype
+pub struct Prototype {
+    /// channels of actual prototype image
+    pub channels: Vec<Channel>,
     /// time of last use, used for forgetting policy
     pub last_use_time: i64,
 }
@@ -124,13 +133,18 @@ pub struct PrototypeClassifier {
     pub stimulus_conf: f64,
 }
 
-pub fn calc_sims(stimulus: &[Tv], cls: &PrototypeClassifier) -> Vec<f64> {
+pub fn calc_sims(stimulus: &[Channel], cls: &PrototypeClassifier) -> Vec<f64> {
     let mut prototypes_sim: Vec<f64> = vec![]; // similarities of prototypes to stimulus
 
     // compute similarities of all prototypes
     for i_prototype in &cls.prototypes {
-        let tvSim: Tv = foldVec(&compVec(&stimulus, &i_prototype.v));        
-        let sim: f64 = calcExp(&tvSim); // we interpret expectation as similarity of the TV-vectors
+        let mut tv_sim: Tv = Tv{f:0.0,c:0.0};
+        for i_channel_idx in 0..stimulus.len() { // iterate over channels
+            let tv_sim_thischannel: Tv = foldVec(&compVec(&stimulus[i_channel_idx].v, &i_prototype.channels[i_channel_idx].v));
+            tv_sim = rev(&tv_sim, &tv_sim_thischannel);
+        }
+
+        let sim: f64 = calcExp(&tv_sim); // we interpret expectation as similarity of the TV-vectors
         
         prototypes_sim.push(sim);
     }
@@ -167,7 +181,7 @@ pub fn classify_max(prototypes_sim: &[f64]) -> Option<(usize, f64)> {
 /// returns the index of the prototype
 ///
 /// /param add do we want to add the new prototype or revise if we found similar one? useful to only classify without addig anything
-pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], current_time:i64, add: bool) -> Option<usize> {
+pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Channel], current_time:i64, add: bool) -> Option<usize> {
     let dbg:i64 = 0;
     
     { // classify stimulus
@@ -181,8 +195,11 @@ pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], current_time:i64
                 
                 if add {
                     // revise evidence
-                    let revised: Vec<Tv> = revVec(&cls.prototypes[idx].v, &stimulus);
-                    cls.prototypes[idx].v = revised;
+                    for i_channel_idx in 0..cls.prototypes[idx].channels.len() {
+                        let revised: Vec<Tv> = revVec(&cls.prototypes[idx].channels[i_channel_idx].v, &stimulus[i_channel_idx].v);
+                        cls.prototypes[idx].channels[i_channel_idx].v = revised;
+                    }
+                    
 
                     cls.prototypes[idx].last_use_time = current_time; // update time
                 }
@@ -193,7 +210,7 @@ pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Tv], current_time:i64
                 if add {
                     // no match -> create new prototype
                     if dbg>0{println!("[d ] create new prototype");}
-                    cls.prototypes.push(Prototype{v:stimulus.to_vec(), last_use_time:current_time});
+                    cls.prototypes.push(Prototype{channels:stimulus.to_vec().clone(), last_use_time:current_time});
                     return Some(cls.prototypes.len()-1); // return index at added entry
                 }
                 else {

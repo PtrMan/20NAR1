@@ -130,7 +130,7 @@ pub fn main() {
         nar20_1::ModNlpA::train();
     }
     
-    else if runEnv == "protoVisionB" { // prototyping of vision stuff
-        nar20_1::ModVisionB::prototypeV2();
-    }
+    //else if runEnv == "protoVisionB" { // prototyping of vision stuff
+    //    nar20_1::ModVisionB::prototypeV2();
+    //}
 }
