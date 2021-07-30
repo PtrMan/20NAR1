@@ -118,3 +118,11 @@ pub fn sub(a:&Map2d<f64>, b:&Map2d<f64>) -> Map2d<f64> {
     }
     res
 }
+
+pub fn clone(m:&Map2d<f64>)->Map2d<f64> {
+    Map2d::<f64> {
+        arr: m.arr.clone(),
+        w: m.w,
+        h: m.h,
+    }
+}
