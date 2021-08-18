@@ -119,6 +119,40 @@ pub fn sub(a:&Map2d<f64>, b:&Map2d<f64>) -> Map2d<f64> {
     res
 }
 
+pub fn add(a:&Map2d<f64>, b:&Map2d<f64>) -> Map2d<f64> {
+    let mut res = makeMap2d(a.h, a.w);
+    for iy in 0..a.h {
+        for ix in 0..a.w {
+            let av = readAt(a, iy, ix);
+            let bv = readAt(b, iy, ix);
+            writeAt(&mut res,iy,ix, av+bv);
+        }
+    }
+    res
+}
+
+pub fn divScalar(a:&Map2d<f64>, val:f64) -> Map2d<f64> {
+    let mut res = makeMap2d(a.h, a.w);
+    for iy in 0..a.h {
+        for ix in 0..a.w {
+            let av = readAt(a, iy, ix);
+            writeAt(&mut res,iy,ix, av/val);
+        }
+    }
+    res
+}
+
+pub fn distPow2(v: &Map2d<f64>) -> f64 {
+    let mut sum = 0.0;
+    for iy in 0..v.h {
+        for ix in 0..v.w {
+            let v1 = readAt(v, iy, ix);
+            sum += (v1*v1);
+        }
+    }
+    sum
+}
+
 pub fn clone(m:&Map2d<f64>)->Map2d<f64> {
     Map2d::<f64> {
         arr: m.arr.clone(),

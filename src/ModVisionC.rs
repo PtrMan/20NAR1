@@ -24,6 +24,27 @@ pub fn convWithoutBorder(v:&Map2d<f64>, kernel:&Map2d<f64>) -> Map2d<f64> {
     res
 }
 
+pub fn convo(v:&Map2d<f64>, kernel:&Map2d<f64>) -> Map2d<f64> {
+    let mut res:Map2d<f64> = makeMap2d(v.h,v.w);
+    
+    for iy in 0..v.h {
+        for ix in 0..v.w {
+            let mut acc:f64 = 0.0;
+            for idy in -kernel.h/2..kernel.h/2 {
+                for idx in -kernel.w/2..kernel.w/2 {
+                    let kx = kernel.w/2+idx; // kernel x
+                    let ky = kernel.h/2+idy;
+                    
+                    acc += readAt(kernel,ky,kx)*readAt(v,idy+iy,idx+ix);
+                }
+            }
+
+            writeAt(&mut res,iy,ix,acc);
+        }
+    }
+    res
+}
+
 
 /**
  * \param phi angle in radiants

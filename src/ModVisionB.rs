@@ -140,10 +140,13 @@ pub fn calc_sims(stimulus: &[Channel], cls: &PrototypeClassifier) -> Vec<f64> {
     for i_prototype in &cls.prototypes {
         let mut tv_sim: Tv = Tv{f:0.0,c:0.0};
         for i_channel_idx in 0..stimulus.len() { // iterate over channels
+            //println!("comp {} {} and {} {}", stimulus[i_channel_idx].v[0].f, stimulus[i_channel_idx].v[0].c, i_prototype.channels[i_channel_idx].v[0].f, i_prototype.channels[i_channel_idx].v[0].c);
+
             let tv_sim_thischannel: Tv = foldVec(&compVec(&stimulus[i_channel_idx].v, &i_prototype.channels[i_channel_idx].v));
             tv_sim = rev(&tv_sim, &tv_sim_thischannel);
         }
 
+        //println!("DBG: {} {}", tv_sim.f, tv_sim.c);
         let sim: f64 = calcExp(&tv_sim); // we interpret expectation as similarity of the TV-vectors
         
         prototypes_sim.push(sim);
@@ -182,7 +185,7 @@ pub fn classify_max(prototypes_sim: &[f64]) -> Option<(usize, f64)> {
 ///
 /// /param add do we want to add the new prototype or revise if we found similar one? useful to only classify without addig anything
 pub fn classify(cls: &mut PrototypeClassifier, stimulus: &[Channel], current_time:i64, add: bool) -> Option<usize> {
-    let dbg:i64 = 0;
+    let dbg:i64 = 2;
     
     { // classify stimulus
         let prototypes_sim: Vec<f64> = calc_sims(stimulus, &cls);
