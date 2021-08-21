@@ -541,3 +541,95 @@ pub fn checkEqTerm(a:&Term, b:&Term) -> bool {
         },
     }
 }
+
+
+/// helper to count occurence of (sub)term
+pub fn count_occurence_subterms(t: &Term, searched: &Term) -> i64 {
+    if checkEqTerm(t, searched) {
+        return 1;
+    }
+
+    return match t {
+        Term::Stmt(_, subja, preda) => {
+            count_occurence_subterms(subja, searched) + count_occurence_subterms(preda, searched)
+        }
+        Term::Name(_) => {
+            0
+        },
+        Term::Seq(seqa) => {
+            let mut n = 0;
+            for idx in 0..seqa.len() {
+                n += count_occurence_subterms(&seqa[idx], searched);
+            }
+            n
+        },
+        Term::SetInt(seta) => {
+            let mut n = 0;
+            for idx in 0..seta.len() {
+                n += count_occurence_subterms(&seta[idx], searched);
+            }
+            n
+        },
+        Term::SetExt(seta) => {
+            let mut n = 0;
+            for idx in 0..seta.len() {
+                n += count_occurence_subterms(&seta[idx], searched);
+            }
+            n
+        },
+        Term::QVar(_) => {
+            0
+        },
+        Term::DepVar(_) => {
+            0
+        },
+        Term::IndepVar(_) => {
+            0
+        },
+        Term::Conj(elementsa) => {
+            let mut n = 0;
+            for idx in 0..elementsa.len() {
+                n += count_occurence_subterms(&elementsa[idx], searched);
+            }
+            n
+        },
+        Term::Prod(elementsa) => {
+            let mut n = 0;
+            for idx in 0..elementsa.len() {
+                n += count_occurence_subterms(&elementsa[idx], searched);
+            }
+            n
+        },
+        Term::Img(rela,idxa,elementsa) => {
+            let mut n = 0;
+            for idx in 0..elementsa.len() {
+                n += count_occurence_subterms(&elementsa[idx], searched);
+            }
+            n
+        },
+        Term::IntInt(seta) => {
+            let mut n = 0;
+            for idx in 0..seta.len() {
+                n += count_occurence_subterms(&seta[idx], searched);
+            }
+            n
+        },
+        Term::ExtInt(seta) => {
+            let mut n = 0;
+            for idx in 0..seta.len() {
+                n += count_occurence_subterms(&seta[idx], searched);
+            }
+            n
+        },
+        Term::Par(elementsa) => {
+            let mut n = 0;
+            for idx in 0..elementsa.len() {
+                n += count_occurence_subterms(&elementsa[idx], searched);
+            }
+            n
+        },
+        Term::Neg(terma) => {
+            count_occurence_subterms(terma, searched)
+        },
+    }
+}

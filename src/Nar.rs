@@ -104,7 +104,7 @@ pub fn inputT2(nar:&mut Nar, term:&Term, punct:EnumPunctation, tv:&Tv, isEvent:b
             sentence.evi = Some(Evidence::CNT{pos:10,cnt:10}); // we need to transcribe TV
                                                             // TODO< transcribe TV in a better way, we need to approximate freq and conf! >
             
-            NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence, nar.cfg__nConceptBeliefs, nar.procNar.t);
+            NarProc::mem_add_evidence(Arc::clone(&nar.procNar.evidenceMem), &sentence, nar.cfg__nConceptBeliefs, nar.procNar.t, &mut nar.procNar.rng);
         }
         else {
             println!("ERR : form is not supported!");

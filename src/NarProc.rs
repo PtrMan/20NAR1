@@ -380,6 +380,8 @@ pub fn narInit() -> ProcNar {
         let evidenceMem = Arc::clone(&nar.evidenceMem);
         let cfg__nConceptBeliefs = nar.cfg__nConceptBeliefs;
         nar.storeWorkers.push(thread::spawn(move|| {
+            let mut rng = rand::thread_rng();
+            
             loop {
                 let msgRes = rx.recv();
                 if !msgRes.is_ok() {
@@ -432,7 +434,7 @@ pub fn narInit() -> ProcNar {
                 
                 if addEvidenceFlag.load(Ordering::Relaxed) {
                     // add evidence
-                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence, cfg__nConceptBeliefs, currentTime);
+                    mem_add_evidence(Arc::clone(&evidenceMem), &evidenceSentence, cfg__nConceptBeliefs, currentTime, &mut rng);
                 }
             }
         }));
@@ -461,8 +463,21 @@ pub fn narInit() -> ProcNar {
     nar
 }
 
+// INGATE< gate >
 /// add procedural evidence to memory
-pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &Sentence, nBeliefs:usize, currentTime: i64) {
+pub fn mem_add_evidence(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &Sentence, nBeliefs:usize, currentTime: i64,  rng: &mut rand::rngs::ThreadRng) {
+    mem_add_evidence_internal(Arc::clone(&evidenceMem), evidenceSentence, nBeliefs, currentTime);
+
+    // TODO< how to manage evidence of vars? and revise? >
+    // intro vars and add to memory
+    let sentences_with_vars: Vec<Sentence> = NarInfProcedural::matchandintro_var1_sentence(evidenceSentence, rng);
+    for i_sentence in &sentences_with_vars {
+        mem_add_evidence_internal(Arc::clone(&evidenceMem), i_sentence, nBeliefs, currentTime);
+    }
+}
+
+/// internal helper to add procedural evidence to memory
+fn mem_add_evidence_internal(evidenceMem: Arc<RwLock<NarMem::Mem>>, evidenceSentence: &Sentence, nBeliefs:usize, currentTime: i64) {
     // enumerate subterms to decide concept names where we store the belief
     let subterms = {
         let mut subterms = vec![];
